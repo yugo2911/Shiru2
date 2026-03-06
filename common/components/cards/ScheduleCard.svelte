@@ -206,7 +206,6 @@
     display: block;
     flex: 1;
     overflow: hidden;
-    border-top: 3px solid var(--media-color);
     min-height: 0;
   }
 
