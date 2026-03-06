@@ -26,7 +26,7 @@
         const media = variables.hideSubs ? entry.media?.media : entry
         return media?.id ? { id: media.id, idMal: media.idMal ?? null } : null
     }).filter(item => item != null)
-    // Hide My Anime / Show My Anime
+
     if ((variables.hideMyAnime || variables.showMyAnime) && Helper.isAuthorized()) {
       const userIds = await Helper.userLists(variables).then(res => {
         if (!res?.data && res?.errors) throw res.errors[0]
@@ -39,12 +39,9 @@
     if (!res?.data && res?.errors) throw res.errors[0]
     results.data.Page.media = results.data.Page.media.concat(res.data.Page.media)
     if (variables.hideSubs) {
-      // filter out entries without airing schedule, duplicates [only allow first occurrence], and completed dubs, then sort entries from first airing to last airing.
       results.data.Page.media = results.data.Page.media.filter((media, index, self) => {
         const cachedItem = airingLists.find(entry => entry.media?.media?.id === media.id)
-        if (cachedItem?.delayedIndefinitely && cachedItem?.status?.toUpperCase()?.includes('FINISHED')) { // skip these as they are VERY likely partial dubs so production isn't necessarily in a suspended state.
-          return false
-        }
+        if (cachedItem?.delayedIndefinitely && cachedItem?.status?.toUpperCase()?.includes('FINISHED')) return false
         const numberOfEpisodes = cachedItem.subtractedEpisodeNumber ? (cachedItem.episodeNumber - cachedItem.subtractedEpisodeNumber) : 1
         let predict = false
         if (cachedItem?.media?.media?.airingSchedule?.nodes?.length) {
@@ -70,11 +67,9 @@
           return new Date(nextAiring(aEntry?.media?.media?.airingSchedule?.nodes, variables)?.airingAt).getTime() - new Date(nextAiring(bEntry?.media?.media?.airingSchedule?.nodes, variables)?.airingAt).getTime()
       })
     } else {
-      // filter out entries without airing schedule and duplicates [only allow first occurrence], then sort entries from first airing to last airing.
       results.data.Page.media = results.data.Page.media.filter((media, index, self) => nextAiring(media?.airingSchedule?.nodes)?.airingAt && self.findIndex(m => m?.id === media?.id) === index).sort((a, b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
     }
 
-    // Group by weekday and inject __dayHeader sentinels, starting from today
     const todayIdx = new Date().getDay()
     const orderedDays = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
     const grouped = {}
@@ -91,7 +86,6 @@
       withHeaders.push(...grouped[day])
     }
     results.data.Page.media = withHeaders
-
     return results
   }
 </script>
@@ -115,12 +109,23 @@
     return SectionsManager.wrapResponse(raw, 150)
   }
 
+  const views = ['big', 'small', 'text', 'single']
+  const toggleView = () => {
+    const idx = views.indexOf($settings.scheduleView || 'big')
+    $settings.scheduleView = views[(idx + 1) % views.length]
+  }
+
   $: isTextMode = $settings.scheduleView === 'text' || $settings.scheduleView === 'single'
 </script>
 
+<button class="view-switch-fab" on:click={toggleView}>
+  {$settings.scheduleView || 'big'}
+</button>
+
+<SearchPage key={key} search={search}/>
+
 {#if isTextMode && textGroups.length}
   <div class='text-grid-wrap'>
-    <SearchPage key={key} search={search}/>
     <div class='text-grid' class:single-col={$settings.scheduleView === 'single'}>
       {#each textGroups as group}
         <div class='text-col'>
@@ -132,11 +137,25 @@
       {/each}
     </div>
   </div>
-{:else}
-  <SearchPage key={key} search={search}/>
 {/if}
 
 <style>
+  .view-switch-fab {
+    position: fixed;
+    bottom: 60px;
+    left: 60px;
+    z-index: 9999;
+    padding: 15px 25px;
+    font-size: 32px;
+    font-weight: bold;
+    text-transform: uppercase;
+    background: #2edf82;
+    color: #000;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+
   .text-grid-wrap :global(.schedule-grid) {
     display: none !important;
   }

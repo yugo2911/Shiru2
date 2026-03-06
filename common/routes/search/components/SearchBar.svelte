@@ -358,22 +358,6 @@
         {/if}
       </div>
     </form>
-    {#if search.scheduleList}
-    <span
-      class='mr-10 ml-auto icon pointer'
-      class:text-dark-light={($settings.scheduleView || 'calendar') === 'calendar'}
-      class:text-primary={($settings.scheduleView || 'calendar') !== 'calendar'}
-      data-toggle='tooltip'
-      data-placement='bottom'
-      data-target-breakpoint='md'
-      data-title={VIEW_TITLES[$settings.scheduleView || 'calendar']}
-      use:click={cycleViewMode}>
-      <svelte:component this={VIEW_ICONS[$settings.scheduleView || 'calendar']} size='2.25rem' />
-    </span>
-    {:else}
-    <span class='mr-10 ml-auto filled icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Small Cards' class:text-muted={$settings.cards === 'small'} use:click={() => { if ($settings.cards !== 'small') changeCardMode('small') }}><Grid3X3 size='2.25rem' /></span>
-    <span class='icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Large Cards' class:text-muted={$settings.cards === 'full'} use:click={() => { if ($settings.cards !== 'full') changeCardMode('full') }}><Grid2X2 size='2.25rem' /></span>
-    {/if}
   </div>
 </form>
 
