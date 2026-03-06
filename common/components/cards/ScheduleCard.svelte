@@ -167,8 +167,8 @@
 <style>
   .schedule-card-ct {
     display: flex;
-    justify-content: center;
-    padding: 0.6rem 4rem;
+    justify-content: flex-start;
+    padding: 1.4rem 4rem;
     position: relative;
   }
 
@@ -180,7 +180,7 @@
     display: flex;
     flex-direction: row;
     width: 64rem;
-    min-height: 22rem;
+    height: 36rem;
     border-radius: 0.8rem;
     overflow: hidden;
     background: hsl(var(--dark-color-light-hsl));
@@ -197,8 +197,8 @@
   .img-col {
     display: flex;
     flex-direction: column;
-    flex: 0 0 16rem;
-    width: 16rem;
+    flex: 0 0 22.4rem;
+    width: 22.4rem;
     background: hsl(var(--dark-color-dim-hsl));
   }
 
@@ -223,7 +223,7 @@
 
   .cover-meta {
     flex-shrink: 0;
-    padding: 0.75rem 1rem 0.85rem;
+    padding: 1.2rem 1.4rem 1.4rem;
     background: hsl(var(--dark-color-very-dim-hsl));
     border-top: 1px solid var(--border-color-sp);
     display: flex;
@@ -232,25 +232,29 @@
   }
 
   .cover-title {
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 800;
     color: #ffffff;
     display: -webkit-box;
     line-height: 1.3;
+    letter-spacing: -0.01em;
   }
 
   .cover-studio {
-    font-size: 1.05rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: var(--accent-color);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.85;
   }
 
   .content-col {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 1.4rem 1.6rem 1.2rem;
-    gap: 0.8rem;
+    padding: 2rem 2.2rem 1.8rem;
+    gap: 1.2rem;
     min-width: 0;
   }
 
@@ -270,15 +274,17 @@
   .episode-label {
     font-size: 1.1rem;
     font-weight: 500;
-    color: rgba(190, 190, 210, 0.55);
+    color: rgba(190, 190, 210, 0.35);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .countdown {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    font-size: 4.2rem;
+    font-weight: 900;
+    color: var(--accent-color);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
   }
 
   .stats-col {
@@ -297,40 +303,44 @@
   }
 
   .stat-icon {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.6rem;
+    height: 1.6rem;
     flex-shrink: 0;
+    opacity: 0.9;
   }
 
-  .stat-icon--score { color: #4cba80; }
-  .stat-icon--rank  { color: #e05a7a; }
+  .stat-icon--score { color: #2edf82; }
+  .stat-icon--rank  { color: #ff3d64; }
 
   .stat-val {
-    font-size: 1.3rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: -0.01em;
   }
 
   .subtitle {
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: rgba(190, 190, 210, 0.58);
-    margin-top: -0.2rem;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: rgba(190, 190, 210, 0.25);
+    margin-top: -0.3rem;
+    letter-spacing: 0.01em;
   }
 
   .description-wrap {
     flex: 1;
     overflow: hidden;
-    max-height: 8.5rem;
-    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    max-height: 14rem;
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
   .description {
     margin: 0;
-    font-size: 1.2rem;
-    line-height: 1.65;
-    color: rgba(205, 205, 220, 0.75);
+    font-size: 1.4rem;
+    font-weight: 300;
+    line-height: 1.75;
+    color: rgba(205, 205, 220, 0.45);
   }
 
   .genres {
@@ -342,10 +352,13 @@
 
   .genre {
     background: var(--media-color);
-    color: #ffffff;
-    padding: 0.35rem 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.45rem 1.3rem;
     border-radius: 10rem;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    opacity: 0.82;
   }
 </style>
