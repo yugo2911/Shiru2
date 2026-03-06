@@ -19,11 +19,7 @@
   import { toast } from 'svelte-sonner'
   import Helper from '@/modules/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
-  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, LayoutGrid, LayoutList, AlignLeft, CalendarDays, Rows3 } from 'lucide-svelte'
-
-  const VIEW_MODES = ['calendar', 'big', 'small', 'text', 'single']
-  const VIEW_ICONS = { calendar: CalendarDays, big: LayoutGrid, small: LayoutList, text: AlignLeft, single: Rows3 }
-  const VIEW_TITLES = { calendar: 'Calendar', big: 'Big Cards', small: 'Small Cards', text: 'Text Only', single: 'Single Column' }
+  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2 } from 'lucide-svelte'
 
   function cycleViewMode() {
     const cur = $settings.scheduleView || 'calendar'
@@ -358,6 +354,8 @@
         {/if}
       </div>
     </form>
+      <span class='mr-10 filled ml-auto icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Small Cards' class:text-muted={$settings.cards === 'small'} use:click={() => { if ($settings.cards !== 'small') changeCardMode('small') }}><Grid3X3 size='2.25rem' /></span>
+    <span class='icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Large Cards' class:text-muted={$settings.cards === 'full'} use:click={() => { if ($settings.cards !== 'full') changeCardMode('full') }}><Grid2X2 size='2.25rem' /></span>
   </div>
 </form>
 
