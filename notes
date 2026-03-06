@@ -1,5 +1,10 @@
 todo
-calendar type view button (cache it might be be usered preffered way)
+multiple views
+    calendar type view button (save if last selected)
+    single button to cycle small-medium-large cards for schedule(save last selected)
+    weekday menu like https://animeschedule.net/ only in calendar maybe?
+    phone friedly structure? mode on phone type display
+
 TV,MOVIE etc. secions diffriencation
 Sorting options like anichart
 my list button
@@ -8,7 +13,7 @@ create color.js - color logic does not belog in schedule
 
 kinda out of scope
 clicking on studio so it would lead us to studio produced animes
-we could offer some useful info on hover from anilist
+we could offer some useful info on hover from anilist?(overkill for what schedule be resposible for?)
 
 
 ref

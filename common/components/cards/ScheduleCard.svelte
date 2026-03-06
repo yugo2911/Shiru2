@@ -168,7 +168,7 @@
   .schedule-card-ct {
     display: flex;
     justify-content: flex-start;
-    padding: 1.4rem 4rem;
+    padding: 0.7rem 0.5rem;
     position: relative;
   }
 
@@ -179,7 +179,7 @@
   .schedule-card {
     display: flex;
     flex-direction: row;
-    width: 64rem;
+    width: 52rem;
     height: 36rem;
     border-radius: 0.8rem;
     overflow: hidden;
@@ -197,8 +197,8 @@
   .img-col {
     display: flex;
     flex-direction: column;
-    flex: 0 0 22.4rem;
-    width: 22.4rem;
+    flex: 0 0 26.5rem;
+    width: 26.5rem;
     background: hsl(var(--dark-color-dim-hsl));
   }
 
@@ -223,7 +223,7 @@
 
   .cover-meta {
     flex-shrink: 0;
-    padding: 1.2rem 1.4rem 1.4rem;
+    padding: 0.8rem 1rem 0.9rem;
     background: hsl(var(--dark-color-very-dim-hsl));
     border-top: 1px solid var(--border-color-sp);
     display: flex;
@@ -232,7 +232,7 @@
   }
 
   .cover-title {
-    font-size: 2.2rem;
+    font-size: 1.65rem;
     font-weight: 800;
     color: #ffffff;
     display: -webkit-box;
@@ -241,7 +241,7 @@
   }
 
   .cover-studio {
-    font-size: 1.2rem;
+    font-size: 0.95rem;
     font-weight: 500;
     color: var(--accent-color);
     letter-spacing: 0.06em;
@@ -253,8 +253,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 2rem 2.2rem 1.8rem;
-    gap: 1.2rem;
+    padding: 1.4rem 1.1rem 1.2rem;
+    gap: 0rem;
     min-width: 0;
   }
 
@@ -263,16 +263,17 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
+    margin-bottom: 0rem;
   }
 
   .airing-block {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.05rem;
   }
 
   .episode-label {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: rgba(190, 190, 210, 0.35);
     letter-spacing: 0.08em;
@@ -280,10 +281,10 @@
   }
 
   .countdown {
-    font-size: 4.2rem;
+    font-size: 2.4rem;
     font-weight: 900;
     color: var(--accent-color);
-    line-height: 1.0;
+    line-height: 1.4;
     letter-spacing: -0.03em;
   }
 
@@ -291,7 +292,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.5rem;
+    gap: 0.45rem;
     padding-top: 0.15rem;
     flex-shrink: 0;
   }
@@ -303,8 +304,8 @@
   }
 
   .stat-icon {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 2rem;
+    height: 2rem;
     flex-shrink: 0;
     opacity: 0.9;
   }
@@ -313,31 +314,32 @@
   .stat-icon--rank  { color: #ff3d64; }
 
   .stat-val {
-    font-size: 1.8rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.92);
     letter-spacing: -0.01em;
   }
 
   .subtitle {
-    font-size: 1.05rem;
+    font-size: 0.85rem;
     font-weight: 400;
     color: rgba(190, 190, 210, 0.25);
-    margin-top: -0.3rem;
+    margin-top: 1.6rem;
     letter-spacing: 0.01em;
   }
 
   .description-wrap {
     flex: 1;
     overflow: hidden;
-    max-height: 14rem;
+    max-height: 10rem;
+    margin-top: 0.25rem;
     mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
   .description {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: 300;
     line-height: 1.75;
     color: rgba(205, 205, 220, 0.45);
@@ -348,14 +350,17 @@
     flex-wrap: wrap;
     gap: 0.55rem;
     margin-top: auto;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06)
+  ;
   }
 
   .genre {
     background: var(--media-color);
     color: rgba(255, 255, 255, 0.9);
-    padding: 0.45rem 1.3rem;
+    padding: 0.28rem 0.8rem;
     border-radius: 10rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.03em;
     text-transform: uppercase;
