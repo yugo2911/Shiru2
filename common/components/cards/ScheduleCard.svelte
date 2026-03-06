@@ -209,7 +209,7 @@
     min-height: 0;
   }
 
-  :global(.cover-img) {
+  .cover-link :global(.cover-img) {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -217,7 +217,7 @@
     transition: transform 0.3s ease;
   }
 
-  .schedule-card:hover :global(.cover-img) {
+  .schedule-card:hover .cover-link :global(.cover-img) {
     transform: scale(1.04);
   }
 
@@ -236,9 +236,6 @@
     font-weight: 700;
     color: #ffffff;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
     line-height: 1.3;
   }
 
