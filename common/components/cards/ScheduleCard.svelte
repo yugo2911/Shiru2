@@ -62,7 +62,15 @@
   $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
 </script>
 
-<div class='schedule-card-ct' class:force-mobile={$settings.forceMobileView} use:click={viewMedia}>
+<div class='schedule-card-ct' class:force-mobile={$settings.forceMobileView} class:text-grid={$settings.textGridView} use:click={viewMedia}>
+  {#if $settings.textGridView}
+    <div class='tg-row'>
+      <span class='tg-time'>{episodeInfo ? episodeInfo.time : 'TBA'}</span>
+      <span class='tg-ep'>{episodeInfo ? episodeInfo.episode : 'Upcoming'}</span>
+      <span class='tg-title'>{anilistClient.title(media)}</span>
+      {#if media?.averageScore}<span class='tg-score'>{Math.round(media.averageScore / 10) * 10}%</span>{/if}
+    </div>
+  {:else}
   <div class='schedule-card pointer load-in' style='--media-color: {mediaColor}; --accent-color: {accentColor}'>
 
     <div class='img-col'>
@@ -131,6 +139,7 @@
     </div>
 
   </div>
+  {/if}
 </div>
 
 <style>
@@ -526,4 +535,61 @@
   }
   
 }
+  /* ── Text Grid View ─────────────────────────────── */
+  :global(.text-grid).schedule-card-ct {
+    padding: 0;
+    display: block;
+  }
+
+  .tg-row {
+    display: grid;
+    grid-template-columns: 6.5rem 7rem 1fr 4rem;
+    align-items: center;
+    padding: 0.35rem 1.2rem;
+    gap: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+
+  .tg-row:hover {
+    background: rgba(255,255,255,0.04);
+  }
+
+  .tg-time {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent-color, rgba(190,190,210,0.9));
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .tg-ep {
+    font-size: 1rem;
+    font-weight: 400;
+    color: rgba(190,190,210,0.4);
+    white-space: nowrap;
+    padding-left: 0.5rem;
+    border-left: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .tg-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: rgba(235,235,245,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 1.2rem;
+  }
+
+  .tg-score {
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(190,190,210,0.35);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
 </style>
