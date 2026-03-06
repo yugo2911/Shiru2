@@ -100,35 +100,33 @@
   import { settings } from '@/modules/settings.js'
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
-  let textModeGroups = []
-  let textModeVars = null
+  let textGroups = [], textVars = null
 
   $search.load = (_, __, variables) => {
-    textModeVars = variables
+    textVars = variables
     const raw = fetchAllScheduleEntries(variables)
-    raw.then(result => {
-      const media = result?.data?.Page?.media ?? []
-      const groups = []
-      let cur = null
-      for (const item of media) {
-        if (item.__dayHeader) { cur = { day: item.day, items: [] }; groups.push(cur) }
-        else if (cur) cur.items.push(item)
-      }
-      textModeGroups = groups
+    raw.then(r => {
+      textGroups = (r?.data?.Page?.media ?? []).reduce((acc, item) => {
+        if (item.__dayHeader) acc.push({ day: item.day, items: [] })
+        else acc.at(-1)?.items.push(item)
+        return acc
+      }, [])
     })
     return SectionsManager.wrapResponse(raw, 150)
   }
+
+  $: isTextMode = $settings.scheduleView === 'text' || $settings.scheduleView === 'single'
 </script>
 
-{#if ($settings.scheduleView === 'text' || $settings.scheduleView === 'single') && textModeGroups.length}
+{#if isTextMode && textGroups.length}
   <div class='text-grid-wrap'>
     <SearchPage key={key} search={search}/>
     <div class='text-grid' class:single-col={$settings.scheduleView === 'single'}>
-      {#each textModeGroups as group}
+      {#each textGroups as group}
         <div class='text-col'>
           <div class='text-day-header'>{group.day}</div>
           {#each group.items as item}
-            <ScheduleCard data={item} variables={textModeVars} />
+            <ScheduleCard data={item} variables={textVars} />
           {/each}
         </div>
       {/each}
