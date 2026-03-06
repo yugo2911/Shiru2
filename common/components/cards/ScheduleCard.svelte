@@ -254,7 +254,7 @@
   }
 
   .countdown {
-    font-size: 2.0rem;
+    font-size: 2.1rem;
     font-weight: 600;
   }
 
