@@ -8,6 +8,8 @@
   import { cache, caches } from '@/modules/cache.js'
   import Helper from '@/modules/helper.js'
 
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
   const key = writable({})
   const search = writable(cache.getEntry(caches.HISTORY, 'lastSchedule') || { scheduleList: true, format: ['TV'], format_not: [], genre: [], genre_not: [], tag: [], tag_not: [], status: [], status_not: [] })
   search.subscribe(value => {
@@ -71,6 +73,25 @@
       // filter out entries without airing schedule and duplicates [only allow first occurrence], then sort entries from first airing to last airing.
       results.data.Page.media = results.data.Page.media.filter((media, index, self) => nextAiring(media?.airingSchedule?.nodes)?.airingAt && self.findIndex(m => m?.id === media?.id) === index).sort((a, b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
     }
+
+    // Group by weekday and inject __dayHeader sentinels, starting from today
+    const todayIdx = new Date().getDay()
+    const orderedDays = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
+    const grouped = {}
+    for (const media of results.data.Page.media) {
+      const node = nextAiring(media?.airingSchedule?.nodes, variables)
+      if (!node?.airingAt) continue
+      const day = DAYS[new Date(node.airingAt * 1000).getDay()]
+      ;(grouped[day] ??= []).push(media)
+    }
+    const withHeaders = []
+    for (const day of orderedDays) {
+      if (!grouped[day]) continue
+      withHeaders.push({ __dayHeader: true, day })
+      withHeaders.push(...grouped[day])
+    }
+    results.data.Page.media = withHeaders
+
     return results
   }
 </script>
