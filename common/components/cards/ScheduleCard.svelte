@@ -62,7 +62,7 @@
   $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
 </script>
 
-<div class='schedule-card-ct' class:force-mobile={$settings.forceMobileView} use:click={viewMedia}>
+<div class='schedule-card-ct' class:view-calendar={!$settings.scheduleView || $settings.scheduleView === 'calendar'} class:view-big={$settings.scheduleView === 'big'} class:view-small={$settings.scheduleView === 'small'} class:view-text={$settings.scheduleView === 'text'} use:click={viewMedia}>
   <div class='schedule-card pointer load-in' style='--media-color: {mediaColor}; --accent-color: {accentColor}'>
 
     <div class='img-col'>
@@ -338,11 +338,14 @@
     opacity: 0.82;
   }
 
-  :global(.force-mobile).schedule-card-ct {
+  /* ── view-small (was force-mobile) ── */
+  :global(.view-small).schedule-card-ct,
+  :global(.view-text).schedule-card-ct {
     padding: 0.5rem 0.6rem;
   }
 
-  :global(.force-mobile) .schedule-card {
+  :global(.view-small) .schedule-card,
+  :global(.view-text) .schedule-card {
     width: 100%;
     height: auto;
     flex-direction: row;
@@ -351,7 +354,7 @@
     gap: 0;
   }
 
-  :global(.force-mobile) .img-col {
+  :global(.view-small) .img-col {
     flex: 0 0 80px;
     width: 80px;
     height: 110px;
@@ -359,41 +362,41 @@
     border-radius: 6px 0 0 6px;
   }
 
-  :global(.force-mobile) .cover-link {
+  :global(.view-small) .cover-link {
     flex: 1;
     height: 100%;
   }
 
-  :global(.force-mobile) .cover-meta {
+  :global(.view-small) .cover-meta {
     display: none;
   }
 
-  :global(.force-mobile) .content-col {
+  :global(.view-small) .content-col {
     padding: 12px 14px;
     gap: 4px;
     justify-content: center;
   }
 
-  :global(.force-mobile) .top-row {
+  :global(.view-small) .top-row {
     flex-direction: column;
     gap: 0;
     margin-bottom: 0;
   }
 
-  :global(.force-mobile) .airing-block {
+  :global(.view-small) .airing-block {
     flex-direction: row;
     align-items: baseline;
     gap: 6px;
   }
 
-  :global(.force-mobile) .episode-label {
+  :global(.view-small) .episode-label {
     font-size: 14px;
     color: rgba(190, 190, 210, 0.55);
     letter-spacing: 0;
     text-transform: none;
   }
 
-  :global(.force-mobile) .countdown {
+  :global(.view-small) .countdown {
     font-size: 14px;
     font-weight: 400;
     color: rgba(190, 190, 210, 0.55);
@@ -401,7 +404,7 @@
     letter-spacing: 0;
   }
 
-  :global(.force-mobile) .cover-title {
+  :global(.view-small) .mobile-title {
     display: block;
     font-size: 15px;
     font-weight: 700;
@@ -413,23 +416,90 @@
     line-height: 1.2;
   }
 
-  :global(.force-mobile) .mobile-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
-    color: #ffffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-    line-height: 1.2;
-  }
-
-  :global(.force-mobile) .stats-col,
-  :global(.force-mobile) .subtitle,
-  :global(.force-mobile) .description-wrap,
-  :global(.force-mobile) .genres {
+  :global(.view-small) .stats-col,
+  :global(.view-small) .subtitle,
+  :global(.view-small) .description-wrap,
+  :global(.view-small) .genres {
     display: none;
+  }
+
+  /* ── view-text: text-only, no image ── */
+  :global(.view-text) .img-col {
+    display: none;
+  }
+
+  :global(.view-text) .content-col {
+    padding: 10px 16px;
+    gap: 2px;
+    justify-content: center;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  :global(.view-text) .top-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  :global(.view-text) .airing-block {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  :global(.view-text) .episode-label {
+    font-size: 13px;
+    color: rgba(190, 190, 210, 0.45);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  :global(.view-text) .countdown {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-color);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  :global(.view-text) .mobile-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  :global(.view-text) .stats-col,
+  :global(.view-text) .subtitle,
+  :global(.view-text) .description-wrap,
+  :global(.view-text) .genres {
+    display: none;
+  }
+
+  :global(.view-text) .schedule-card {
+    height: auto;
+    min-height: 0;
+  }
+
+  /* ── view-big: wider, taller cards ── */
+  :global(.view-big) .schedule-card {
+    width: 64rem;
+    height: 42rem;
+  }
+
+  :global(.view-big) .img-col {
+    flex: 0 0 32rem;
+    width: 32rem;
   }
 
   @media (max-width: 700px) {
