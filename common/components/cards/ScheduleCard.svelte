@@ -77,6 +77,7 @@
     </div>
 
     <div class='content-col'>
+      <div class='mobile-title'>{anilistClient.title(media)}</div> 
       <div class='top-row'>
         <div class='airing-block'>
           {#if episodeInfo}
@@ -286,7 +287,9 @@
     color: rgba(255, 255, 255, 0.92);
     letter-spacing: -0.01em;
   }
-
+  .mobile-title {
+  display: none;
+}
   .subtitle {
     font-size: 0.85rem;
     font-weight: 400;
@@ -333,4 +336,99 @@
     text-transform: uppercase;
     opacity: 0.82;
   }
+
+  @media (max-width: 600px) {
+  .schedule-card-ct {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .schedule-card {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 0.7rem;
+    gap: 0;
+  }
+
+  .img-col {
+    flex: 0 0 80px;
+    width: 80px;
+    height: 110px;
+    flex-direction: row;
+    border-radius: 6px 0 0 6px;
+  }
+
+  .cover-link {
+    flex: 1;
+    height: 100%;
+  }
+
+  .cover-meta {
+    display: none;
+  }
+
+  .content-col {
+    padding: 12px 14px;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .top-row {
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  .airing-block {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .episode-label {
+    font-size: 14px;
+    color: rgba(190, 190, 210, 0.55);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .countdown {
+    font-size: 14px;
+    font-weight: 400;
+    color: rgba(190, 190, 210, 0.55);
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  .cover-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .mobile-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+  .stats-col,
+  .subtitle,
+  .description-wrap,
+  .genres {
+    display: none;
+  }
+  
+}
 </style>
