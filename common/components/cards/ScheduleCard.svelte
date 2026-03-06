@@ -168,7 +168,7 @@
   .schedule-card-ct {
     display: flex;
     justify-content: center;
-    padding: 0.6rem 1.6rem;
+    padding: 0.6rem 4rem;
     position: relative;
   }
 
