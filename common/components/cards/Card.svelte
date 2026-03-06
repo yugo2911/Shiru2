@@ -3,6 +3,7 @@
   import SmallCard from '@/components/cards/SmallCard.svelte'
   import EpisodeCardSk from '@/components/skeletons/EpisodeCardSk.svelte'
   import FullCard from '@/components/cards/FullCard.svelte'
+  import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
   import EpisodeCard from '@/components/cards/EpisodeCard.svelte'
   import FullCardSk from '@/components/skeletons/FullCardSk.svelte'
   import { settings } from '@/modules/settings.js'
@@ -10,7 +11,7 @@
   export let card
 
   export let variables = null
-  const type = card.type || $settings.cards
+  const type = card.type || (variables?.scheduleList ? 'schedule' : $settings.cards)
 </script>
 
 {#if type === 'episode'}
@@ -30,6 +31,16 @@
   {:then data}
     {#if data}
       <FullCard {data} {variables} />
+    {/if}
+  {/await}
+
+{:else if type === 'schedule'}
+
+  {#await card.data}
+    <FullCardSk />
+  {:then data}
+    {#if data}
+      <ScheduleCard {data} {variables} />
     {/if}
   {/await}
 

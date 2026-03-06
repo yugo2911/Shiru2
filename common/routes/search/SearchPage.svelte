@@ -107,7 +107,7 @@
 
 <div class='bg-dark h-full w-full overflow-y-scroll d-flex flex-wrap flex-row root overflow-x-hidden justify-content-center align-content-start' class:mt-safe-area={!$search.fileEdit && !$status.match(/offline/i)} class:bg-very-dark={$search.fileEdit} bind:this={container} on:scroll={infiniteScroll} on:resize={updateRowMarkers}>
   <SearchBar bind:search={$search} clearNow={$clearNow} on:input={update} />
-  <div class='w-full d-grid d-md-flex flex-wrap flex-row px-40 justify-content-center align-content-start'>
+  <div class='w-full d-grid d-md-flex flex-wrap flex-row px-40 justify-content-center align-content-start' class:schedule-grid={$search.scheduleList}>
     {#key $key}
       {#each $items as card}
         <div class='grid-card'><Card {card} variables={{...$search}} /></div>
@@ -120,6 +120,9 @@
 </div>
 
 <style>
+  .schedule-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64rem, 1fr)) !important;
+  }
   .d-grid:has(.item.small-card) {
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)) !important;
   }
