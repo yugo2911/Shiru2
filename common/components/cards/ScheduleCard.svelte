@@ -60,9 +60,21 @@
   }
 
   $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
+
+  let mouseX = 0
+  let mouseY = 0
+  function onMouseMove(e) { mouseX = e.clientX; mouseY = e.clientY }
 </script>
 
-<div class='schedule-card-ct' class:view-calendar={!$settings.scheduleView || $settings.scheduleView === 'calendar'} class:view-big={$settings.scheduleView === 'big'} class:view-small={$settings.scheduleView === 'small'} class:view-text={$settings.scheduleView === 'text'} use:click={viewMedia}>
+{#if data?.__dayHeader}
+  <div class='day-header-label'>{data.day}</div>
+{:else}
+<div class='schedule-card-ct'
+  class:view-big={$settings.scheduleView === 'big'}
+  class:view-small={$settings.scheduleView === 'small'}
+  class:view-text={$settings.scheduleView === 'text'}
+  on:mousemove={onMouseMove}
+  use:click={viewMedia}>
   <div class='schedule-card pointer load-in' style='--media-color: {mediaColor}; --accent-color: {accentColor}'>
 
     <div class='img-col'>
@@ -131,7 +143,11 @@
     </div>
 
   </div>
+  <div class='text-hover-art' style='left:{mouseX + 24}px; top:{mouseY - 220}px'>
+    <SmartImage class='text-hover-img' images={[media?.coverImage?.extraLarge, media?.coverImage?.medium, './404_cover.png']}/>
+  </div>
 </div>
+{/if}
 
 <style>
   .schedule-card-ct {
@@ -338,169 +354,65 @@
     opacity: 0.82;
   }
 
-  /* ── view-small (was force-mobile) ── */
-  :global(.view-small).schedule-card-ct,
-  :global(.view-text).schedule-card-ct {
-    padding: 0.5rem 0.6rem;
-  }
-
-  :global(.view-small) .schedule-card,
-  :global(.view-text) .schedule-card {
+  /* day header */
+  .day-header-label {
     width: 100%;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
+    padding: 1.6rem 1.2rem 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: rgba(190,190,210,0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ── view-big ── */
+  :global(.view-big) .schedule-card { width: 64rem; height: 42rem; }
+  :global(.view-big) .img-col { flex: 0 0 32rem; width: 32rem; }
+
+  /* ── view-small ── */
+  :global(.view-small).schedule-card-ct { padding: 0.5rem 0.6rem; }
+  :global(.view-small) .schedule-card { width: 100%; height: auto; flex-direction: row; align-items: center; border-radius: 0.7rem; gap: 0; }
+  :global(.view-small) .img-col { flex: 0 0 80px; width: 80px; height: 110px; flex-direction: row; border-radius: 6px 0 0 6px; }
+  :global(.view-small) .cover-link { flex: 1; height: 100%; }
+  :global(.view-small) .cover-meta { display: none; }
+  :global(.view-small) .content-col { padding: 12px 14px; gap: 4px; justify-content: center; }
+  :global(.view-small) .top-row { flex-direction: column; gap: 0; margin-bottom: 0; }
+  :global(.view-small) .airing-block { flex-direction: row; align-items: baseline; gap: 6px; }
+  :global(.view-small) .episode-label { font-size: 14px; color: rgba(190,190,210,0.55); letter-spacing: 0; text-transform: none; }
+  :global(.view-small) .countdown { font-size: 14px; font-weight: 400; color: rgba(190,190,210,0.55); line-height: 1.3; letter-spacing: 0; }
+  :global(.view-small) .mobile-title { display: block; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; line-height: 1.2; }
+  :global(.view-small) .stats-col, :global(.view-small) .subtitle, :global(.view-small) .description-wrap, :global(.view-small) .genres { display: none; }
+
+  /* ── view-text ── */
+  :global(.view-text).schedule-card-ct { padding: 0.25rem 0.4rem; position: relative; }
+  :global(.view-text) .schedule-card { width: 100%; height: auto; flex-direction: row; align-items: center; border-radius: 0.6rem; gap: 0; }
+  :global(.view-text) .img-col { display: none; }
+  :global(.view-text) .content-col { flex-direction: row; align-items: center; padding: 8px 12px; gap: 10px; justify-content: flex-start; }
+  :global(.view-text) .mobile-title { display: block; flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0; line-height: 1.2; }
+  :global(.view-text) .top-row { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 0; flex-shrink: 0; }
+  :global(.view-text) .airing-block { flex-direction: row; align-items: baseline; gap: 4px; }
+  :global(.view-text) .episode-label { font-size: 11px; color: rgba(190,190,210,0.38); letter-spacing: 0; text-transform: none; }
+  :global(.view-text) .countdown { font-size: 12px; font-weight: 600; color: var(--accent-color); line-height: 1.2; letter-spacing: 0; }
+  :global(.view-text) .stats-col, :global(.view-text) .subtitle, :global(.view-text) .description-wrap, :global(.view-text) .genres { display: none; }
+
+  /* ── text mode hover art ── */
+  .text-hover-art { display: none; }
+  :global(.view-text) .text-hover-art {
+    display: block;
+    position: fixed;
+    width: 200px;
+    height: 285px;
     border-radius: 0.7rem;
-    gap: 0;
-  }
-
-  :global(.view-small) .img-col {
-    flex: 0 0 80px;
-    width: 80px;
-    height: 110px;
-    flex-direction: row;
-    border-radius: 6px 0 0 6px;
-  }
-
-  :global(.view-small) .cover-link {
-    flex: 1;
-    height: 100%;
-  }
-
-  :global(.view-small) .cover-meta {
-    display: none;
-  }
-
-  :global(.view-small) .content-col {
-    padding: 12px 14px;
-    gap: 4px;
-    justify-content: center;
-  }
-
-  :global(.view-small) .top-row {
-    flex-direction: column;
-    gap: 0;
-    margin-bottom: 0;
-  }
-
-  :global(.view-small) .airing-block {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  :global(.view-small) .episode-label {
-    font-size: 14px;
-    color: rgba(190, 190, 210, 0.55);
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  :global(.view-small) .countdown {
-    font-size: 14px;
-    font-weight: 400;
-    color: rgba(190, 190, 210, 0.55);
-    line-height: 1.3;
-    letter-spacing: 0;
-  }
-
-  :global(.view-small) .mobile-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
-    color: #ffffff;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-    line-height: 1.2;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    transform: scale(0.92);
+    z-index: 9999;
   }
-
-  :global(.view-small) .stats-col,
-  :global(.view-small) .subtitle,
-  :global(.view-small) .description-wrap,
-  :global(.view-small) .genres {
-    display: none;
-  }
-
-  /* ── view-text: text-only, no image ── */
-  :global(.view-text) .img-col {
-    display: none;
-  }
-
-  :global(.view-text) .content-col {
-    padding: 10px 16px;
-    gap: 2px;
-    justify-content: center;
-    flex-direction: row;
-    align-items: center;
-  }
-
-  :global(.view-text) .top-row {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 0;
-    flex-shrink: 0;
-  }
-
-  :global(.view-text) .airing-block {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 5px;
-  }
-
-  :global(.view-text) .episode-label {
-    font-size: 13px;
-    color: rgba(190, 190, 210, 0.45);
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  :global(.view-text) .countdown {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent-color);
-    line-height: 1.2;
-    letter-spacing: 0;
-  }
-
-  :global(.view-text) .mobile-title {
-    display: block;
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.2;
-    flex: 1;
-    min-width: 0;
-    margin-bottom: 0;
-  }
-
-  :global(.view-text) .stats-col,
-  :global(.view-text) .subtitle,
-  :global(.view-text) .description-wrap,
-  :global(.view-text) .genres {
-    display: none;
-  }
-
-  :global(.view-text) .schedule-card {
-    height: auto;
-    min-height: 0;
-  }
-
-  /* ── view-big: wider, taller cards ── */
-  :global(.view-big) .schedule-card {
-    width: 64rem;
-    height: 42rem;
-  }
-
-  :global(.view-big) .img-col {
-    flex: 0 0 32rem;
-    width: 32rem;
-  }
+  :global(.view-text) .text-hover-art :global(.text-hover-img) { width: 100%; height: 100%; object-fit: cover; display: block; }
+  :global(.view-text).schedule-card-ct:hover .text-hover-art { opacity: 1; transform: scale(1); }
 
   @media (max-width: 700px) {
   .schedule-card-ct {

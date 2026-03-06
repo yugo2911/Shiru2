@@ -97,7 +97,74 @@
 </script>
 
 <script>
-  $search.load = (_, __, variables) => SectionsManager.wrapResponse(fetchAllScheduleEntries(variables), 150)
+  import { settings } from '@/modules/settings.js'
+  import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
+
+  let textModeGroups = []
+  let textModeVars = null
+
+  $search.load = (_, __, variables) => {
+    textModeVars = variables
+    const raw = fetchAllScheduleEntries(variables)
+    raw.then(result => {
+      const media = result?.data?.Page?.media ?? []
+      const groups = []
+      let cur = null
+      for (const item of media) {
+        if (item.__dayHeader) { cur = { day: item.day, items: [] }; groups.push(cur) }
+        else if (cur) cur.items.push(item)
+      }
+      textModeGroups = groups
+    })
+    return SectionsManager.wrapResponse(raw, 150)
+  }
 </script>
 
-<SearchPage key={key} search={search}/>
+{#if $settings.scheduleView === 'text' && textModeGroups.length}
+  <div class='text-grid-wrap'>
+    <SearchPage key={key} search={search}/>
+    <div class='text-grid'>
+      {#each textModeGroups as group}
+        <div class='text-col'>
+          <div class='text-day-header'>{group.day}</div>
+          {#each group.items as item}
+            <ScheduleCard data={item} variables={textModeVars} />
+          {/each}
+        </div>
+      {/each}
+    </div>
+  </div>
+{:else}
+  <SearchPage key={key} search={search}/>
+{/if}
+
+<style>
+  .text-grid-wrap :global(.schedule-grid) {
+    display: none !important;
+  }
+
+  .text-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 0.5rem;
+    padding: 0.5rem;
+    align-items: start;
+  }
+  @media (min-width: 900px)  { .text-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1300px) { .text-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .text-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .text-day-header {
+    padding: 1rem 0.6rem 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: rgba(190, 190, 210, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+</style>
