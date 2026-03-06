@@ -183,8 +183,8 @@
     min-height: 22rem;
     border-radius: 0.8rem;
     overflow: hidden;
-    background: #1a1a24;
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: hsl(var(--dark-color-light-hsl));
+    border: 1px solid var(--border-color-sp);
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
     transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
@@ -199,7 +199,7 @@
     flex-direction: column;
     flex: 0 0 16rem;
     width: 16rem;
-    background: #111118;
+    background: hsl(var(--dark-color-dim-hsl));
   }
 
   .cover-link {
@@ -224,8 +224,8 @@
   .cover-meta {
     flex-shrink: 0;
     padding: 0.75rem 1rem 0.85rem;
-    background: #0f0f16;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    background: hsl(var(--dark-color-very-dim-hsl));
+    border-top: 1px solid var(--border-color-sp);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
