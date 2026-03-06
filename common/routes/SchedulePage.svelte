@@ -120,10 +120,10 @@
   }
 </script>
 
-{#if $settings.scheduleView === 'text' && textModeGroups.length}
+{#if ($settings.scheduleView === 'text' || $settings.scheduleView === 'single') && textModeGroups.length}
   <div class='text-grid-wrap'>
     <SearchPage key={key} search={search}/>
-    <div class='text-grid'>
+    <div class='text-grid' class:single-col={$settings.scheduleView === 'single'}>
       {#each textModeGroups as group}
         <div class='text-col'>
           <div class='text-day-header'>{group.day}</div>
@@ -145,13 +145,12 @@
 
   .text-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 0 0.5rem;
     padding: 0.5rem;
     align-items: start;
   }
-  @media (min-width: 900px)  { .text-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 1300px) { .text-grid { grid-template-columns: repeat(4, 1fr); } }
+  .text-grid.single-col { grid-template-columns: minmax(280px, 600px); justify-content: center; }
 
   .text-col {
     display: flex;

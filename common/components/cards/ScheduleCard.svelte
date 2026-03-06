@@ -11,47 +11,6 @@
 
   export let data
   export let variables = null
-  let _variables = variables
-
-  let media = data
-  $: if (data && !media) media = data
-  $: if (data) media = data
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
-
-  function viewMedia() {
-    if (_variables?.fileEdit) _variables.fileEdit(media)
-    else modal.open(modal.ANIME_DETAILS, media)
-  }
-
-  let airingInterval
-  let _airingAt = null
-  $: airingInfo = getAiringInfo(_airingAt)
-  onMount(() => {
-    _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
-    if (_variables?.scheduleList) airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
-  })
-  onDestroy(() => clearTimeout(airingInterval))
-
-  $: mediaColor = media?.coverImage?.color || '#333344'
-
-  $: accentColor = getAccentColor(mediaColor)
-
-  $: episodeInfo = (() => {
-    if (!airingInfo || !_airingAt?.time || typeof _airingAt.time === 'string') return null
-    const ep = airingInfo.episode || 'Ep 1'
-    const time = airingInfo.time || ''
-    return { episode: ep, time }
-  })()
-
-  $: ranking = media?.popularity ? '#' + media.popularity : null
-  $: rating = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
-
-  $: sequelInfo = (() => {
-    const relations = media?.relations?.edges || []
-    const sequel = relations.find(e => e.relationType === 'SEQUEL')
-    if (sequel?.node?.title?.userPreferred) return `Sequel to ${sequel.node.title.userPreferred}`
-    return null
-  })()
 
   const SOURCE_LABELS = {
     MANGA: 'Manga', LIGHT_NOVEL: 'Light Novel', ORIGINAL: 'Original',
@@ -59,10 +18,48 @@
     NOVEL: 'Novel', DOUJINSHI: 'Doujinshi', ANIME: 'Anime', WEB_MANGA: 'Web Manga'
   }
 
-  $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
-
+  let media = data
+  let airingInterval
+  let _airingAt = null
   let mouseX = 0
   let mouseY = 0
+
+  $: media = data
+  mediaCache.subscribe(value => {
+    if (value && JSON.stringify(value[media?.id]) !== JSON.stringify(media)) media = value[media?.id]
+  })
+
+  $: airingInfo = getAiringInfo(_airingAt)
+  $: mediaColor = media?.coverImage?.color || '#333344'
+  $: accentColor = getAccentColor(mediaColor)
+  $: isTextView = $settings.scheduleView === 'text' || $settings.scheduleView === 'single'
+
+  $: episodeInfo = (() => {
+    if (!airingInfo || !_airingAt?.time || typeof _airingAt.time === 'string') return null
+    return { episode: airingInfo.episode || 'Ep 1', time: airingInfo.time || '' }
+  })()
+
+  $: ranking = media?.popularity ? '#' + media.popularity : null
+  $: rating = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
+
+  $: sequelInfo = (() => {
+    const sequel = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')
+    return sequel?.node?.title?.userPreferred ? `Sequel to ${sequel.node.title.userPreferred}` : null
+  })()
+
+  $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
+
+  onMount(() => {
+    _airingAt = media && variables?.scheduleList && airingAt(media, variables)
+    if (variables?.scheduleList) airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
+  })
+  onDestroy(() => clearTimeout(airingInterval))
+
+  function viewMedia() {
+    if (variables?.fileEdit) variables.fileEdit(media)
+    else modal.open(modal.ANIME_DETAILS, media)
+  }
+
   function onMouseMove(e) { mouseX = e.clientX; mouseY = e.clientY }
 </script>
 
@@ -72,7 +69,7 @@
 <div class='schedule-card-ct'
   class:view-big={$settings.scheduleView === 'big'}
   class:view-small={$settings.scheduleView === 'small'}
-  class:view-text={$settings.scheduleView === 'text'}
+  class:view-text={isTextView}
   on:mousemove={onMouseMove}
   use:click={viewMedia}>
   <div class='schedule-card pointer load-in' style='--media-color: {mediaColor}; --accent-color: {accentColor}'>
@@ -90,7 +87,7 @@
     </div>
 
     <div class='content-col'>
-      <div class='mobile-title'>{anilistClient.title(media)}</div> 
+      <div class='mobile-title'>{anilistClient.title(media)}</div>
       <div class='top-row'>
         <div class='airing-block'>
           {#if episodeInfo}
@@ -156,10 +153,7 @@
     padding: 0.7rem 0.5rem;
     position: relative;
   }
-
-  .schedule-card-ct:hover {
-    z-index: 30;
-  }
+  .schedule-card-ct:hover { z-index: 30; }
 
   .schedule-card {
     display: flex;
@@ -170,13 +164,12 @@
     overflow: hidden;
     background: hsl(var(--dark-color-light-hsl));
     border: 1px solid var(--border-color-sp);
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
     transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
-
   .schedule-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.55);
   }
 
   .img-col {
@@ -193,7 +186,6 @@
     overflow: hidden;
     min-height: 0;
   }
-
   .cover-link :global(.cover-img) {
     width: 100%;
     height: 100%;
@@ -201,10 +193,7 @@
     display: block;
     transition: transform 0.3s ease;
   }
-
-  .schedule-card:hover .cover-link :global(.cover-img) {
-    transform: scale(1.04);
-  }
+  .schedule-card:hover .cover-link :global(.cover-img) { transform: scale(1.04); }
 
   .cover-meta {
     flex-shrink: 0;
@@ -215,16 +204,14 @@
     flex-direction: column;
     gap: 0.25rem;
   }
-
   .cover-title {
     font-size: 1.65rem;
     font-weight: 800;
-    color: #ffffff;
+    color: #fff;
     display: -webkit-box;
     line-height: 1.3;
     letter-spacing: -0.01em;
   }
-
   .cover-studio {
     font-size: 0.95rem;
     font-weight: 500;
@@ -239,7 +226,7 @@
     display: flex;
     flex-direction: column;
     padding: 1.4rem 1.1rem 1.2rem;
-    gap: 0rem;
+    gap: 0;
     min-width: 0;
   }
 
@@ -248,7 +235,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 0rem;
+    margin-bottom: 0;
   }
 
   .airing-block {
@@ -256,15 +243,13 @@
     flex-direction: column;
     gap: 0.05rem;
   }
-
   .episode-label {
     font-size: 0.9rem;
     font-weight: 500;
-    color: rgba(190, 190, 210, 0.35);
+    color: rgba(190,190,210,0.35);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-
   .countdown {
     font-size: 2.4rem;
     font-weight: 900;
@@ -281,36 +266,23 @@
     padding-top: 0.15rem;
     flex-shrink: 0;
   }
-
-  .stat-row {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .stat-icon {
-    width: 2rem;
-    height: 2rem;
-    flex-shrink: 0;
-    opacity: 0.9;
-  }
-
+  .stat-row { display: flex; align-items: center; gap: 0.4rem; }
+  .stat-icon { width: 2rem; height: 2rem; flex-shrink: 0; opacity: 0.9; }
   .stat-icon--score { color: #2edf82; }
   .stat-icon--rank  { color: #ff3d64; }
-
   .stat-val {
     font-size: 1.35rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.92);
+    color: rgba(255,255,255,0.92);
     letter-spacing: -0.01em;
   }
-  .mobile-title {
-  display: none;
-}
+
+  .mobile-title { display: none; }
+
   .subtitle {
     font-size: 0.85rem;
     font-weight: 400;
-    color: rgba(190, 190, 210, 0.25);
+    color: rgba(190,190,210,0.25);
     margin-top: 1.6rem;
     letter-spacing: 0.01em;
   }
@@ -323,13 +295,12 @@
     mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
-
   .description {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 300;
     line-height: 1.75;
-    color: rgba(205, 205, 220, 0.45);
+    color: rgba(205,205,220,0.45);
   }
 
   .genres {
@@ -338,13 +309,11 @@
     gap: 0.55rem;
     margin-top: auto;
     padding-top: 0.7rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06)
-  ;
+    border-top: 1px solid rgba(255,255,255,0.06);
   }
-
   .genre {
     background: var(--media-color);
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255,255,255,0.9);
     padding: 0.28rem 0.8rem;
     border-radius: 10rem;
     font-size: 0.9rem;
@@ -354,7 +323,6 @@
     opacity: 0.82;
   }
 
-  /* day header */
   .day-header-label {
     width: 100%;
     padding: 1.6rem 1.2rem 0.5rem;
@@ -365,11 +333,9 @@
     letter-spacing: 0.12em;
   }
 
-  /* ── view-big ── */
   :global(.view-big) .schedule-card { width: 64rem; height: 42rem; }
   :global(.view-big) .img-col { flex: 0 0 32rem; width: 32rem; }
 
-  /* ── view-small ── */
   :global(.view-small).schedule-card-ct { padding: 0.5rem 0.6rem; }
   :global(.view-small) .schedule-card { width: 100%; height: auto; flex-direction: row; align-items: center; border-radius: 0.7rem; gap: 0; }
   :global(.view-small) .img-col { flex: 0 0 80px; width: 80px; height: 110px; flex-direction: row; border-radius: 6px 0 0 6px; }
@@ -383,7 +349,6 @@
   :global(.view-small) .mobile-title { display: block; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; line-height: 1.2; }
   :global(.view-small) .stats-col, :global(.view-small) .subtitle, :global(.view-small) .description-wrap, :global(.view-small) .genres { display: none; }
 
-  /* ── view-text ── */
   :global(.view-text).schedule-card-ct { padding: 0.25rem 0.4rem; position: relative; }
   :global(.view-text) .schedule-card { width: 100%; height: auto; flex-direction: row; align-items: center; border-radius: 0.6rem; gap: 0; }
   :global(.view-text) .img-col { display: none; }
@@ -395,7 +360,6 @@
   :global(.view-text) .countdown { font-size: 12px; font-weight: 600; color: var(--accent-color); line-height: 1.2; letter-spacing: 0; }
   :global(.view-text) .stats-col, :global(.view-text) .subtitle, :global(.view-text) .description-wrap, :global(.view-text) .genres { display: none; }
 
-  /* ── text mode hover art ── */
   .text-hover-art { display: none; }
   :global(.view-text) .text-hover-art {
     display: block;
@@ -415,97 +379,18 @@
   :global(.view-text).schedule-card-ct:hover .text-hover-art { opacity: 1; transform: scale(1); }
 
   @media (max-width: 700px) {
-  .schedule-card-ct {
-    padding: 0.5rem 0.6rem;
+    .schedule-card-ct { padding: 0.5rem 0.6rem; }
+    .schedule-card { width: 100%; height: auto; flex-direction: row; align-items: center; border-radius: 0.7rem; gap: 0; }
+    .img-col { flex: 0 0 80px; width: 80px; height: 110px; flex-direction: row; border-radius: 6px 0 0 6px; }
+    .cover-link { flex: 1; height: 100%; }
+    .cover-meta { display: none; }
+    .content-col { padding: 12px 14px; gap: 4px; justify-content: center; }
+    .top-row { flex-direction: column; gap: 0; margin-bottom: 0; }
+    .airing-block { flex-direction: row; align-items: baseline; gap: 6px; }
+    .episode-label { font-size: 14px; color: rgba(190,190,210,0.55); letter-spacing: 0; text-transform: none; }
+    .countdown { font-size: 14px; font-weight: 400; color: rgba(190,190,210,0.55); line-height: 1.3; letter-spacing: 0; }
+    .cover-title { display: block; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; line-height: 1.2; }
+    .mobile-title { display: block; font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; line-height: 1.2; }
+    .stats-col, .subtitle, .description-wrap, .genres { display: none; }
   }
-
-  .schedule-card {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    border-radius: 0.7rem;
-    gap: 0;
-  }
-
-  .img-col {
-    flex: 0 0 80px;
-    width: 80px;
-    height: 110px;
-    flex-direction: row;
-    border-radius: 6px 0 0 6px;
-  }
-
-  .cover-link {
-    flex: 1;
-    height: 100%;
-  }
-
-  .cover-meta {
-    display: none;
-  }
-
-  .content-col {
-    padding: 12px 14px;
-    gap: 4px;
-    justify-content: center;
-  }
-
-  .top-row {
-    flex-direction: column;
-    gap: 0;
-    margin-bottom: 0;
-  }
-
-  .airing-block {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  .episode-label {
-    font-size: 14px;
-    color: rgba(190, 190, 210, 0.55);
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .countdown {
-    font-size: 14px;
-    font-weight: 400;
-    color: rgba(190, 190, 210, 0.55);
-    line-height: 1.3;
-    letter-spacing: 0;
-  }
-
-  .cover-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
-    color: #ffffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-    line-height: 1.2;
-  }
-  .mobile-title {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
-  line-height: 1.2;
-}
-  .stats-col,
-  .subtitle,
-  .description-wrap,
-  .genres {
-    display: none;
-  }
-  
-}
 </style>

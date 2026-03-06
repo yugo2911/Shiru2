@@ -19,16 +19,15 @@
   import { toast } from 'svelte-sonner'
   import Helper from '@/modules/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
-  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, AlignLeft, CalendarDays, LayoutList, LayoutGrid } from 'lucide-svelte'
+  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, LayoutGrid, LayoutList, AlignLeft, CalendarDays, Rows3 } from 'lucide-svelte'
 
-  const VIEW_MODES = ['calendar', 'big', 'small', 'text']
-  const VIEW_MODE_ICONS = { calendar: CalendarDays, big: LayoutGrid, small: LayoutList, text: AlignLeft }
-  const VIEW_MODE_TITLES = { calendar: 'Calendar Mode', big: 'Big Cards', small: 'Small Cards', text: 'Text Only' }
+  const VIEW_MODES = ['calendar', 'big', 'small', 'text', 'single']
+  const VIEW_ICONS = { calendar: CalendarDays, big: LayoutGrid, small: LayoutList, text: AlignLeft, single: Rows3 }
+  const VIEW_TITLES = { calendar: 'Calendar', big: 'Big Cards', small: 'Small Cards', text: 'Text Only', single: 'Single Column' }
 
   function cycleViewMode() {
-    const current = $settings.scheduleView || 'calendar'
-    const next = VIEW_MODES[(VIEW_MODES.indexOf(current) + 1) % VIEW_MODES.length]
-    $settings.scheduleView = next
+    const cur = $settings.scheduleView || 'calendar'
+    $settings.scheduleView = VIEW_MODES[(VIEW_MODES.indexOf(cur) + 1) % VIEW_MODES.length]
   }
 
   export let clearNow
@@ -359,11 +358,22 @@
         {/if}
       </div>
     </form>
-    <span class='mr-10 ml-auto icon text-dark-light pointer' data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title={VIEW_MODE_TITLES[$settings.scheduleView || 'calendar']} class:text-primary={($settings.scheduleView || 'calendar') !== 'calendar'} use:click={cycleViewMode}>
-      <svelte:component this={VIEW_MODE_ICONS[$settings.scheduleView || 'calendar']} size='2.25rem' />
+    {#if search.scheduleList}
+    <span
+      class='mr-10 ml-auto icon pointer'
+      class:text-dark-light={($settings.scheduleView || 'calendar') === 'calendar'}
+      class:text-primary={($settings.scheduleView || 'calendar') !== 'calendar'}
+      data-toggle='tooltip'
+      data-placement='bottom'
+      data-target-breakpoint='md'
+      data-title={VIEW_TITLES[$settings.scheduleView || 'calendar']}
+      use:click={cycleViewMode}>
+      <svelte:component this={VIEW_ICONS[$settings.scheduleView || 'calendar']} size='2.25rem' />
     </span>
-    <span class='mr-10 filled icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Small Cards' class:text-muted={$settings.cards === 'small'} use:click={() => { if ($settings.cards !== 'small') changeCardMode('small') }}><Grid3X3 size='2.25rem' /></span>
+    {:else}
+    <span class='mr-10 ml-auto filled icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Small Cards' class:text-muted={$settings.cards === 'small'} use:click={() => { if ($settings.cards !== 'small') changeCardMode('small') }}><Grid3X3 size='2.25rem' /></span>
     <span class='icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Large Cards' class:text-muted={$settings.cards === 'full'} use:click={() => { if ($settings.cards !== 'full') changeCardMode('full') }}><Grid2X2 size='2.25rem' /></span>
+    {/if}
   </div>
 </form>
 
