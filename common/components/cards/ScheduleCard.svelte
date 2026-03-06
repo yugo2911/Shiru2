@@ -7,6 +7,7 @@
   import { mediaCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
   import { getAccentColor } from '@/modules/color.js'
+  import { settings } from '@/modules/settings.js'
 
   export let data
   export let variables = null
@@ -61,7 +62,7 @@
   $: sourceInfo = media?.source ? (SOURCE_LABELS[media.source] ?? null) : null
 </script>
 
-<div class='schedule-card-ct' use:click={viewMedia}>
+<div class='schedule-card-ct' class:force-mobile={$settings.forceMobileView} use:click={viewMedia}>
   <div class='schedule-card pointer load-in' style='--media-color: {mediaColor}; --accent-color: {accentColor}'>
 
     <div class='img-col'>
@@ -337,7 +338,101 @@
     opacity: 0.82;
   }
 
-  @media (max-width: 600px) {
+  :global(.force-mobile).schedule-card-ct {
+    padding: 0.5rem 0.6rem;
+  }
+
+  :global(.force-mobile) .schedule-card {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 0.7rem;
+    gap: 0;
+  }
+
+  :global(.force-mobile) .img-col {
+    flex: 0 0 80px;
+    width: 80px;
+    height: 110px;
+    flex-direction: row;
+    border-radius: 6px 0 0 6px;
+  }
+
+  :global(.force-mobile) .cover-link {
+    flex: 1;
+    height: 100%;
+  }
+
+  :global(.force-mobile) .cover-meta {
+    display: none;
+  }
+
+  :global(.force-mobile) .content-col {
+    padding: 12px 14px;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  :global(.force-mobile) .top-row {
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  :global(.force-mobile) .airing-block {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  :global(.force-mobile) .episode-label {
+    font-size: 14px;
+    color: rgba(190, 190, 210, 0.55);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  :global(.force-mobile) .countdown {
+    font-size: 14px;
+    font-weight: 400;
+    color: rgba(190, 190, 210, 0.55);
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  :global(.force-mobile) .cover-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  :global(.force-mobile) .mobile-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  :global(.force-mobile) .stats-col,
+  :global(.force-mobile) .subtitle,
+  :global(.force-mobile) .description-wrap,
+  :global(.force-mobile) .genres {
+    display: none;
+  }
+
+  @media (max-width: 700px) {
   .schedule-card-ct {
     padding: 0.5rem 0.6rem;
   }
