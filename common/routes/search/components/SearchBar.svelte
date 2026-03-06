@@ -19,7 +19,7 @@
   import { toast } from 'svelte-sonner'
   import Helper from '@/modules/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
-  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, Smartphone, TableProperties } from 'lucide-svelte'
+  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, Smartphone } from 'lucide-svelte'
 
   export let clearNow
   export let search
@@ -352,7 +352,6 @@
     <span class='mr-10 ml-auto icon text-dark-light pointer' data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Toggle Mobile View' class:text-primary={$settings.forceMobileView} use:click={() => { $settings.forceMobileView = !$settings.forceMobileView }}><Smartphone size='2.25rem' /></span>
     <span class='mr-10 filled icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Small Cards' class:text-muted={$settings.cards === 'small'} use:click={() => { if ($settings.cards !== 'small') changeCardMode('small') }}><Grid3X3 size='2.25rem' /></span>
     <span class='icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Large Cards' class:text-muted={$settings.cards === 'full'} use:click={() => { if ($settings.cards !== 'full') changeCardMode('full') }}><Grid2X2 size='2.25rem' /></span>
-    <span class='ml-5 icon text-dark-light pointer' class:d-advanced-search={!advancedSearch?.length} class:d-none={!(!search.disableSearch && !search.clearNext)} data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Text Grid View' class:text-primary={$settings.textGridView} use:click={() => { $settings.textGridView = !$settings.textGridView }}><TableProperties size='2.25rem' /></span>
   </div>
 </form>
 

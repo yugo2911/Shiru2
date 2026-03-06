@@ -19,8 +19,6 @@
     cache.setEntry(caches.HISTORY, 'lastSchedule', searched)
   })
 
-  export const groupedDays = writable([])
-
   async function fetchAllScheduleEntries (variables) {
     const results = { data: { Page: { media: [], pageInfo: { hasNextPage: false } } } }
     const airingLists = await (variables.hideSubs ? animeSchedule.dubAiringLists.value : animeSchedule.subAiringLists.value)
@@ -41,9 +39,10 @@
     if (!res?.data && res?.errors) throw res.errors[0]
     results.data.Page.media = results.data.Page.media.concat(res.data.Page.media)
     if (variables.hideSubs) {
+      // filter out entries without airing schedule, duplicates [only allow first occurrence], and completed dubs, then sort entries from first airing to last airing.
       results.data.Page.media = results.data.Page.media.filter((media, index, self) => {
         const cachedItem = airingLists.find(entry => entry.media?.media?.id === media.id)
-        if (cachedItem?.delayedIndefinitely && cachedItem?.status?.toUpperCase()?.includes('FINISHED')) {
+        if (cachedItem?.delayedIndefinitely && cachedItem?.status?.toUpperCase()?.includes('FINISHED')) { // skip these as they are VERY likely partial dubs so production isn't necessarily in a suspended state.
           return false
         }
         const numberOfEpisodes = cachedItem.subtractedEpisodeNumber ? (cachedItem.episodeNumber - cachedItem.subtractedEpisodeNumber) : 1
@@ -71,10 +70,11 @@
           return new Date(nextAiring(aEntry?.media?.media?.airingSchedule?.nodes, variables)?.airingAt).getTime() - new Date(nextAiring(bEntry?.media?.media?.airingSchedule?.nodes, variables)?.airingAt).getTime()
       })
     } else {
+      // filter out entries without airing schedule and duplicates [only allow first occurrence], then sort entries from first airing to last airing.
       results.data.Page.media = results.data.Page.media.filter((media, index, self) => nextAiring(media?.airingSchedule?.nodes)?.airingAt && self.findIndex(m => m?.id === media?.id) === index).sort((a, b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
     }
 
-    // Group by weekday starting from today
+    // Group by weekday and inject __dayHeader sentinels, starting from today
     const todayIdx = new Date().getDay()
     const orderedDays = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
     const grouped = {}
@@ -84,11 +84,6 @@
       const day = DAYS[new Date(node.airingAt * 1000).getDay()]
       ;(grouped[day] ??= []).push(media)
     }
-
-    // Populate grouped days store for column view
-    groupedDays.set(orderedDays.filter(d => grouped[d]).map(d => ({ day: d, entries: grouped[d] })))
-
-    // Build flat sentinel array for normal view
     const withHeaders = []
     for (const day of orderedDays) {
       if (!grouped[day]) continue
@@ -102,141 +97,7 @@
 </script>
 
 <script>
-  import { settings } from '@/modules/settings.js'
-  import { airingAt, getAiringInfo } from '@/modules/anime/anime.js'
-  import { modal } from '@/modules/navigation.js'
-  import { click } from '@/modules/click.js'
-
   $search.load = (_, __, variables) => SectionsManager.wrapResponse(fetchAllScheduleEntries(variables), 150)
-
-  function getEpisodeInfo (media) {
-    const _airingAt = airingAt(media, { scheduleList: true })
-    if (!_airingAt) return null
-    return getAiringInfo(_airingAt)
-  }
-
-  function viewMedia (media) {
-    modal.open(modal.ANIME_DETAILS, media)
-  }
 </script>
 
-{#if $settings.textGridView}
-  <div class='schedule-columns'>
-    {#each $groupedDays as { day, entries }}
-      <div class='day-col'>
-        <div class='day-col-header'>{day}</div>
-        <div class='day-col-entries'>
-          {#each entries as media}
-            {@const info = getEpisodeInfo(media)}
-            <div class='day-entry' use:click={() => viewMedia(media)}>
-              <span class='day-entry-time'>{info?.time ?? 'TBA'}</span>
-              <span class='day-entry-ep'>{info?.episode ?? 'Upcoming'}</span>
-              <span class='day-entry-title'>{anilistClient.title(media)}</span>
-              {#if media?.averageScore}<span class='day-entry-score'>{Math.round(media.averageScore / 10) * 10}%</span>{/if}
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/each}
-  </div>
-{:else}
-  <SearchPage key={key} search={search}/>
-{/if}
-
-<style>
-  .schedule-columns {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-    gap: 0;
-    padding: 1.2rem 1rem 2rem;
-  }
-
-  .day-col {
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid rgba(255,255,255,0.06);
-    min-width: 0;
-  }
-
-  .day-col:last-child {
-    border-right: none;
-  }
-
-  .day-col-header {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 0.6rem 1.2rem 0.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    position: sticky;
-    top: 0;
-    background: hsl(var(--dark-color-hsl));
-    z-index: 2;
-  }
-
-  .day-col-entries {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .day-entry {
-    display: grid;
-    grid-template-columns: 5.5rem 1fr auto;
-    grid-template-rows: auto auto;
-    column-gap: 0.6rem;
-    padding: 0.55rem 1.2rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    cursor: pointer;
-    transition: background 0.1s ease;
-    align-items: center;
-  }
-
-  .day-entry:hover {
-    background: rgba(255,255,255,0.05);
-  }
-
-  .day-entry-time {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--accent-color, rgba(160,160,220,0.9));
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    grid-row: 1 / 3;
-    align-self: center;
-  }
-
-  .day-entry-ep {
-    font-size: 0.9rem;
-    font-weight: 400;
-    color: rgba(190,190,210,0.35);
-    white-space: nowrap;
-    grid-column: 2;
-    grid-row: 1;
-    line-height: 1.2;
-  }
-
-  .day-entry-title {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: rgba(235,235,248,0.9);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    grid-column: 2;
-    grid-row: 2;
-    line-height: 1.3;
-  }
-
-  .day-entry-score {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: rgba(190,190,210,0.3);
-    font-variant-numeric: tabular-nums;
-    grid-column: 3;
-    grid-row: 1 / 3;
-    align-self: center;
-    white-space: nowrap;
-  }
-</style>
+<SearchPage key={key} search={search}/>
