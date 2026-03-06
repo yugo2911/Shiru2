@@ -535,7 +535,6 @@
   }
   
 }
-  /* ── Text Grid View ─────────────────────────────── */
   :global(.text-grid).schedule-card-ct {
     padding: 0;
     display: block;
