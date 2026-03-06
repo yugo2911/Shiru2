@@ -150,11 +150,10 @@
 
   .schedule-card {
     width: 64rem !important;
-    height: 22rem !important;
+    height: 26.4rem !important;
     border-radius: 0.5rem;
     overflow: hidden;
     transition: transform 0.2s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     background: var(--media-color);
   }
 
@@ -165,7 +164,7 @@
   .img-col {
     flex: 0 0 18rem;
     width: 18rem;
-    height: 22rem;
+    height: 26.4rem;
     overflow: hidden;
   }
 
@@ -186,7 +185,6 @@
   .cover .overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
