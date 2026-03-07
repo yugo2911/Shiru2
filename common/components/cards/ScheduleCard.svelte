@@ -194,8 +194,8 @@
   .day-header-label { width:100%; padding:1.6rem 1.2rem 0.5rem; font-size:1.05rem; font-weight:700; color:rgba(190,190,210,0.45); text-transform:uppercase; letter-spacing:0.12em; }
 
   /* big */
-  :global(.view-grid) .schedule-card { width:64rem; height:42rem; }
-  :global(.view-grid) .img-col { flex:0 0 32rem; width:32rem; }
+  :global(.view-grid) .schedule-card { width:36rem; height:30rem; }
+  :global(.view-grid) .img-col { flex:0 0 16rem; width:16rem; }
 
   /* small + mobile shared rules */
   :global(.view-compact).schedule-card-ct { padding:0.5rem 0.6rem; }

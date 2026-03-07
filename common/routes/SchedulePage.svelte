@@ -95,6 +95,26 @@
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
   let textGroups = [], textVars = null
+  const TODAY = DAYS[new Date().getDay()]
+  let selectedDay = TODAY
+
+  function scrollToDay(day) {
+    selectedDay = day
+    const el = document.getElementById(`day-col-${day}`)
+    if (!el) return
+    // Use scrollIntoView — works regardless of scroll container
+    // scroll-margin-top on .text-col handles the sticky carousel offset
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // Days ordered starting from today (same order as the schedule)
+  $: orderedDays = (() => {
+    const todayIdx = DAYS.indexOf(TODAY)
+    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
+  })()
+
+  // Which days actually have content
+  $: activeDays = new Set(textGroups.map(g => g.day))
 
   $search.load = (_, __, variables) => {
     textVars = variables
@@ -129,42 +149,67 @@
   </button>
   
   <div class="view-options">
-    <div class="option-group">
-      <span>Layout Mode</span>
-      <div class="row">
-        <button class:active={gridCols === 'auto'} on:click={() => $settings.schedCols = 'auto'}>Auto</button>
-        <button class:active={gridCols === 1} on:click={() => $settings.schedCols = 1}>1 Col</button>
-        <button class:active={gridCols === 2} on:click={() => $settings.schedCols = 2}>2 Col</button>
+    {#if isTextMode}
+      <div class="option-group">
+        <span>Columns</span>
+        <div class="row">
+          <button class:active={gridCols === 'auto'} on:click={() => $settings.schedCols = 'auto'}>Auto</button>
+          <button class:active={gridCols === 1} on:click={() => $settings.schedCols = 1}>1</button>
+          <button class:active={gridCols === 2} on:click={() => $settings.schedCols = 2}>2</button>
+          <button class:active={gridCols === 3} on:click={() => $settings.schedCols = 3}>3</button>
+        </div>
       </div>
-    </div>
+    {/if}
 
     <div class="option-group">
-      <span>Visual Tweaks</span>
+      <span>Cards</span>
       <div class="row vertical">
         <button class:active={$settings.compactCards} on:click={() => $settings.compactCards = !$settings.compactCards}>
-          {$settings.compactCards ? 'Normal Size' : 'Compact Mode'}
+          {$settings.compactCards ? '✓ Compact' : 'Compact Mode'}
         </button>
         <button class:active={$settings.hideStats} on:click={() => $settings.hideStats = !$settings.hideStats}>
-          {$settings.hideStats ? 'Show Stats' : 'Hide Stats'}
+          {$settings.hideStats ? '✓ Stats Hidden' : 'Hide Stats'}
         </button>
       </div>
     </div>
   </div>
 </div>
 
+<div class='schedule-root'
+     class:hide-stats={$settings.hideStats}
+     class:compact-cards={$settings.compactCards}>
+
 <div class:hidden-search={isTextMode}>
   <SearchPage key={key} search={search}/>
 </div>
 
 {#if isTextMode}
+  <div class='day-carousel'>
+    {#each orderedDays as day, i}
+      {@const isToday = day === TODAY}
+      {@const isSelected = day === selectedDay}
+      {@const hasContent = activeDays.has(day)}
+      {@const distance = Math.min(i, orderedDays.length - i)}
+      <button
+        class='day-pill'
+        class:is-today={isToday}
+        class:is-selected={isSelected}
+        class:no-content={!hasContent}
+        style="--dist:{distance}"
+        on:click={() => scrollToDay(day)}
+        disabled={!hasContent}>
+        <span class='day-short'>{day.slice(0, 3)}</span>
+        {#if isToday}<span class='today-dot'></span>{/if}
+      </button>
+    {/each}
+  </div>
+
   <div class='text-grid-wrap' 
-       class:hide-stats={$settings.hideStats}
-       class:compact-mode={$settings.compactCards}
        style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
     {#if textGroups.length}
       <div class='text-grid' class:single-col={$settings.scheduleView === 'agenda'}>
         {#each textGroups as group}
-          <div class='text-col'>
+          <div class='text-col' id='day-col-{group.day}'>
             <div class='text-day-header'>{group.day}</div>
             <div class="items-container">
               {#each group.items as item}
@@ -179,6 +224,8 @@
     {/if}
   </div>
 {/if}
+
+</div><!-- end .schedule-root -->
 
 <style>
   /* MENU SYSTEM */
@@ -277,6 +324,71 @@
     background: rgba(46, 223, 130, 0.05);
   }
 
+  /* DAY CAROUSEL */
+  .day-carousel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: linear-gradient(to bottom, hsl(var(--dark-color-hsl, 220 13% 9%)) 70%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .day-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 10rem;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    opacity: calc(1 - clamp(0, var(--dist) * 0.18, 0.72));
+    transform: scale(calc(1 - clamp(0, var(--dist) * 0.04, 0.18)));
+  }
+
+  .day-pill:hover:not(:disabled) {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .day-pill.is-selected {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    border-color: #2edf82;
+    background: rgba(46, 223, 130, 0.08);
+  }
+
+  .day-pill.no-content { opacity: 0.15 !important; cursor: default; }
+
+  .day-short {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .day-pill.is-selected .day-short { color: #2edf82; }
+  .day-pill.is-today .day-short { }
+
+  .today-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #2edf82;
+    flex-shrink: 0;
+  }
+
   /* GRID SYSTEM */
   /* Hide SearchPage output in list/agenda modes — we render our own grid */
   .hidden-search { display: none !important; }
@@ -303,7 +415,7 @@
     margin: 0 auto;
   }
 
-  .text-col { display: flex; flex-direction: column; min-width: 0; }
+  .text-col { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 80px; }
   .items-container { display: flex; flex-direction: column; gap: 0.8rem; }
 
   .text-day-header {
@@ -316,15 +428,15 @@
     margin-bottom: 1rem;
   }
 
-  /* GLOBAL CARD OVERRIDES */
-  .hide-stats :global(.stats-col) { display: none !important; }
+  /* GLOBAL CARD OVERRIDES — apply in ALL view modes */
+  :global(.schedule-root.hide-stats) :global(.stats-col) { display: none !important; }
 
-  .compact-mode :global(.schedule-card) { height: 75px !important; }
-  .compact-mode :global(.img-col) { flex: 0 0 55px !important; }
-  .compact-mode :global(.description-wrap), 
-  .compact-mode :global(.genres),
-  .compact-mode :global(.subtitle) { display: none !important; }
-  .compact-mode :global(.content-col) { padding: 0.2rem 0.8rem !important; justify-content: center !important; }
+  :global(.schedule-root.compact-cards) :global(.schedule-card) { height: 75px !important; }
+  :global(.schedule-root.compact-cards) :global(.img-col) { flex: 0 0 55px !important; }
+  :global(.schedule-root.compact-cards) :global(.description-wrap),
+  :global(.schedule-root.compact-cards) :global(.genres),
+  :global(.schedule-root.compact-cards) :global(.subtitle) { display: none !important; }
+  :global(.schedule-root.compact-cards) :global(.content-col) { padding: 0.2rem 0.8rem !important; justify-content: center !important; }
 
   @media (max-width: 800px) {
     .text-grid { grid-template-columns: 1fr !important; }
