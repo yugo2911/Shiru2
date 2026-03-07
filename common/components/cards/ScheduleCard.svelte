@@ -29,32 +29,41 @@
   }
 
   let media = data
-  let airingInterval, _airingAt = null
+  let airingInterval = null, _airingAt = null
   let mouseX = 0, mouseY = 0
 
-  mediaCache.subscribe(v => {
+  $: if (data && !data.__dayHeader) media = data
+
+  const unsubCache = mediaCache.subscribe(v => {
     if (v?.[media?.id] && JSON.stringify(v[media.id]) !== JSON.stringify(media)) media = v[media.id]
   })
 
-  $: activeView    = resolvedView ?? $settings.resolvedScheduleView ?? $settings.scheduleView ?? 'grid'
-  $: isTextView    = activeView === 'list' || activeView === 'agenda'
-  $: airingInfo    = getAiringInfo(_airingAt)
-  $: mediaColor    = media?.coverImage?.color || '#333344'
-  $: accentColor   = getAccentColor(mediaColor)
-  $: episodeInfo   = (_airingAt?.time && typeof _airingAt.time !== 'string')
+  $: activeView  = (() => {
+    const v = resolvedView ?? $settings.scheduleView ?? 'grid'
+    return v === 'auto' ? 'grid' : v
+  })()
+  $: isTextView  = activeView === 'list' || activeView === 'agenda'
+  $: airingInfo  = getAiringInfo(_airingAt)
+  $: mediaColor  = media?.coverImage?.color || '#333344'
+  $: accentColor = getAccentColor(mediaColor)
+  $: episodeInfo = (_airingAt?.time && typeof _airingAt.time !== 'string')
       ? { episode: airingInfo?.episode || 'Ep 1', time: airingInfo?.time || '' }
       : null
-  $: ranking       = media?.popularity  ? '#' + media.popularity : null
-  $: rating        = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
-  $: sequelInfo    = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')?.node?.title?.userPreferred
-  $: sourceInfo    = SOURCE_LABELS[media?.source] ?? null
-  $: watchStatus   = media?.mediaListEntry?.status ?? null
+  $: ranking     = media?.popularity  ? '#' + media.popularity : null
+  $: rating      = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
+  $: sequelInfo  = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')?.node?.title?.userPreferred
+  $: sourceInfo  = SOURCE_LABELS[media?.source] ?? null
+  $: watchStatus = media?.mediaListEntry?.status ?? null
 
   onMount(() => {
     _airingAt = media && variables?.scheduleList && airingAt(media, variables)
-    if (variables?.scheduleList) airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
+    if (variables?.scheduleList) airingInterval = setInterval(() => { airingInfo = getAiringInfo(_airingAt) }, 60_000)
   })
-  onDestroy(() => clearTimeout(airingInterval))
+
+  onDestroy(() => {
+    if (airingInterval) clearInterval(airingInterval)
+    unsubCache()
+  })
 
   const viewMedia = () => variables?.fileEdit ? variables.fileEdit(media) : modal.open(modal.ANIME_DETAILS, media)
   const onMouseMove = e => { mouseX = e.clientX; mouseY = e.clientY }

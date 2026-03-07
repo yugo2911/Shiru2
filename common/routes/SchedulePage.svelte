@@ -97,12 +97,17 @@
   import { modal } from '@/modules/navigation.js'
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
+  const AUTO_BREAKPOINTS = { wide: 1400, mid: 900 }
+
   let textGroups = [], textVars = null
-  const TODAY = DAYS[new Date().getDay()]
-  let selectedDay = TODAY
-  let screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+  const TODAY        = DAYS[new Date().getDay()]
+  const TODAY_IDX    = DAYS.indexOf(TODAY)
+  const ORDERED_DAYS = [...DAYS.slice(TODAY_IDX), ...DAYS.slice(0, TODAY_IDX)]
+  let selectedDay    = TODAY
+  let screenWidth    = typeof window !== 'undefined' ? window.innerWidth : 1280
 
   onMount(() => {
+    screenWidth = window.innerWidth
     const onResize = () => { screenWidth = window.innerWidth }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
@@ -120,6 +125,17 @@
   }
   const DAY_DATES = getDayDates()
 
+  function trackMouse(node) {
+    const onMove = e => node.style.setProperty('--mx', e.clientX + 'px') || node.style.setProperty('--my', e.clientY + 'px')
+    node.addEventListener('mousemove', onMove)
+    return { destroy: () => node.removeEventListener('mousemove', onMove) }
+  }
+
+  function fmtTime(ts) {
+    if (!ts) return ''
+    return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+
   function findScrollParent(el) {
     let node = el.parentElement
     while (node && node !== document.body) {
@@ -134,21 +150,21 @@
     selectedDay = day
     const el = document.getElementById(`day-col-${day}`)
     if (!el) return
-    const scroller = findScrollParent(el)
+    const scroller  = findScrollParent(el)
     const carouselH = document.querySelector('.day-carousel')?.offsetHeight ?? 55
-    const elTop = el.getBoundingClientRect().top
+    const elTop     = el.getBoundingClientRect().top
     const scrollerTop = scroller.getBoundingClientRect?.()?.top ?? 0
-    const target = scroller.scrollTop + (elTop - scrollerTop) - carouselH - 8
+    const target    = scroller.scrollTop + (elTop - scrollerTop) - carouselH - 8
     scroller.scrollTo({ top: target, behavior: 'smooth' })
   }
 
-  $: orderedDays = (() => {
-    const todayIdx = DAYS.indexOf(TODAY)
-    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
-  })()
+  $: activeDays  = new Set(textGroups.map(g => g.day))
+  $: autoView    = screenWidth >= AUTO_BREAKPOINTS.wide ? 'list'
+                 : screenWidth >= AUTO_BREAKPOINTS.mid  ? 'compact'
+                 : 'agenda'
 
-  $: activeDays = new Set(textGroups.map(g => g.day))
-  $: autoView = screenWidth >= 1400 ? 'list' : screenWidth >= 900 ? 'compact' : 'agenda'
+  $: todayGroup  = textGroups.find(g => g.day === TODAY) ?? null
+  $: otherGroups = textGroups.filter(g => g.day !== TODAY)
 
   $search.load = (_, __, variables) => {
     textVars = variables
@@ -163,20 +179,11 @@
         }
         return acc
       }, [])
-    })
+    }).catch(() => { textGroups = [] })
     return SectionsManager.wrapResponse(raw, 150)
   }
 
-  function fmtTime(ts) {
-    if (!ts) return ''
-    const d = new Date(ts * 1000)
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  }
-
-  $: todayGroup = textGroups.find(g => g.day === TODAY)
-  $: otherGroups = textGroups.filter(g => g.day !== TODAY)
-
-  const VIEWS = ['auto', 'grid', 'compact', 'list', 'agenda', 'guide']
+  const VIEWS      = ['auto', 'grid', 'compact', 'list', 'agenda', 'guide']
   const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda', guide: 'Guide' }
 
   const toggleView = () => {
@@ -190,18 +197,16 @@
   $: isTextMode   = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide'
   $: gridCols     = $settings.schedCols || 'auto'
 
-  let cardW      = $settings.cardW      ?? 38
-  let cardH      = $settings.cardH      ?? 32
-  let cardImg    = $settings.cardImg    ?? 17
-  let compactImg = $settings.compactImg ?? 80
-  let compactH   = $settings.compactH   ?? 110
+  $: cardW      = $settings.cardW      ?? 38
+  $: cardH      = $settings.cardH      ?? 32
+  $: cardImg    = $settings.cardImg    ?? 17
+  $: compactImg = $settings.compactImg ?? 80
+  $: compactH   = $settings.compactH   ?? 110
 
-  $: $settings.cardW      = cardW
-  $: $settings.cardH      = cardH
-  $: $settings.cardImg    = cardImg
-  $: $settings.compactImg = compactImg
-  $: $settings.compactH   = compactH
-  $: cardVars = `--card-w:${cardW}rem; --card-h:${cardH}rem; --card-img:${cardImg}rem; --compact-img:${compactImg}px; --compact-card-h:${compactH}px`</script>
+  function saveCardSetting(key, val) { $settings[key] = val }
+
+  $: cardVars = `--card-w:${cardW}rem; --card-h:${cardH}rem; --card-img:${cardImg}rem; --compact-img:${compactImg}px; --compact-card-h:${compactH}px`
+</script>
 
 <div class="view-menu-wrap">
   <button class="view-switch-fab" on:click={toggleView}>
@@ -224,25 +229,25 @@
     {#if resolvedView === 'grid'}
       <div class="option-group">
         <span>Card Width <em>{cardW}rem</em></span>
-        <input type="range" min="20" max="60" step="1" bind:value={cardW} />
+        <input type="range" min="20" max="60" step="1" value={cardW} on:input={e => saveCardSetting('cardW', +e.target.value)} />
       </div>
       <div class="option-group">
         <span>Card Height <em>{cardH}rem</em></span>
-        <input type="range" min="16" max="55" step="1" bind:value={cardH} />
+        <input type="range" min="16" max="55" step="1" value={cardH} on:input={e => saveCardSetting('cardH', +e.target.value)} />
       </div>
       <div class="option-group">
         <span>Image Width <em>{cardImg}rem</em></span>
-        <input type="range" min="8" max="35" step="1" bind:value={cardImg} />
+        <input type="range" min="8" max="35" step="1" value={cardImg} on:input={e => saveCardSetting('cardImg', +e.target.value)} />
       </div>
     {/if}
     {#if resolvedView === 'compact'}
       <div class="option-group">
         <span>Thumb Width <em>{compactImg}px</em></span>
-        <input type="range" min="40" max="200" step="4" bind:value={compactImg} />
+        <input type="range" min="40" max="200" step="4" value={compactImg} on:input={e => saveCardSetting('compactImg', +e.target.value)} />
       </div>
       <div class="option-group">
         <span>Row Height <em>{compactH}px</em></span>
-        <input type="range" min="50" max="200" step="4" bind:value={compactH} />
+        <input type="range" min="50" max="200" step="4" value={compactH} on:input={e => saveCardSetting('compactH', +e.target.value)} />
       </div>
     {/if}
     <div class="option-group">
@@ -270,11 +275,11 @@
   </div>
 
   <div class='day-carousel'>
-    {#each orderedDays as day, i}
+    {#each ORDERED_DAYS as day, i}
       {@const isToday = day === TODAY}
       {@const isSelected = day === selectedDay}
       {@const hasContent = activeDays.has(day)}
-      {@const distance = Math.min(i, orderedDays.length - i)}
+      {@const distance = Math.min(i, ORDERED_DAYS.length - i)}
       <button
         class='day-pill'
         class:is-today={isToday}
@@ -294,7 +299,7 @@
     {#if resolvedView === 'guide'}
       {#if textGroups.length}
         <div class='guide-wrap'>
-          <div class='guide-now'>
+          <div class='guide-now' id='day-col-{TODAY}'>
             <div class='guide-now-header'>
               <span class='guide-now-title'>Airtime today</span>
               <span class='guide-now-date'>{new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).replace(' at', ',')}</span>
@@ -302,9 +307,11 @@
             {#if todayGroup}
               <div class='guide-list'>
                 {#each todayGroup.items as { media, airingAt }}
-                  <div class='guide-row' use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
+                  {@const coverImg = media?.coverImage?.extraLarge || media?.coverImage?.medium}
+                  <div class='guide-row' use:trackMouse use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
                     <span class='guide-name'>{anilistClient.title(media)}</span>
                     <span class='guide-time'>{fmtTime(airingAt)}</span>
+                    {#if coverImg}<img class='guide-hover-art' src={coverImg} alt='' />{/if}
                   </div>
                 {/each}
               </div>
@@ -319,9 +326,11 @@
                 <div class='guide-day-name'>{group.day}</div>
                 <div class='guide-list'>
                   {#each group.items as { media, airingAt }}
-                    <div class='guide-row' use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
+                    {@const coverImg = media?.coverImage?.extraLarge || media?.coverImage?.medium}
+                    <div class='guide-row' use:trackMouse use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
                       <span class='guide-name'>{anilistClient.title(media)}</span>
                       <span class='guide-time'>{fmtTime(airingAt)}</span>
+                      {#if coverImg}<img class='guide-hover-art' src={coverImg} alt='' />{/if}
                     </div>
                   {/each}
                 </div>
@@ -668,6 +677,26 @@
   .guide-row:hover { background: rgba(255,255,255,0.04); }
   .guide-row:last-child { border-bottom: none; }
 
+  .guide-hover-art {
+    position: fixed;
+    width: 180px;
+    height: 255px;
+    object-fit: cover;
+    border-radius: 0.6rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transform: scale(0.92) translate(16px, -50%);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    top: var(--my, -9999px);
+    left: var(--mx, -9999px);
+  }
+  .guide-row:hover .guide-hover-art {
+    opacity: 1;
+    transform: scale(1) translate(16px, -50%);
+  }
+
   .guide-name {
     font-size: 0.9rem;
     font-weight: 400;
@@ -688,7 +717,7 @@
     letter-spacing: 0.02em;
   }
 
-  .guide-week { overflow-y: auto; }
+  .guide-week { }
 
   .guide-day-section {
     margin-bottom: 2rem;
