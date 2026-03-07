@@ -255,7 +255,7 @@
      class:view-is-text={isTextMode}
      style={cardVars}>
 
-  <div class:hidden-search={isTextMode}>
+  <div class:hidden-search={isTextMode} class:grid-scroll-wrap={!isTextMode}>
     <SearchPage key={key} search={search}/>
   </div>
 
@@ -559,6 +559,11 @@
   .hidden-search { display: none !important; }
 
   .text-scroll-wrap {
+    overflow-y: auto;
+    height: calc(100vh - 50px);
+  }
+
+  .grid-scroll-wrap {
     overflow-y: auto;
     height: calc(100vh - 50px);
   }
