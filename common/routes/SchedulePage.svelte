@@ -91,10 +91,11 @@
 </script>
 
 <script>
-  import { settings } from '@/modules/settings.js'
-  import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
-
   import { onMount } from 'svelte'
+  import { settings } from '@/modules/settings.js'
+  import { click } from '@/modules/click.js'
+  import { modal } from '@/modules/navigation.js'
+  import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
   let textGroups = [], textVars = null
   const TODAY = DAYS[new Date().getDay()]
@@ -108,7 +109,6 @@
   })
 
   function getDayDates() {
-    const todayIdx = DAYS.indexOf(TODAY)
     const now = new Date()
     return DAYS.reduce((acc, day, i) => {
       const diff = ((i - now.getDay()) + 7) % 7
@@ -120,11 +120,26 @@
   }
   const DAY_DATES = getDayDates()
 
+  function findScrollParent(el) {
+    let node = el.parentElement
+    while (node && node !== document.body) {
+      const style = getComputedStyle(node)
+      if (/auto|scroll/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node
+      node = node.parentElement
+    }
+    return document.documentElement
+  }
+
   function scrollToDay(day) {
     selectedDay = day
     const el = document.getElementById(`day-col-${day}`)
     if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const scroller = findScrollParent(el)
+    const carouselH = document.querySelector('.day-carousel')?.offsetHeight ?? 55
+    const elTop = el.getBoundingClientRect().top
+    const scrollerTop = scroller.getBoundingClientRect?.()?.top ?? 0
+    const target = scroller.scrollTop + (elTop - scrollerTop) - carouselH - 8
+    scroller.scrollTo({ top: target, behavior: 'smooth' })
   }
 
   $: orderedDays = (() => {
@@ -133,7 +148,6 @@
   })()
 
   $: activeDays = new Set(textGroups.map(g => g.day))
-
   $: autoView = screenWidth >= 1400 ? 'list' : screenWidth >= 900 ? 'compact' : 'agenda'
 
   $search.load = (_, __, variables) => {
@@ -141,36 +155,53 @@
     const raw = fetchAllScheduleEntries(variables)
     raw.then(r => {
       textGroups = (r?.data?.Page?.media ?? []).reduce((acc, item) => {
-        if (item.__dayHeader) acc.push({ day: item.day, items: [] })
-        else acc.at(-1)?.items.push(item)
+        if (item.__dayHeader) {
+          acc.push({ day: item.day, items: [] })
+        } else {
+          const node = nextAiring(item?.airingSchedule?.nodes, variables)
+          acc.at(-1)?.items.push({ media: item, airingAt: node?.airingAt ?? null })
+        }
         return acc
       }, [])
     })
     return SectionsManager.wrapResponse(raw, 150)
   }
 
-  const views = ['auto', 'grid', 'compact', 'list', 'agenda']
-  const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda' }
-  const toggleView = () => {
-    const idx = views.indexOf($settings.scheduleView || 'auto')
-    $settings.scheduleView = views[(idx + 1) % views.length]
+  function fmtTime(ts) {
+    if (!ts) return ''
+    const d = new Date(ts * 1000)
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
-  $: currentView = $settings.scheduleView || 'auto'
-  $: nextView = views[(views.indexOf(currentView) + 1) % views.length]
+  $: todayGroup = textGroups.find(g => g.day === TODAY)
+  $: otherGroups = textGroups.filter(g => g.day !== TODAY)
+
+  const VIEWS = ['auto', 'grid', 'compact', 'list', 'agenda', 'guide']
+  const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda', guide: 'Guide' }
+
+  const toggleView = () => {
+    const idx = VIEWS.indexOf($settings.scheduleView || 'auto')
+    $settings.scheduleView = VIEWS[(idx + 1) % VIEWS.length]
+  }
+
+  $: currentView  = $settings.scheduleView || 'auto'
+  $: nextView     = VIEWS[(VIEWS.indexOf(currentView) + 1) % VIEWS.length]
   $: resolvedView = currentView === 'auto' ? autoView : currentView
-  $: isTextMode = resolvedView === 'list' || resolvedView === 'agenda'
-  $: gridCols = $settings.schedCols || 'auto'
+  $: isTextMode   = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide'
+  $: gridCols     = $settings.schedCols || 'auto'
 
-  let cardW = $settings.cardW ?? 38
-  let cardH = $settings.cardH ?? 32
-  let cardImg = $settings.cardImg ?? 17
+  let cardW      = $settings.cardW      ?? 38
+  let cardH      = $settings.cardH      ?? 32
+  let cardImg    = $settings.cardImg    ?? 17
   let compactImg = $settings.compactImg ?? 80
-  let compactH = $settings.compactH ?? 110
+  let compactH   = $settings.compactH   ?? 110
 
-  $: { $settings.cardW = cardW; $settings.cardH = cardH; $settings.cardImg = cardImg; $settings.compactImg = compactImg; $settings.compactH = compactH }
-  $: cardVars = `--card-w:${cardW}rem; --card-h:${cardH}rem; --card-img:${cardImg}rem; --compact-img:${compactImg}px; --compact-card-h:${compactH}px`
-</script>
+  $: $settings.cardW      = cardW
+  $: $settings.cardH      = cardH
+  $: $settings.cardImg    = cardImg
+  $: $settings.compactImg = compactImg
+  $: $settings.compactH   = compactH
+  $: cardVars = `--card-w:${cardW}rem; --card-h:${cardH}rem; --card-img:${cardImg}rem; --compact-img:${compactImg}px; --compact-card-h:${compactH}px`</script>
 
 <div class="view-menu-wrap">
   <button class="view-switch-fab" on:click={toggleView}>
@@ -234,6 +265,10 @@
      class:view-is-text={isTextMode}
      style={cardVars}>
 
+  <div class:hidden-search={isTextMode}>
+    <SearchPage key={key} search={search}/>
+  </div>
+
   <div class='day-carousel'>
     {#each orderedDays as day, i}
       {@const isToday = day === TODAY}
@@ -255,30 +290,69 @@
     {/each}
   </div>
 
-  <div class:hidden-search={isTextMode}>
-    <SearchPage key={key} search={search}/>
-  </div>
-
   {#if isTextMode}
-    <div class='text-grid-wrap' 
-         style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
+    {#if resolvedView === 'guide'}
       {#if textGroups.length}
-        <div class='text-grid' class:single-col={resolvedView === 'agenda'}>
-          {#each textGroups as group}
-            <div class='text-col' id='day-col-{group.day}'>
-              <div class='text-day-header'>{group.day}</div>
-              <div class="items-container">
-                {#each group.items as item}
-                  <ScheduleCard data={item} variables={textVars} />
+        <div class='guide-wrap'>
+          <div class='guide-now'>
+            <div class='guide-now-header'>
+              <span class='guide-now-title'>Airtime today</span>
+              <span class='guide-now-date'>{new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).replace(' at', ',')}</span>
+            </div>
+            {#if todayGroup}
+              <div class='guide-list'>
+                {#each todayGroup.items as { media, airingAt }}
+                  <div class='guide-row' use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
+                    <span class='guide-name'>{anilistClient.title(media)}</span>
+                    <span class='guide-time'>{fmtTime(airingAt)}</span>
+                  </div>
                 {/each}
               </div>
-            </div>
-          {/each}
+            {:else}
+              <div class='guide-empty'>No airings today</div>
+            {/if}
+          </div>
+          <div class='guide-week'>
+            <div class='guide-week-header'>Weekly Schedule</div>
+            {#each otherGroups as group}
+              <div class='guide-day-section' id='day-col-{group.day}'>
+                <div class='guide-day-name'>{group.day}</div>
+                <div class='guide-list'>
+                  {#each group.items as { media, airingAt }}
+                    <div class='guide-row' use:click={() => modal.open(modal.ANIME_DETAILS, media)}>
+                      <span class='guide-name'>{anilistClient.title(media)}</span>
+                      <span class='guide-time'>{fmtTime(airingAt)}</span>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/each}
+          </div>
         </div>
       {:else}
         <div class='text-loading'>Loading schedule…</div>
       {/if}
-    </div>
+    {:else}
+      <div class='text-grid-wrap' 
+           style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
+        {#if textGroups.length}
+          <div class='text-grid' class:single-col={resolvedView === 'agenda'}>
+            {#each textGroups as group}
+              <div class='text-col' id='day-col-{group.day}'>
+                <div class='text-day-header'>{group.day}</div>
+                <div class="items-container">
+                  {#each group.items as { media }}
+                    <ScheduleCard data={media} variables={textVars} {resolvedView} />
+                  {/each}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class='text-loading'>Loading schedule…</div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 
 </div>
@@ -401,74 +475,88 @@
     z-index: 100;
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    background: linear-gradient(to bottom, hsl(var(--dark-color-hsl, 220 13% 9%)) 70%, transparent);
-    backdrop-filter: blur(8px);
+    align-items: stretch;
+    gap: 2px;
+    padding: 6px 12px 0;
+    background: hsl(var(--dark-color-hsl, 220 13% 9%));
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
 
   .day-pill {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
     background: none;
-    border: 1px solid transparent;
-    border-radius: 10rem;
-    padding: 5px 14px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 18px 10px;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-    opacity: calc(1 - clamp(0, var(--dist) * 0.18, 0.72));
-    transform: scale(calc(1 - clamp(0, var(--dist) * 0.04, 0.18)));
+    transition: opacity 0.18s ease, background 0.18s ease;
+    opacity: calc(1 - clamp(0, var(--dist) * 0.13, 0.65));
+    position: relative;
+    flex: 1;
+    max-width: 90px;
   }
+
+  .day-pill::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 10%; right: 10%;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+    transition: background 0.18s ease;
+  }
+
+  .day-pill.is-selected::after { background: #2edf82; }
 
   .day-pill:hover:not(:disabled) {
     opacity: 1 !important;
-    transform: scale(1) !important;
-    background: rgba(255,255,255,0.05);
-    border-color: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
   }
 
-  .day-pill.is-selected {
-    opacity: 1 !important;
-    transform: scale(1) !important;
-    border-color: #2edf82;
-    background: rgba(46, 223, 130, 0.08);
-  }
-
-  .day-pill.no-content { opacity: 0.15 !important; cursor: default; }
+  .day-pill.is-selected { opacity: 1 !important; background: rgba(46,223,130,0.05); }
+  .day-pill.no-content { opacity: 0.18 !important; cursor: default; }
 
   .day-date {
-    font-size: 9px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.25);
+    font-size: 15px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.55);
     line-height: 1;
-    letter-spacing: 0.02em;
+    letter-spacing: -0.01em;
+    transition: color 0.18s ease;
   }
 
-  .day-pill.is-selected .day-date { color: rgba(46, 223, 130, 0.5); }
-  .day-pill.is-today .day-date { color: rgba(255,255,255,0.45); }
+  .day-pill.is-today .day-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: #2edf82;
+    color: #000;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .day-pill.is-selected:not(.is-today) .day-date { color: #2edf82; font-weight: 500; }
 
   .day-short {
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 10px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #fff;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.35);
     line-height: 1;
+    transition: color 0.18s ease;
   }
 
-  .day-pill.is-selected .day-short { color: #2edf82; }
+  .day-pill.is-today .day-short { color: rgba(255,255,255,0.55); }
+  .day-pill.is-selected .day-short { color: rgba(255,255,255,0.7); }
 
-  .today-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #2edf82;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
+  .today-dot { display: none; }
 
   /* GRID SYSTEM */
   /* Hide SearchPage output in list/agenda modes — we render our own grid */
@@ -496,7 +584,7 @@
     margin: 0 auto;
   }
 
-  .text-col { display: flex; flex-direction: column; min-width: 0; width: 100%; scroll-margin-top: 80px; }
+  .text-col { display: flex; flex-direction: column; min-width: 0; width: 100%; scroll-margin-top: 70px; }
   .items-container { display: flex; flex-direction: column; gap: 0.8rem; width: 100%; }
 
   .text-day-header {
@@ -521,5 +609,103 @@
 
   @media (max-width: 800px) {
     .text-grid { grid-template-columns: 1fr !important; }
+  }
+
+  /* GUIDE VIEW */
+  .guide-wrap {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    min-height: 80vh;
+    padding: 2rem;
+  }
+
+  @media (max-width: 900px) {
+    .guide-wrap { grid-template-columns: 1fr; }
+    .guide-now { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 2rem; margin-bottom: 2rem; }
+  }
+
+  .guide-now {
+    border-right: 1px solid rgba(255,255,255,0.07);
+    padding-right: 2rem;
+    margin-right: 2rem;
+  }
+
+  .guide-now-header, .guide-week-header { margin-bottom: 1.5rem; }
+
+  .guide-now-title, .guide-week-header {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+
+  .guide-now-date {
+    display: block;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    margin-top: 0.3rem;
+    font-weight: 400;
+  }
+
+  .guide-list { display: flex; flex-direction: column; }
+
+  .guide-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    gap: 1rem;
+    transition: background 0.12s ease;
+    border-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .guide-row:hover { background: rgba(255,255,255,0.04); }
+  .guide-row:last-child { border-bottom: none; }
+
+  .guide-name {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.75);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .guide-time {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.35);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .guide-week { overflow-y: auto; }
+
+  .guide-day-section {
+    margin-bottom: 2rem;
+    scroll-margin-top: 70px;
+  }
+
+  .guide-day-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  .guide-empty {
+    color: rgba(255,255,255,0.2);
+    font-size: 0.85rem;
+    padding: 1rem 0;
   }
 </style>

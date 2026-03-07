@@ -11,6 +11,7 @@
 
   export let data
   export let variables = null
+  export let resolvedView = null
 
   const SOURCE_LABELS = {
     MANGA: 'Manga', LIGHT_NOVEL: 'Light Novel', ORIGINAL: 'Original',
@@ -18,41 +19,36 @@
     NOVEL: 'Novel', DOUJINSHI: 'Doujinshi', ANIME: 'Anime', WEB_MANGA: 'Web Manga'
   }
 
+  const WATCH_STATUS_LABELS = {
+    CURRENT: 'Watching', PLANNING: 'Plan to Watch', COMPLETED: 'Completed',
+    DROPPED: 'Dropped', PAUSED: 'Paused', REPEATING: 'Rewatching'
+  }
+  const WATCH_STATUS_COLORS = {
+    CURRENT: '#2edf82', PLANNING: '#5ba4f5', COMPLETED: '#888',
+    DROPPED: '#ff3d64', PAUSED: '#f5a623', REPEATING: '#a78bfa'
+  }
+
   let media = data
   let airingInterval, _airingAt = null
   let mouseX = 0, mouseY = 0
 
-  mediaCache.subscribe(v => { if (v?.[media?.id] && JSON.stringify(v[media.id]) !== JSON.stringify(media)) media = v[media.id] })
+  mediaCache.subscribe(v => {
+    if (v?.[media?.id] && JSON.stringify(v[media.id]) !== JSON.stringify(media)) media = v[media.id]
+  })
 
-  $: airingInfo   = getAiringInfo(_airingAt)
-  $: mediaColor   = media?.coverImage?.color || '#333344'
-  $: accentColor  = getAccentColor(mediaColor)
-  $: isTextView   = $settings.scheduleView === 'list' || $settings.scheduleView === 'agenda'
-  $: episodeInfo  = (_airingAt?.time && typeof _airingAt.time !== 'string')
+  $: activeView    = resolvedView ?? $settings.resolvedScheduleView ?? $settings.scheduleView ?? 'grid'
+  $: isTextView    = activeView === 'list' || activeView === 'agenda'
+  $: airingInfo    = getAiringInfo(_airingAt)
+  $: mediaColor    = media?.coverImage?.color || '#333344'
+  $: accentColor   = getAccentColor(mediaColor)
+  $: episodeInfo   = (_airingAt?.time && typeof _airingAt.time !== 'string')
       ? { episode: airingInfo?.episode || 'Ep 1', time: airingInfo?.time || '' }
       : null
-  $: ranking      = media?.popularity  ? '#' + media.popularity : null
-  $: rating       = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
-  $: sequelInfo   = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')?.node?.title?.userPreferred
-  $: sourceInfo   = SOURCE_LABELS[media?.source] ?? null
-  $: watchStatus  = media?.mediaListEntry?.status ?? null
-
-  const WATCH_STATUS_LABELS = {
-    CURRENT:   'Watching',
-    PLANNING:  'Plan to Watch',
-    COMPLETED: 'Completed',
-    DROPPED:   'Dropped',
-    PAUSED:    'Paused',
-    REPEATING: 'Rewatching'
-  }
-  const WATCH_STATUS_COLORS = {
-    CURRENT:   '#2edf82',
-    PLANNING:  '#5ba4f5',
-    COMPLETED: '#888',
-    DROPPED:   '#ff3d64',
-    PAUSED:    '#f5a623',
-    REPEATING: '#a78bfa'
-  }
+  $: ranking       = media?.popularity  ? '#' + media.popularity : null
+  $: rating        = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
+  $: sequelInfo    = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')?.node?.title?.userPreferred
+  $: sourceInfo    = SOURCE_LABELS[media?.source] ?? null
+  $: watchStatus   = media?.mediaListEntry?.status ?? null
 
   onMount(() => {
     _airingAt = media && variables?.scheduleList && airingAt(media, variables)
@@ -65,11 +61,11 @@
 </script>
 
 {#if data?.__dayHeader}
-  <div class='day-header-label'>{data.day}</div>
+  <div class='day-header-label' id='day-col-{data.day}'>{data.day}</div>
 {:else}
 <div class='schedule-card-ct'
-  class:view-grid={$settings.scheduleView === 'grid' || !$settings.scheduleView}
-  class:view-compact={$settings.scheduleView === 'compact'}
+  class:view-grid={activeView === 'grid'}
+  class:view-compact={activeView === 'compact'}
   class:view-text={isTextView}
   on:mousemove={onMouseMove}
   use:click={viewMedia}>
@@ -191,7 +187,7 @@
   .description { margin:0; font-size:1.1rem; font-weight:300; line-height:1.75; color:rgba(205,205,220,0.45); }
   .genres { display:flex; flex-wrap:wrap; gap:0.55rem; margin-top:auto; padding-top:0.7rem; border-top:1px solid rgba(255,255,255,0.06); }
   .genre { background:var(--media-color); color:rgba(255,255,255,0.9); padding:0.28rem 0.8rem; border-radius:10rem; font-size:0.9rem; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; opacity:0.82; }
-  .day-header-label { width:100%; padding:1.6rem 1.2rem 0.5rem; font-size:1.05rem; font-weight:700; color:rgba(190,190,210,0.45); text-transform:uppercase; letter-spacing:0.12em; }
+  .day-header-label { width:100%; padding:1.6rem 1.2rem 0.5rem; font-size:1.05rem; font-weight:700; color:rgba(190,190,210,0.45); text-transform:uppercase; letter-spacing:0.12em; scroll-margin-top: 70px; }
 
   /* big */
   :global(.view-grid) .schedule-card { width:var(--card-w, 38rem); height:var(--card-h, 32rem); }
