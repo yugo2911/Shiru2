@@ -109,44 +109,94 @@
     return SectionsManager.wrapResponse(raw, 150)
   }
 
-  const views = ['big', 'small', 'text', 'single']
+  const views = ['grid', 'compact', 'list', 'agenda']
+  const VIEW_LABELS = { grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda' }
   const toggleView = () => {
-    const idx = views.indexOf($settings.scheduleView || 'big')
+    const idx = views.indexOf($settings.scheduleView || 'grid')
     $settings.scheduleView = views[(idx + 1) % views.length]
   }
 
-  $: isTextMode = $settings.scheduleView === 'text' || $settings.scheduleView === 'single'
+  $: currentView = $settings.scheduleView || 'grid'
+  $: nextView = views[(views.indexOf(currentView) + 1) % views.length]
+  $: isTextMode = currentView === 'list' || currentView === 'agenda'
+  $: gridCols = $settings.schedCols || 'auto'
 </script>
 
-<button class="view-switch-fab" on:click={toggleView}>
-  {$settings.scheduleView || 'big'}
-</button>
-
-<SearchPage key={key} search={search}/>
-
-{#if isTextMode && textGroups.length}
-  <div class='text-grid-wrap'>
-    <div class='text-grid' class:single-col={$settings.scheduleView === 'single'}>
-      {#each textGroups as group}
-        <div class='text-col'>
-          <div class='text-day-header'>{group.day}</div>
-          {#each group.items as item}
-            <ScheduleCard data={item} variables={textVars} />
-          {/each}
-        </div>
-      {/each}
+<div class="view-menu-wrap">
+  <button class="view-switch-fab" on:click={toggleView}>
+    <span class="fab-current">{VIEW_LABELS[currentView]}</span>
+    <span class="fab-arrow">→ {VIEW_LABELS[nextView]}</span>
+  </button>
+  
+  <div class="view-options">
+    <div class="option-group">
+      <span>Layout Mode</span>
+      <div class="row">
+        <button class:active={gridCols === 'auto'} on:click={() => $settings.schedCols = 'auto'}>Auto</button>
+        <button class:active={gridCols === 1} on:click={() => $settings.schedCols = 1}>1 Col</button>
+        <button class:active={gridCols === 2} on:click={() => $settings.schedCols = 2}>2 Col</button>
+      </div>
     </div>
+
+    <div class="option-group">
+      <span>Visual Tweaks</span>
+      <div class="row vertical">
+        <button class:active={$settings.compactCards} on:click={() => $settings.compactCards = !$settings.compactCards}>
+          {$settings.compactCards ? 'Normal Size' : 'Compact Mode'}
+        </button>
+        <button class:active={$settings.hideStats} on:click={() => $settings.hideStats = !$settings.hideStats}>
+          {$settings.hideStats ? 'Show Stats' : 'Hide Stats'}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class:hidden-search={isTextMode}>
+  <SearchPage key={key} search={search}/>
+</div>
+
+{#if isTextMode}
+  <div class='text-grid-wrap' 
+       class:hide-stats={$settings.hideStats}
+       class:compact-mode={$settings.compactCards}
+       style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
+    {#if textGroups.length}
+      <div class='text-grid' class:single-col={$settings.scheduleView === 'agenda'}>
+        {#each textGroups as group}
+          <div class='text-col'>
+            <div class='text-day-header'>{group.day}</div>
+            <div class="items-container">
+              {#each group.items as item}
+                <ScheduleCard data={item} variables={textVars} />
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class='text-loading'>Loading schedule…</div>
+    {/if}
   </div>
 {/if}
 
 <style>
-  .view-switch-fab {
+  /* MENU SYSTEM */
+  .view-menu-wrap {
     position: fixed;
     bottom: 60px;
     left: 60px;
     z-index: 9999;
-    padding: 15px 25px;
-    font-size: 32px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+
+  .view-switch-fab {
+    position: relative;
+    z-index: 10;
+    padding: 12px 20px;
+    font-size: 13px;
     font-weight: bold;
     text-transform: uppercase;
     background: #2edf82;
@@ -154,33 +204,129 @@
     border: none;
     border-radius: 50px;
     cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 110px;
   }
 
-  .text-grid-wrap :global(.schedule-grid) {
-    display: none !important;
+  .fab-current {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .fab-arrow {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 0.04em;
+  }
+
+  .view-options {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    min-width: 220px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    position: relative;
+  }
+
+  /* Hover Bridge */
+  .view-options::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 25px;
+  }
+
+  .view-menu-wrap:hover .view-options {
+    display: flex;
+  }
+
+  .option-group { display: flex; flex-direction: column; gap: 6px; }
+  .option-group span { font-size: 9px; text-transform: uppercase; color: #555; font-weight: 800; letter-spacing: 1px; }
+  .row { display: flex; gap: 4px; }
+  .row.vertical { flex-direction: column; }
+  
+  .view-options button {
+    background: #1a1a1a;
+    border: 1px solid transparent;
+    color: #888;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .view-options button.active {
+    border-color: #2edf82;
+    color: #2edf82;
+    background: rgba(46, 223, 130, 0.05);
+  }
+
+  /* GRID SYSTEM */
+  /* Hide SearchPage output in list/agenda modes — we render our own grid */
+  .hidden-search { display: none !important; }
+
+  .text-loading {
+    padding: 3rem;
+    text-align: center;
+    color: rgba(190,190,210,0.3);
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
   }
 
   .text-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 0 0.5rem;
-    padding: 0.5rem;
+    grid-template-columns: var(--cols);
+    gap: 1.5rem;
+    padding: 1rem;
     align-items: start;
   }
-  .text-grid.single-col { grid-template-columns: minmax(280px, 600px); justify-content: center; }
 
-  .text-col {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+  .text-grid.single-col {
+    grid-template-columns: 1fr;
+    max-width: 780px;
+    margin: 0 auto;
   }
 
+  .text-col { display: flex; flex-direction: column; min-width: 0; }
+  .items-container { display: flex; flex-direction: column; gap: 0.8rem; }
+
   .text-day-header {
-    padding: 1rem 0.6rem 0.4rem;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: rgba(190, 190, 210, 0.45);
+    padding: 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #2edf82;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    border-bottom: 1px solid #222;
+    margin-bottom: 1rem;
+  }
+
+  /* GLOBAL CARD OVERRIDES */
+  .hide-stats :global(.stats-col) { display: none !important; }
+
+  .compact-mode :global(.schedule-card) { height: 75px !important; }
+  .compact-mode :global(.img-col) { flex: 0 0 55px !important; }
+  .compact-mode :global(.description-wrap), 
+  .compact-mode :global(.genres),
+  .compact-mode :global(.subtitle) { display: none !important; }
+  .compact-mode :global(.content-col) { padding: 0.2rem 0.8rem !important; justify-content: center !important; }
+
+  @media (max-width: 800px) {
+    .text-grid { grid-template-columns: 1fr !important; }
   }
 </style>

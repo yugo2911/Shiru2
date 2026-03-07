@@ -27,7 +27,7 @@
   $: airingInfo   = getAiringInfo(_airingAt)
   $: mediaColor   = media?.coverImage?.color || '#333344'
   $: accentColor  = getAccentColor(mediaColor)
-  $: isTextView   = $settings.scheduleView === 'text' || $settings.scheduleView === 'single'
+  $: isTextView   = $settings.scheduleView === 'list' || $settings.scheduleView === 'agenda'
   $: episodeInfo  = (_airingAt?.time && typeof _airingAt.time !== 'string')
       ? { episode: airingInfo?.episode || 'Ep 1', time: airingInfo?.time || '' }
       : null
@@ -35,6 +35,24 @@
   $: rating       = media?.averageScore ? Math.round(media.averageScore / 10) * 10 : null
   $: sequelInfo   = media?.relations?.edges?.find(e => e.relationType === 'SEQUEL')?.node?.title?.userPreferred
   $: sourceInfo   = SOURCE_LABELS[media?.source] ?? null
+  $: watchStatus  = media?.mediaListEntry?.status ?? null
+
+  const WATCH_STATUS_LABELS = {
+    CURRENT:   'Watching',
+    PLANNING:  'Plan to Watch',
+    COMPLETED: 'Completed',
+    DROPPED:   'Dropped',
+    PAUSED:    'Paused',
+    REPEATING: 'Rewatching'
+  }
+  const WATCH_STATUS_COLORS = {
+    CURRENT:   '#2edf82',
+    PLANNING:  '#5ba4f5',
+    COMPLETED: '#888',
+    DROPPED:   '#ff3d64',
+    PAUSED:    '#f5a623',
+    REPEATING: '#a78bfa'
+  }
 
   onMount(() => {
     _airingAt = media && variables?.scheduleList && airingAt(media, variables)
@@ -50,8 +68,8 @@
   <div class='day-header-label'>{data.day}</div>
 {:else}
 <div class='schedule-card-ct'
-  class:view-big={$settings.scheduleView === 'big'}
-  class:view-small={$settings.scheduleView === 'small'}
+  class:view-grid={$settings.scheduleView === 'grid' || !$settings.scheduleView}
+  class:view-compact={$settings.scheduleView === 'compact'}
   class:view-text={isTextView}
   on:mousemove={onMouseMove}
   use:click={viewMedia}>
@@ -75,6 +93,11 @@
           <div class='countdown'>{episodeInfo?.time ?? 'TBA'}</div>
         </div>
         <div class='stats-col'>
+          {#if watchStatus && WATCH_STATUS_LABELS[watchStatus]}
+            <div class='watch-chip' style='--chip-color:{WATCH_STATUS_COLORS[watchStatus]}'>
+              {WATCH_STATUS_LABELS[watchStatus]}
+            </div>
+          {/if}
           {#if rating}
             <div class='stat-row'>
               <svg viewBox='0 0 512 512' class='stat-icon stat-icon--score'>
@@ -148,6 +171,19 @@
   .stat-icon { width:2rem; height:2rem; flex-shrink:0; opacity:0.9; }
   .stat-icon--score { color:#2edf82; }
   .stat-icon--rank  { color:#ff3d64; }
+  .watch-chip {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--chip-color);
+    border: 1px solid var(--chip-color);
+    border-radius: 10rem;
+    padding: 0.2rem 0.6rem;
+    opacity: 0.9;
+    white-space: nowrap;
+  }
+
   .stat-val { font-size:1.35rem; font-weight:700; color:rgba(255,255,255,0.92); letter-spacing:-0.01em; }
   .mobile-title { display:none; }
   .subtitle { font-size:0.85rem; font-weight:400; color:rgba(190,190,210,0.25); margin-top:1.6rem; letter-spacing:0.01em; }
@@ -158,28 +194,28 @@
   .day-header-label { width:100%; padding:1.6rem 1.2rem 0.5rem; font-size:1.05rem; font-weight:700; color:rgba(190,190,210,0.45); text-transform:uppercase; letter-spacing:0.12em; }
 
   /* big */
-  :global(.view-big) .schedule-card { width:64rem; height:42rem; }
-  :global(.view-big) .img-col { flex:0 0 32rem; width:32rem; }
+  :global(.view-grid) .schedule-card { width:64rem; height:42rem; }
+  :global(.view-grid) .img-col { flex:0 0 32rem; width:32rem; }
 
   /* small + mobile shared rules */
-  :global(.view-small).schedule-card-ct { padding:0.5rem 0.6rem; }
+  :global(.view-compact).schedule-card-ct { padding:0.5rem 0.6rem; }
 
   /* Shared compact layout (small view + mobile) */
-  :global(.view-small) .schedule-card {
+  :global(.view-compact) .schedule-card {
     width:100%; height:auto; flex-direction:row; align-items:center; border-radius:0.7rem;
   }
-  :global(.view-small) .img-col { flex:0 0 80px; width:80px; height:110px; border-radius:6px 0 0 6px; }
-  :global(.view-small) .cover-meta,
-  :global(.view-small) .stats-col, :global(.view-small) .subtitle,
-  :global(.view-small) .description-wrap, :global(.view-small) .genres { display:none; }
-  :global(.view-small) .cover-link { flex:1; height:100%; }
-  :global(.view-small) .content-col { padding:12px 14px; gap:4px; justify-content:center; }
-  :global(.view-small) .top-row { flex-direction:column; gap:0; }
-  :global(.view-small) .airing-block { flex-direction:row; align-items:baseline; gap:6px; }
-  :global(.view-small) .episode-label,
-  :global(.view-small) .countdown { font-size:14px; color:rgba(190,190,210,0.55); letter-spacing:0; text-transform:none; line-height:1.3; }
-  :global(.view-small) .countdown { font-weight:400; }
-  :global(.view-small) .mobile-title { display:block; font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; line-height:1.2; }
+  :global(.view-compact) .img-col { flex:0 0 80px; width:80px; height:110px; border-radius:6px 0 0 6px; }
+  :global(.view-compact) .cover-meta,
+  :global(.view-compact) .stats-col, :global(.view-compact) .subtitle,
+  :global(.view-compact) .description-wrap, :global(.view-compact) .genres { display:none; }
+  :global(.view-compact) .cover-link { flex:1; height:100%; }
+  :global(.view-compact) .content-col { padding:12px 14px; gap:4px; justify-content:center; }
+  :global(.view-compact) .top-row { flex-direction:column; gap:0; }
+  :global(.view-compact) .airing-block { flex-direction:row; align-items:baseline; gap:6px; }
+  :global(.view-compact) .episode-label,
+  :global(.view-compact) .countdown { font-size:14px; color:rgba(190,190,210,0.55); letter-spacing:0; text-transform:none; line-height:1.3; }
+  :global(.view-compact) .countdown { font-weight:400; }
+  :global(.view-compact) .mobile-title { display:block; font-size:15px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; line-height:1.2; }
 
   /* text / single */
   :global(.view-text).schedule-card-ct { padding:0.25rem 0.4rem; }
