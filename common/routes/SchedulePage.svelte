@@ -392,7 +392,7 @@
     font-size: 13px;
     font-weight: bold;
     text-transform: uppercase;
-    background: #2edf82;
+    background: var(--accent-color);
     color: #000;
     border: none;
     border-radius: 50px;
@@ -465,21 +465,21 @@
   }
 
   .view-options button.active {
-    border-color: #2edf82;
-    color: #2edf82;
-    background: rgba(46, 223, 130, 0.05);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color), transparent 95%);
   }
 
   .view-options input[type="range"] {
     width: 100%;
-    accent-color: #2edf82;
+    accent-color: var(--accent-color);
     cursor: pointer;
     margin: 2px 0;
   }
 
   .option-group em {
     font-style: normal;
-    color: #2edf82;
+    color: var(--accent-color);
     font-size: 9px;
     font-weight: 700;
     margin-left: 4px;
@@ -525,14 +525,14 @@
     transition: background 0.18s ease;
   }
 
-  .day-pill.is-selected::after { background: #2edf82; }
+  .day-pill.is-selected::after { background: var(--accent-color); }
 
   .day-pill:hover:not(:disabled) {
     opacity: 1 !important;
     background: rgba(255,255,255,0.04);
   }
 
-  .day-pill.is-selected { opacity: 1 !important; background: rgba(46,223,130,0.05); }
+  .day-pill.is-selected { opacity: 1 !important; background: color-mix(in srgb, var(--accent-color), transparent 95%); }
   .day-pill.no-content { opacity: 0.18 !important; cursor: default; }
 
   .day-date {
@@ -550,14 +550,14 @@
     justify-content: center;
     width: 26px;
     height: 26px;
-    background: #2edf82;
+    background: var(--accent-color);
     color: #000;
     border-radius: 50%;
     font-size: 13px;
     font-weight: 700;
   }
 
-  .day-pill.is-selected:not(.is-today) .day-date { color: #2edf82; font-weight: 500; }
+  .day-pill.is-selected:not(.is-today) .day-date { color: var(--accent-color); font-weight: 500; }
 
   .day-short {
     font-size: 10px;
@@ -617,7 +617,7 @@
     padding: 1rem 0;
     font-size: 1.1rem;
     font-weight: 900;
-    color: #2edf82;
+    color: var(--accent-color);
     text-transform: uppercase;
     border-bottom: 1px solid #222;
     margin-bottom: 1rem;
