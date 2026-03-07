@@ -136,26 +136,11 @@
     return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
-  function findScrollParent(el) {
-    let node = el.parentElement
-    while (node && node !== document.body) {
-      const style = getComputedStyle(node)
-      if (/auto|scroll/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node
-      node = node.parentElement
-    }
-    return document.documentElement
-  }
-
   function scrollToDay(day) {
     selectedDay = day
     const el = document.getElementById(`day-col-${day}`)
     if (!el) return
-    const scroller  = findScrollParent(el)
-    const carouselH = document.querySelector('.day-carousel')?.offsetHeight ?? 55
-    const elTop     = el.getBoundingClientRect().top
-    const scrollerTop = scroller.getBoundingClientRect?.()?.top ?? 0
-    const target    = scroller.scrollTop + (elTop - scrollerTop) - carouselH - 8
-    scroller.scrollTo({ top: target, behavior: 'smooth' })
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   $: activeDays  = new Set(textGroups.map(g => g.day))
@@ -635,6 +620,7 @@
   }
 
   .guide-now {
+    scroll-margin-top: 70px;
     border-right: 1px solid rgba(255,255,255,0.07);
     padding-right: 2rem;
     margin-right: 2rem;
