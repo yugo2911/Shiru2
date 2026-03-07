@@ -106,11 +106,17 @@
   let selectedDay    = TODAY
   let screenWidth    = typeof window !== 'undefined' ? window.innerWidth : 1280
 
+  let now = new Date()
+
   onMount(() => {
     screenWidth = window.innerWidth
     const onResize = () => { screenWidth = window.innerWidth }
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    const timeInterval = setInterval(() => { now = new Date() }, 1000)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      clearInterval(timeInterval)
+    }
   })
 
   function getDayDates() {
@@ -288,7 +294,7 @@
           <div class='guide-now' id='day-col-{TODAY}'>
             <div class='guide-now-header'>
               <span class='guide-now-title'>Airtime today</span>
-              <span class='guide-now-date'>{new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).replace(' at', ',')}</span>
+              <span class='guide-now-date'>{now.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) + ', ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false })}</span>
             </div>
             {#if todayGroup}
               <div class='guide-list'>
