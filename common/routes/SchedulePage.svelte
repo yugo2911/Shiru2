@@ -98,6 +98,9 @@
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
   const AUTO_BREAKPOINTS = { wide: 1400, mid: 900 }
+  // Below this width, grid is force-overridden to compact; below MOBILE_SM, compact → agenda
+  const MOBILE_LG = 900
+  const MOBILE_SM = 600
 
   let textGroups = [], textVars = null
   const TODAY        = DAYS[new Date().getDay()]
@@ -174,7 +177,7 @@
     return SectionsManager.wrapResponse(raw, 150)
   }
 
-  const VIEWS      = ['auto', 'grid', 'compact', 'list', 'agenda', 'guide']
+  const VIEWS       = ['auto', 'grid', 'compact', 'list', 'agenda', 'guide']
   const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda', guide: 'Guide' }
 
   const toggleView = () => {
@@ -182,11 +185,22 @@
     $settings.scheduleView = VIEWS[(idx + 1) % VIEWS.length]
   }
 
-  $: currentView  = $settings.scheduleView || 'auto'
-  $: nextView     = VIEWS[(VIEWS.indexOf(currentView) + 1) % VIEWS.length]
-  $: resolvedView = currentView === 'auto' ? autoView : currentView
-  $: isTextMode   = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide' || resolvedView === 'compact'
-  $: gridCols     = $settings.schedCols || 'auto'
+  $: currentView = $settings.scheduleView || 'auto'
+  $: nextView    = VIEWS[(VIEWS.indexOf(currentView) + 1) % VIEWS.length]
+
+  // Resolve the chosen view, then clamp it for the current screen size.
+  // grid   → forced to compact below 900px
+  // compact → forced to agenda  below 600px
+  // All other views (list, agenda, guide) are never overridden.
+  $: resolvedView = (() => {
+    const chosen = currentView === 'auto' ? autoView : currentView
+    if (screenWidth < MOBILE_SM && (chosen === 'grid' || chosen === 'compact')) return 'agenda'
+    if (screenWidth < MOBILE_LG && chosen === 'grid') return 'compact'
+    return chosen
+  })()
+
+  $: isTextMode = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide' || resolvedView === 'compact'
+  $: gridCols   = $settings.schedCols || 'auto'
 
   $: cardW      = $settings.cardW      ?? 38
   $: cardH      = $settings.cardH      ?? 32
