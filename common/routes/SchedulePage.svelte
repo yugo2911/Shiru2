@@ -630,6 +630,8 @@
     gap: 0;
     min-height: 80vh;
     padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
   }
 
   @media (max-width: 900px) {
@@ -648,7 +650,7 @@
 
   .guide-now-title, .guide-week-header {
     display: block;
-    font-size: 1.5rem;
+    font-size: 2.5rem;
     font-weight: 700;
     color: #fff;
     letter-spacing: -0.02em;
@@ -656,7 +658,7 @@
 
   .guide-now-date {
     display: block;
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     color: rgba(255,255,255,0.3);
     margin-top: 0.3rem;
     font-weight: 400;
@@ -702,7 +704,7 @@
   }
 
   .guide-name {
-    font-size: 0.9rem;
+    font-size: 1.3rem;
     font-weight: 400;
     color: rgba(255,255,255,0.75);
     flex: 1;
@@ -713,7 +715,7 @@
   }
 
   .guide-time {
-    font-size: 0.85rem;
+    font-size: 1.2rem;
     font-weight: 500;
     color: rgba(255,255,255,0.35);
     flex-shrink: 0;
@@ -729,7 +731,7 @@
   }
 
   .guide-day-name {
-    font-size: 1.3rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: rgba(255,255,255,0.85);
     margin-bottom: 0.75rem;
