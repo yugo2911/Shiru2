@@ -194,17 +194,17 @@
   .day-header-label { width:100%; padding:1.6rem 1.2rem 0.5rem; font-size:1.05rem; font-weight:700; color:rgba(190,190,210,0.45); text-transform:uppercase; letter-spacing:0.12em; }
 
   /* big */
-  :global(.view-grid) .schedule-card { width:36rem; height:30rem; }
-  :global(.view-grid) .img-col { flex:0 0 16rem; width:16rem; }
+  :global(.view-grid) .schedule-card { width:var(--card-w, 38rem); height:var(--card-h, 32rem); }
+  :global(.view-grid) .img-col { flex:0 0 var(--card-img, 17rem); width:var(--card-img, 17rem); }
 
   /* small + mobile shared rules */
   :global(.view-compact).schedule-card-ct { padding:0.5rem 0.6rem; }
 
   /* Shared compact layout (small view + mobile) */
   :global(.view-compact) .schedule-card {
-    width:100%; height:auto; flex-direction:row; align-items:center; border-radius:0.7rem;
+    width:100%; height:var(--compact-h, auto); flex-direction:row; align-items:center; border-radius:0.7rem;
   }
-  :global(.view-compact) .img-col { flex:0 0 80px; width:80px; height:110px; border-radius:6px 0 0 6px; }
+  :global(.view-compact) .img-col { flex:0 0 var(--compact-img, 80px); width:var(--compact-img, 80px); height:var(--compact-card-h, 110px); border-radius:6px 0 0 6px; }
   :global(.view-compact) .cover-meta,
   :global(.view-compact) .stats-col, :global(.view-compact) .subtitle,
   :global(.view-compact) .description-wrap, :global(.view-compact) .genres { display:none; }

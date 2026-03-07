@@ -94,27 +94,47 @@
   import { settings } from '@/modules/settings.js'
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
+  import { onMount } from 'svelte'
+
   let textGroups = [], textVars = null
   const TODAY = DAYS[new Date().getDay()]
   let selectedDay = TODAY
+  let screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+
+  onMount(() => {
+    const onResize = () => { screenWidth = window.innerWidth }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  })
+
+  function getDayDates() {
+    const todayIdx = DAYS.indexOf(TODAY)
+    const now = new Date()
+    return DAYS.reduce((acc, day, i) => {
+      const diff = ((i - now.getDay()) + 7) % 7
+      const d = new Date(now)
+      d.setDate(now.getDate() + diff)
+      acc[day] = d.getDate()
+      return acc
+    }, {})
+  }
+  const DAY_DATES = getDayDates()
 
   function scrollToDay(day) {
     selectedDay = day
     const el = document.getElementById(`day-col-${day}`)
     if (!el) return
-    // Use scrollIntoView — works regardless of scroll container
-    // scroll-margin-top on .text-col handles the sticky carousel offset
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // Days ordered starting from today (same order as the schedule)
   $: orderedDays = (() => {
     const todayIdx = DAYS.indexOf(TODAY)
     return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
   })()
 
-  // Which days actually have content
   $: activeDays = new Set(textGroups.map(g => g.day))
+
+  $: autoView = screenWidth >= 1400 ? 'list' : screenWidth >= 900 ? 'compact' : 'agenda'
 
   $search.load = (_, __, variables) => {
     textVars = variables
@@ -129,22 +149,32 @@
     return SectionsManager.wrapResponse(raw, 150)
   }
 
-  const views = ['grid', 'compact', 'list', 'agenda']
-  const VIEW_LABELS = { grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda' }
+  const views = ['auto', 'grid', 'compact', 'list', 'agenda']
+  const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda' }
   const toggleView = () => {
-    const idx = views.indexOf($settings.scheduleView || 'grid')
+    const idx = views.indexOf($settings.scheduleView || 'auto')
     $settings.scheduleView = views[(idx + 1) % views.length]
   }
 
-  $: currentView = $settings.scheduleView || 'grid'
+  $: currentView = $settings.scheduleView || 'auto'
   $: nextView = views[(views.indexOf(currentView) + 1) % views.length]
-  $: isTextMode = currentView === 'list' || currentView === 'agenda'
+  $: resolvedView = currentView === 'auto' ? autoView : currentView
+  $: isTextMode = resolvedView === 'list' || resolvedView === 'agenda'
   $: gridCols = $settings.schedCols || 'auto'
+
+  let cardW = $settings.cardW ?? 38
+  let cardH = $settings.cardH ?? 32
+  let cardImg = $settings.cardImg ?? 17
+  let compactImg = $settings.compactImg ?? 80
+  let compactH = $settings.compactH ?? 110
+
+  $: { $settings.cardW = cardW; $settings.cardH = cardH; $settings.cardImg = cardImg; $settings.compactImg = compactImg; $settings.compactH = compactH }
+  $: cardVars = `--card-w:${cardW}rem; --card-h:${cardH}rem; --card-img:${cardImg}rem; --compact-img:${compactImg}px; --compact-card-h:${compactH}px`
 </script>
 
 <div class="view-menu-wrap">
   <button class="view-switch-fab" on:click={toggleView}>
-    <span class="fab-current">{VIEW_LABELS[currentView]}</span>
+    <span class="fab-current">{VIEW_LABELS[currentView]}{currentView === 'auto' ? ` · ${VIEW_LABELS[resolvedView]}` : ''}</span>
     <span class="fab-arrow">→ {VIEW_LABELS[nextView]}</span>
   </button>
   
@@ -160,7 +190,30 @@
         </div>
       </div>
     {/if}
-
+    {#if resolvedView === 'grid'}
+      <div class="option-group">
+        <span>Card Width <em>{cardW}rem</em></span>
+        <input type="range" min="20" max="60" step="1" bind:value={cardW} />
+      </div>
+      <div class="option-group">
+        <span>Card Height <em>{cardH}rem</em></span>
+        <input type="range" min="16" max="55" step="1" bind:value={cardH} />
+      </div>
+      <div class="option-group">
+        <span>Image Width <em>{cardImg}rem</em></span>
+        <input type="range" min="8" max="35" step="1" bind:value={cardImg} />
+      </div>
+    {/if}
+    {#if resolvedView === 'compact'}
+      <div class="option-group">
+        <span>Thumb Width <em>{compactImg}px</em></span>
+        <input type="range" min="40" max="200" step="4" bind:value={compactImg} />
+      </div>
+      <div class="option-group">
+        <span>Row Height <em>{compactH}px</em></span>
+        <input type="range" min="50" max="200" step="4" bind:value={compactH} />
+      </div>
+    {/if}
     <div class="option-group">
       <span>Cards</span>
       <div class="row vertical">
@@ -177,13 +230,10 @@
 
 <div class='schedule-root'
      class:hide-stats={$settings.hideStats}
-     class:compact-cards={$settings.compactCards}>
+     class:compact-cards={$settings.compactCards}
+     class:view-is-text={isTextMode}
+     style={cardVars}>
 
-<div class:hidden-search={isTextMode}>
-  <SearchPage key={key} search={search}/>
-</div>
-
-{#if isTextMode}
   <div class='day-carousel'>
     {#each orderedDays as day, i}
       {@const isToday = day === TODAY}
@@ -197,35 +247,41 @@
         class:no-content={!hasContent}
         style="--dist:{distance}"
         on:click={() => scrollToDay(day)}
-        disabled={!hasContent}>
+        disabled={!hasContent && isTextMode}>
+        <span class='day-date'>{DAY_DATES[day]}</span>
         <span class='day-short'>{day.slice(0, 3)}</span>
         {#if isToday}<span class='today-dot'></span>{/if}
       </button>
     {/each}
   </div>
 
-  <div class='text-grid-wrap' 
-       style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
-    {#if textGroups.length}
-      <div class='text-grid' class:single-col={$settings.scheduleView === 'agenda'}>
-        {#each textGroups as group}
-          <div class='text-col' id='day-col-{group.day}'>
-            <div class='text-day-header'>{group.day}</div>
-            <div class="items-container">
-              {#each group.items as item}
-                <ScheduleCard data={item} variables={textVars} />
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div class='text-loading'>Loading schedule…</div>
-    {/if}
+  <div class:hidden-search={isTextMode}>
+    <SearchPage key={key} search={search}/>
   </div>
-{/if}
 
-</div><!-- end .schedule-root -->
+  {#if isTextMode}
+    <div class='text-grid-wrap' 
+         style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
+      {#if textGroups.length}
+        <div class='text-grid' class:single-col={resolvedView === 'agenda'}>
+          {#each textGroups as group}
+            <div class='text-col' id='day-col-{group.day}'>
+              <div class='text-day-header'>{group.day}</div>
+              <div class="items-container">
+                {#each group.items as item}
+                  <ScheduleCard data={item} variables={textVars} />
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class='text-loading'>Loading schedule…</div>
+      {/if}
+    </div>
+  {/if}
+
+</div>
 
 <style>
   /* MENU SYSTEM */
@@ -324,7 +380,21 @@
     background: rgba(46, 223, 130, 0.05);
   }
 
-  /* DAY CAROUSEL */
+  .view-options input[type="range"] {
+    width: 100%;
+    accent-color: #2edf82;
+    cursor: pointer;
+    margin: 2px 0;
+  }
+
+  .option-group em {
+    font-style: normal;
+    color: #2edf82;
+    font-size: 9px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+
   .day-carousel {
     position: sticky;
     top: 0;
@@ -342,11 +412,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     background: none;
     border: 1px solid transparent;
     border-radius: 10rem;
-    padding: 6px 14px;
+    padding: 5px 14px;
     cursor: pointer;
     transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     opacity: calc(1 - clamp(0, var(--dist) * 0.18, 0.72));
@@ -369,6 +439,17 @@
 
   .day-pill.no-content { opacity: 0.15 !important; cursor: default; }
 
+  .day-date {
+    font-size: 9px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.25);
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .day-pill.is-selected .day-date { color: rgba(46, 223, 130, 0.5); }
+  .day-pill.is-today .day-date { color: rgba(255,255,255,0.45); }
+
   .day-short {
     font-size: 11px;
     font-weight: 800;
@@ -379,7 +460,6 @@
   }
 
   .day-pill.is-selected .day-short { color: #2edf82; }
-  .day-pill.is-today .day-short { }
 
   .today-dot {
     width: 4px;
@@ -387,6 +467,7 @@
     border-radius: 50%;
     background: #2edf82;
     flex-shrink: 0;
+    margin-top: 1px;
   }
 
   /* GRID SYSTEM */
