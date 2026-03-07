@@ -142,7 +142,7 @@
 {/if}
 
 <style>
-  .schedule-card-ct { display:flex; justify-content:flex-start; padding:0.7rem 0.5rem; position:relative; }
+  .schedule-card-ct { display:flex; justify-content:flex-start; padding:0.7rem 0.5rem; position:relative; width:100%; }
   .schedule-card-ct:hover { z-index:30; }
   .schedule-card {
     display:flex; flex-direction:row; width:52rem; height:36rem;

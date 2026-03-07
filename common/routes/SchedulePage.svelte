@@ -496,8 +496,8 @@
     margin: 0 auto;
   }
 
-  .text-col { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 80px; }
-  .items-container { display: flex; flex-direction: column; gap: 0.8rem; }
+  .text-col { display: flex; flex-direction: column; min-width: 0; width: 100%; scroll-margin-top: 80px; }
+  .items-container { display: flex; flex-direction: column; gap: 0.8rem; width: 100%; }
 
   .text-day-header {
     padding: 1rem 0;
