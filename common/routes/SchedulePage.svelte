@@ -179,7 +179,7 @@
   $: currentView  = $settings.scheduleView || 'auto'
   $: nextView     = VIEWS[(VIEWS.indexOf(currentView) + 1) % VIEWS.length]
   $: resolvedView = currentView === 'auto' ? autoView : currentView
-  $: isTextMode   = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide'
+  $: isTextMode   = resolvedView === 'list' || resolvedView === 'agenda' || resolvedView === 'guide' || resolvedView === 'compact'
   $: gridCols     = $settings.schedCols || 'auto'
 
   $: cardW      = $settings.cardW      ?? 38
@@ -281,6 +281,7 @@
   </div>
 
   {#if isTextMode}
+    <div class='text-scroll-wrap'>
     {#if resolvedView === 'guide'}
       {#if textGroups.length}
         <div class='guide-wrap'>
@@ -328,7 +329,7 @@
       {/if}
     {:else}
       <div class='text-grid-wrap' 
-           style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
+             style="--cols: {gridCols === 'auto' ? 'repeat(auto-fill, minmax(350px, 1fr))' : `repeat(${gridCols}, 1fr)`}">
         {#if textGroups.length}
           <div class='text-grid' class:single-col={resolvedView === 'agenda'}>
             {#each textGroups as group}
@@ -347,6 +348,7 @@
         {/if}
       </div>
     {/if}
+    </div>
   {/if}
 
 </div>
@@ -555,6 +557,11 @@
   /* GRID SYSTEM */
   /* Hide SearchPage output in list/agenda modes — we render our own grid */
   .hidden-search { display: none !important; }
+
+  .text-scroll-wrap {
+    overflow-y: auto;
+    height: calc(100vh - 50px);
+  }
 
   .text-loading {
     padding: 3rem;
