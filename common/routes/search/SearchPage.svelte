@@ -107,18 +107,10 @@
 
 <div class='bg-dark h-full w-full overflow-y-scroll d-flex flex-wrap flex-row root overflow-x-hidden justify-content-center align-content-start' class:mt-safe-area={!$search.fileEdit && !$status.match(/offline/i)} class:bg-very-dark={$search.fileEdit} bind:this={container} on:scroll={infiniteScroll} on:resize={updateRowMarkers}>
   <SearchBar bind:search={$search} clearNow={$clearNow} on:input={update} />
-  <div class='w-full d-grid d-md-flex flex-wrap flex-row px-40 justify-content-center align-content-start' class:schedule-grid={$search.scheduleList}>
+  <div class='w-full d-grid d-md-flex flex-wrap flex-row px-40 justify-content-center align-content-start'>
     {#key $key}
       {#each $items as card}
-        {#await card.data then media}
-        {#if media?.__dayHeader}
-          <div class='w-full' style='grid-column: 1 / -1; padding: 2.5rem 0 1rem 1.2rem'>
-            <h2 style='font-size: 3rem; font-weight: 800; color: rgba(255,255,255,0.92); letter-spacing: -0.02em'>{media.day}</h2>
-          </div>
-          {:else}
-            <div class='grid-card'><Card {card} variables={{...$search}} /></div>
-          {/if}
-        {/await}
+        <div class='grid-card'><Card {card} variables={{...$search}} /></div>
       {/each}
       {#if $items?.length}
         <ErrorCard promise={$items[0].data} />
@@ -128,9 +120,6 @@
 </div>
 
 <style>
-  .schedule-grid {
-    grid-template-columns: repeat(auto-fill, minmax(64rem, 1fr)) !important;
-  }
   .d-grid:has(.item.small-card) {
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)) !important;
   }
