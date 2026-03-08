@@ -1,7 +1,7 @@
 <script context='module'>
   import SectionsManager from '@/modules/sections.js'
   import SearchPage from '@/routes/search/SearchPage.svelte'
-  import { writable } from 'simple-store-svelte'
+  import { writable, get } from 'simple-store-svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { nextAiring } from '@/modules/anime/anime.js'
   import { animeSchedule } from '@/modules/anime/animeschedule.js'
@@ -9,6 +9,42 @@
   import Helper from '@/modules/helper.js'
 
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const SPECIAL_PAGES = ['airing', 'archive', 'tba']
+
+  const SEASONS = ['Winter', 'Spring', 'Summer', 'Fall']
+  const SEASON_MONTHS = { Winter: [0, 1, 2], Spring: [3, 4, 5], Summer: [6, 7, 8], Fall: [9, 10, 11] }
+
+  function getCurrentSeason(date = new Date()) {
+    const m = date.getMonth()
+    return SEASONS.find(s => SEASON_MONTHS[s].includes(m)) || 'Winter'
+  }
+
+  function getSeasonYear(season, date = new Date()) {
+    const currentSeason = getCurrentSeason(date)
+    const currentYear = date.getFullYear()
+    if (season === 'Fall' && currentSeason !== 'Fall') return currentYear - 1
+    if (season !== 'Fall' && currentSeason === 'Fall') return currentYear + 1
+    return currentYear
+  }
+
+  function buildSeasonWindow(date = new Date()) {
+    const curSeason = getCurrentSeason(date)
+    const curIdx = SEASONS.indexOf(curSeason)
+    const curYear = getSeasonYear(curSeason, date)
+    return [-1, 0, 1, 2].map(offset => {
+      const idx = ((curIdx + offset) % 4 + 4) % 4
+      const adj = curIdx + offset
+      let yearOffset = Math.floor(adj / 4)
+      if (adj < 0) yearOffset = -1
+      else if (adj >= 0) yearOffset = Math.floor(adj / 4)
+      return { season: SEASONS[idx], year: curYear + yearOffset }
+    })
+  }
+
+  const selectedSeason = writable((() => {
+    const now = new Date()
+    return { season: getCurrentSeason(now), year: getSeasonYear(getCurrentSeason(now), now) }
+  })())
 
   const key = writable({})
   const search = writable(cache.getEntry(caches.HISTORY, 'lastSchedule') || { scheduleList: true, format: ['TV'], format_not: [], genre: [], genre_not: [], tag: [], tag_not: [], status: [], status_not: [] })
@@ -18,7 +54,7 @@
     cache.setEntry(caches.HISTORY, 'lastSchedule', s)
   })
 
-  async function fetchAllScheduleEntries (variables) {
+  async function fetchAllScheduleEntries (variables, seasonFilter = null) {
     const results = { data: { Page: { media: [], pageInfo: { hasNextPage: false } } } }
     const airingLists = await (variables.hideSubs ? animeSchedule.dubAiringLists.value : animeSchedule.subAiringLists.value)
     let ids = airingLists.map(entry => {
@@ -35,7 +71,19 @@
       ids = ids.filter(({ id, idMal }) => Helper.isAniAuth() ? variables.hideMyAnime ? !userIds.includes(id) : userIds.includes(id) : variables.hideMyAnime ? !userIds.includes(idMal) : userIds.includes(idMal))
     }
 
-    const res = await anilistClient.searchAllIDS({ id: ids.map(({ id }) => id).filter(Boolean), ...SectionsManager.sanitiseObject(variables), page: 1, perPage: 50 })
+    const idList = ids.map(({ id }) => id).filter(Boolean)
+    const searchParams = { ...SectionsManager.sanitiseObject(variables), page: 1, perPage: 50 }
+    
+    if (idList.length > 0) {
+      searchParams.id = idList
+    }
+    
+    if (seasonFilter && seasonFilter.season && seasonFilter.year) {
+      searchParams.season = seasonFilter.season.toUpperCase()
+      searchParams.seasonYear = seasonFilter.year
+    }
+    
+    const res = await anilistClient.searchAllIDS(searchParams)
     if (!res?.data && res?.errors) throw res.errors[0]
     results.data.Page.media = results.data.Page.media.concat(res.data.Page.media)
 
@@ -111,6 +159,7 @@
 
   let textGroups = [], textVars = null, now = new Date(), selectedDay = TODAY
   let screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+  let activeSpecialPage = 'airing'
 
   onMount(() => {
     screenWidth = window.innerWidth
@@ -131,17 +180,34 @@
   const toggleView = () => { $settings.scheduleView = VIEWS[(VIEWS.indexOf($settings.scheduleView || 'auto') + 1) % VIEWS.length] }
   const set = (k, v) => { $settings[k] = v }
 
+  function processMediaData(mediaList, variables) {
+    return mediaList.reduce((acc, item) => {
+      if (item.__dayHeader) acc.push({ day: item.day, items: [] })
+      else acc.at(-1)?.items.push({ media: item, airingAt: nextAiring(item?.airingSchedule?.nodes, variables)?.airingAt ?? null })
+      return acc
+    }, [])
+  }
+
   $search.load = (_, __, variables) => {
     textVars = variables
-    const raw = fetchAllScheduleEntries(variables)
+    const currentSeason = get(selectedSeason)
+    const raw = fetchAllScheduleEntries(variables, { season: currentSeason.season, year: currentSeason.year })
     raw.then(r => {
-      textGroups = (r?.data?.Page?.media ?? []).reduce((acc, item) => {
-        if (item.__dayHeader) acc.push({ day: item.day, items: [] })
-        else acc.at(-1)?.items.push({ media: item, airingAt: nextAiring(item?.airingSchedule?.nodes, variables)?.airingAt ?? null })
-        return acc
-      }, [])
+      textGroups = processMediaData(r?.data?.Page?.media ?? [], variables)
     }).catch(() => { textGroups = [] })
     return SectionsManager.wrapResponse(raw, 150)
+  }
+
+  let lastSeasonKey = ''
+  $: currentSeasonKey = `${$selectedSeason?.season}-${$selectedSeason?.year}`
+  $: if (currentSeasonKey && textVars) {
+    if (currentSeasonKey !== lastSeasonKey) {
+      lastSeasonKey = currentSeasonKey
+      const seasonFilter = { season: $selectedSeason.season, year: $selectedSeason.year }
+      fetchAllScheduleEntries(textVars, seasonFilter).then(r => {
+        textGroups = processMediaData(r?.data?.Page?.media ?? [], textVars)
+      }).catch(() => { textGroups = [] })
+    }
   }
 
   $: autoView     = screenWidth >= 1400 ? 'list' : screenWidth >= MOBILE_LG ? 'compact' : 'agenda'
@@ -205,8 +271,7 @@
         </div>
       </div>
     {/if}
-    {#if resolvedView === 'grid'}
-      <div class="og"><span>Card Width <em>{cardW}rem</em></span><input type="range" min="20" max="60" step="1" value={cardW} on:input={e => set('cardW', +e.target.value)} /></div>
+    {#if resolvedView === 'grid'} <div class="og"><span>Card Width <em>{cardW}rem</em></span><input type="range" min="20" max="60" step="1" value={cardW} on:input={e => set('cardW', +e.target.value)} /></div>
       <div class="og"><span>Card Height <em>{cardH}rem</em></span><input type="range" min="16" max="55" step="1" value={cardH} on:input={e => set('cardH', +e.target.value)} /></div>
       <div class="og"><span>Image Width <em>{cardImg}rem</em></span><input type="range" min="8" max="35" step="1" value={cardImg} on:input={e => set('cardImg', +e.target.value)} /></div>
     {/if}
@@ -222,6 +287,32 @@
         <button class:active={$settings.hideStats} on:click={() => $settings.hideStats = !$settings.hideStats}>{$settings.hideStats ? '✓ Stats Hidden' : 'Hide Stats'}</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class='season-nav'>
+  <div class='season-pills'>
+    {#each buildSeasonWindow() as { season, year }}
+      {@const key = `${season}-${year}`}
+      <button class='season-pill' class:active={$selectedSeason.season === season && $selectedSeason.year === year} on:click={() => $selectedSeason = { season, year }}>
+        <span class='season-name'>{season}</span>
+        <span class='season-year'>{year}</span>
+      </button>
+    {/each}
+  </div>
+  <div class='quick-links'>
+    <button class='quick-link' class:active={activeSpecialPage === 'airing'} on:click={() => activeSpecialPage = 'airing'}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>Airing</span>
+    </button>
+    <button class='quick-link' class:active={activeSpecialPage === 'archive'} on:click={() => activeSpecialPage = 'archive'}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+      <span>Archive</span>
+    </button>
+    <button class='quick-link' class:active={activeSpecialPage === 'tba'} on:click={() => activeSpecialPage = 'tba'}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      <span>TBA</span>
+    </button>
   </div>
 </div>
 
@@ -400,4 +491,19 @@
     .guide-wrap { grid-template-columns:1fr; }
     .guide-now { border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); padding-bottom:2rem; margin-bottom:2rem; padding-right:0; margin-right:0; }
   }
+
+  /* SEASON NAV */
+  .season-nav { display:flex; align-items:center; justify-content:space-between; padding:0 2rem; height:50px; background:hsl(var(--dark-color-hsl,220 13% 9%)); border-bottom:1px solid rgba(255,255,255,0.06); position:sticky; top:0; z-index:100; }
+  .season-pills { display:flex; align-items:center; gap:0.25rem; }
+  .season-pill { display:flex; flex-direction:column; align-items:center; padding:0.4rem 1.1rem; border-radius:6px; border:none; background:none; cursor:pointer; transition:background 0.15s, opacity 0.15s; opacity:0.45; gap:1px; }
+  .season-pill:hover { opacity:0.75 !important; background:rgba(255,255,255,0.05); }
+  .season-pill.active { opacity:1 !important; }
+  .season-name { font-size:0.8rem; font-weight:700; color:#fff; letter-spacing:0.03em; line-height:1; }
+  .season-year { font-size:0.65rem; font-weight:400; color:rgba(255,255,255,0.4); line-height:1; }
+  .quick-links { display:flex; align-items:center; gap:0.5rem; }
+  .quick-link { display:flex; flex-direction:column; align-items:center; gap:3px; padding:0.4rem 0.7rem; border-radius:6px; border:none; background:none; cursor:pointer; opacity:0.4; transition:opacity 0.15s, background 0.15s; color:#fff; }
+  .quick-link:hover { opacity:0.75 !important; background:rgba(255,255,255,0.05); }
+  .quick-link.active { opacity:1 !important; }
+  .quick-link span { font-size:0.6rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5); }
+  .quick-link :global(svg) { opacity:0.8; }
 </style>
