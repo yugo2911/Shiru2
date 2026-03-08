@@ -8,6 +8,7 @@
   import { modal } from '@/modules/navigation.js'
   import { getAccentColor } from '@/modules/color.js'
   import { settings } from '@/modules/settings.js'
+  import { Smile, Heart } from 'lucide-svelte'
 
   export let data
   export let variables = null
@@ -105,17 +106,13 @@
           {/if}
           {#if rating}
             <div class='stat-row'>
-              <svg viewBox='0 0 512 512' class='stat-icon stat-icon--score'>
-                <path fill='currentColor' d='M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 448c-110.3 0-200-89.7-200-200S137.7 56 248 56s200 89.7 200 200-89.7 200-200 200zm-80-216c17.7 0 32-14.3 32-32s-14.3-32-32-32-32 14.3-32 32 14.3 32 32 32zm160 0c17.7 0 32-14.3 32-32s-14.3-32-32-32-32 14.3-32 32 14.3 32 32 32zm4 72.6c-20.8 25-51.5 39.4-84 39.4s-63.2-14.3-84-39.4c-8.5-10.2-23.7-11.5-33.8-3.1-10.2 8.5-11.5 23.6-3.1 33.8 30 36 74.1 56.6 120.9 56.6s90.9-20.6 120.9-56.6c8.5-10.2 7.1-25.3-3.1-33.8-10.1-8.4-25.3-7.1-33.8 3.1z'/>
-              </svg>
+              <Smile class='stat-icon stat-icon--score' size={18} strokeWidth={2} />
               <span class='stat-val'>{rating}%</span>
             </div>
           {/if}
           {#if ranking}
             <div class='stat-row'>
-              <svg viewBox='0 0 18 18' class='stat-icon stat-icon--rank'>
-                <path stroke='currentColor' fill='none' d='M15.63 3.458a4.125 4.125 0 0 0-5.835 0L9 4.253l-.795-.795A4.126 4.126 0 1 0 2.37 9.293l.795.795L9 15.922l5.835-5.835.795-.795a4.125 4.125 0 0 0 0-5.835v0z' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>
-              </svg>
+              <Heart class='stat-icon stat-icon--rank' size={18} strokeWidth={2} />
               <span class='stat-val'>{ranking}</span>
             </div>
           {/if}
@@ -174,8 +171,10 @@
   .stats-col { display:flex; flex-direction:column; align-items:flex-end; gap:0.45rem; padding-top:0.15rem; flex-shrink:0; }
   .stat-row { display:flex; align-items:center; gap:0.4rem; }
   .stat-icon { width:2rem; height:2rem; flex-shrink:0; opacity:0.9; }
-  .stat-icon--score { color:#2edf82; }
-  .stat-icon--rank  { color:#ff3d64; }
+/* Update these lines in your <style> block */
+/* Update your style block like this */
+  :global(.stat-icon--score) { color: #2edf82; }
+  :global(.stat-icon--rank)  { color: #ff3d64; }
   .watch-chip {
     font-size: 0.75rem;
     font-weight: 700;
