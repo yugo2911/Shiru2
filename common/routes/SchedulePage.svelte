@@ -296,27 +296,29 @@
           </div>
         {:else}<div class='text-loading'>Loading schedule…</div>{/if}
       {:else}
-        <div class='text-grid' class:agenda={isAgenda} style={isAgenda?'':'--col-w:'+colWidth}>
-          {#if textGroups.length}
-            {#each textGroups as group}
-              <div class='text-col' id='day-col-{group.day}'>
-                <div class='text-day-header'>{group.day}</div>
-                <div class="tree-wrap">
-                  {#each Object.entries(group.items.reduce((acc,item)=>{
-                    const t=item.airingAt ? new Date(item.airingAt*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false}) : 'TBA'
-                    ;(acc[t]??=[]).push(item); return acc
-                  },{})) as [time,items]}
-                    <div class="tree-slot">
-                      <div class="tree-time">{time}</div>
-                      {#each items as item}
-                        <div class="tree-card"><ScheduleCard data={item.media} variables={textVars} {resolvedView}/></div>
-                      {/each}
-                    </div>
-                  {/each}
+        <div class='text-grid-inner'>
+          <div class='text-grid' class:agenda={isAgenda} style={isAgenda?'':'--col-w:'+colWidth}>
+            {#if textGroups.length}
+              {#each textGroups as group}
+                <div class='text-col' id='day-col-{group.day}'>
+                  <div class='text-day-header'>{group.day}</div>
+                  <div class="tree-wrap">
+                    {#each Object.entries(group.items.reduce((acc,item)=>{
+                      const t=item.airingAt ? new Date(item.airingAt*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false}) : 'TBA'
+                      ;(acc[t]??=[]).push(item); return acc
+                    },{})) as [time,items]}
+                      <div class="tree-slot">
+                        <div class="tree-time">{time}</div>
+                        {#each items as item}
+                          <div class="tree-card"><ScheduleCard data={item.media} variables={textVars} {resolvedView}/></div>
+                        {/each}
+                      </div>
+                    {/each}
+                  </div>
                 </div>
-              </div>
-            {/each}
-          {:else}<div class='text-loading'>Loading schedule…</div>{/if}
+              {/each}
+            {:else}<div class='text-loading'>Loading schedule…</div>{/if}
+          </div>
         </div>
       {/if}
     </div>
@@ -361,23 +363,16 @@
   .hidden-search { display:none !important; }
   .grid-scroll-wrap { overflow-y:auto; height:calc(100vh - 50px); }
 
-  /* scroll container — horizontal for column views, vertical for agenda */
-  .text-scroll-wrap { overflow-x:auto; overflow-y:hidden; height:calc(100vh - 100px); }
+  /* vertical scroll works exactly as before; inner div pans horizontally */
+  .text-scroll-wrap { overflow-y:auto; overflow-x:hidden; height:calc(100vh - 100px); }
+  .text-grid-inner { overflow-x:auto; overflow-y:visible; }
 
-  /* day columns: horizontal strip that never wraps */
-  .text-grid { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:stretch; height:100%; }
-  /* agenda overrides: single column, vertical scroll */
-  .text-grid.agenda { flex-direction:column; flex-wrap:wrap; height:auto; overflow-y:auto; overflow-x:hidden; max-width:780px; margin:0 auto; padding:1rem; gap:1.5rem; }
+  /* day columns: one horizontal row, never wraps, natural height so page scroll works */
+  .text-grid { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:start; width:max-content; min-width:100%; }
+  .text-grid.agenda { flex-direction:column; width:100%; max-width:780px; margin:0 auto; padding:1rem; gap:1.5rem; }
 
-  .text-col {
-    flex:0 0 var(--col-w,260px);
-    width:var(--col-w,260px);
-    display:flex; flex-direction:column;
-    border-right:1px solid rgba(255,255,255,0.05);
-    overflow-y:auto; height:100%;
-    scroll-margin-left:0;
-  }
-  .text-grid.agenda .text-col { flex:unset; width:100%; border-right:none; overflow-y:visible; height:auto; }
+  .text-col { flex:0 0 var(--col-w,260px); width:var(--col-w,260px); display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.05); }
+  .text-grid.agenda .text-col { flex:unset; width:100%; border-right:none; }
 
   .text-day-header { position:sticky; top:0; z-index:10; padding:0.75em 1em; font-size:0.75em; font-weight:900; color:var(--accent-color); text-transform:uppercase; letter-spacing:0.1em; background:hsl(var(--dark-color-hsl,220 13% 9%)); border-bottom:1px solid rgba(255,255,255,0.07); }
   .text-grid.agenda .text-day-header { position:static; border-bottom:1px solid #222; margin-bottom:0.5em; }
