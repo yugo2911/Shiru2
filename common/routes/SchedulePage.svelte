@@ -95,9 +95,14 @@
   const VIEW_LABELS = { auto: 'Auto', grid: 'Grid', compact: 'Compact', list: 'List', agenda: 'Agenda', guide: 'Guide' }
 
   const TODAY = DAYS[new Date().getDay()]
-  const ORDERED_DAYS = [...DAYS.slice(DAYS.indexOf(TODAY)), ...DAYS.slice(0, DAYS.indexOf(TODAY))]
+  const todayIdx = DAYS.indexOf(TODAY)
+  const centerOffset = (todayIdx - 3 + 7) % 7
+  const ORDERED_DAYS = [...DAYS.slice(centerOffset), ...DAYS.slice(0, centerOffset)]
+  const isPastDay = day => { const diff = (DAYS.indexOf(day) - todayIdx + 7) % 7; return diff > 0 && diff <= 3 }
   const DAY_DATES = DAYS.reduce((acc, day, i) => {
-    const d = new Date(); d.setDate(d.getDate() + ((i - d.getDay() + 7) % 7))
+    const diff = (i - todayIdx + 7) % 7
+    const adjusted = diff > 3 ? diff - 7 : diff
+    const d = new Date(); d.setDate(d.getDate() + adjusted)
     acc[day] = d.getDate(); return acc
   }, {})
 
@@ -153,7 +158,6 @@
   $: todayGroup  = textGroups.find(g => g.day === TODAY) ?? null
   $: otherGroups = textGroups.filter(g => g.day !== TODAY)
 
-  // all layout settings are independent per resolved view
   $: gridCols   = $settings[VK('cols', resolvedView)] ?? 'auto'
   $: gridRows   = $settings[VK('gridrows', resolvedView)] ?? 0
   $: schedRows  = $settings[VK('rows', resolvedView)] ?? 0
@@ -228,9 +232,9 @@
 
   <div class='day-carousel'>
     {#each ORDERED_DAYS as day, i}
-      {@const distance = Math.min(i, ORDERED_DAYS.length - i)}
-      <button class='day-pill' class:is-today={day === TODAY} class:is-selected={day === selectedDay} class:no-content={!activeDays.has(day)}
-        style="--dist:{distance}" on:click={() => scrollToDay(day)} disabled={!activeDays.has(day) && isTextMode}>
+      {@const distance = Math.abs(i - 3)}
+      <button class='day-pill' class:is-today={day === TODAY} class:is-selected={day === selectedDay} class:no-content={!activeDays.has(day)} class:is-past={isPastDay(day)}
+        style="--dist:{distance}" on:click={() => scrollToDay(day)} disabled={!activeDays.has(day) && !isPastDay(day) && isTextMode}>
         <span class='day-date'>{DAY_DATES[day]}</span>
         <span class='day-short'>{day.slice(0, 3)}</span>
         {#if day === TODAY}<span class='today-dot'></span>{/if}
@@ -290,29 +294,21 @@
           {#if textGroups.length}
             <div class='text-grid' class:single-col={resolvedView === 'agenda'} style={gridStyle}>
               {#each textGroups as group}
-                <div class='text-col' id='day-col-{group.day}'>
+                <div class='text-col' class:today-col={group.day === TODAY} id='day-col-{group.day}'>
                   <div class='text-day-header'>{group.day}</div>
-                  {#if gridRows === 1}
-                    <div class="tree-wrap">
-                      {#each Object.entries(group.items.reduce((acc, item) => {
-                        const t = item.airingAt ? new Date(item.airingAt * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false }) : 'TBA'
-                        ;(acc[t] ??= []).push(item); return acc
-                      }, {})) as [time, items]}
-                        <div class="tree-slot">
-                          <div class="tree-time">{time}</div>
-                          {#each items as item}
-                            <div class="tree-card"><ScheduleCard data={item.media} variables={textVars} {resolvedView} /></div>
-                          {/each}
-                        </div>
-                      {/each}
-                    </div>
-                  {:else}
-                    <div class="items-container" style={itemsStyle}>
-                      {#each group.items as { media }}
-                        <ScheduleCard data={media} variables={textVars} {resolvedView} />
-                      {/each}
-                    </div>
-                  {/if}
+                  <div class="tree-wrap">
+                    {#each Object.entries(group.items.reduce((acc, item) => {
+                      const t = item.airingAt ? new Date(item.airingAt * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false }) : 'TBA'
+                      ;(acc[t] ??= []).push(item); return acc
+                    }, {})) as [time, items]}
+                      <div class="tree-slot">
+                        <div class="tree-time">{time}</div>
+                        {#each items as item}
+                          <div class="tree-card"><ScheduleCard data={item.media} variables={textVars} {resolvedView} /></div>
+                        {/each}
+                      </div>
+                    {/each}
+                  </div>
                 </div>
               {/each}
             </div>
@@ -399,7 +395,7 @@
   .guide-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.55em 0.25em; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; gap:1em; transition:background 0.12s; border-radius:4px; }
   .guide-row:hover { background:rgba(255,255,255,0.04); }
   .guide-row:last-child { border-bottom:none; }
-  .guide-hover-art { position:fixed; width:11.25em; height:15.9em; object-fit:cover; border-radius:0.6em; box-shadow:0 8px 32px rgba(0,0,0,0.75); pointer-events:none; z-index:9999; opacity:0; transform:scale(0.92) translate(16px,-50%); transition:opacity 0.15s,transform 0.15s; top:var(--my,-9999px); left:var(--mx,-9999px); }
+  .guide-hover-art { position:fixed; width:225px; height:310px; object-fit:cover; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.75); pointer-events:none; z-index:9999; opacity:0; transform:scale(0.92) translate(16px,-50%); transition:opacity 0.15s,transform 0.15s; top:var(--my,-9999px); left:var(--mx,-9999px); }
   .guide-row:hover .guide-hover-art { opacity:1; transform:scale(1) translate(16px,-50%); }
   .guide-name { font-size:1.3em; font-weight:400; color:rgba(255,255,255,0.75); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .guide-time { font-size:1.2em; font-weight:500; color:rgba(255,255,255,0.35); flex-shrink:0; font-variant-numeric:tabular-nums; letter-spacing:0.02em; }
