@@ -286,17 +286,33 @@
           <div class='text-loading'>Loading schedule…</div>
         {/if}
       {:else}
-        <div class='text-grid-wrap' style="--cols:{gridCols === 'auto' ? 'repeat(auto-fill,minmax(350px,1fr))' : `repeat(${gridCols},1fr)`}">
+        <div class='text-grid-wrap'>
           {#if textGroups.length}
             <div class='text-grid' class:single-col={resolvedView === 'agenda'} style={gridStyle}>
               {#each textGroups as group}
                 <div class='text-col' id='day-col-{group.day}'>
                   <div class='text-day-header'>{group.day}</div>
-                  <div class="items-container" style={itemsStyle}>
-                    {#each group.items as { media }}
-                      <ScheduleCard data={media} variables={textVars} {resolvedView} />
-                    {/each}
-                  </div>
+                  {#if gridRows === 1}
+                    <div class="tree-wrap">
+                      {#each Object.entries(group.items.reduce((acc, item) => {
+                        const t = item.airingAt ? new Date(item.airingAt * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false }) : 'TBA'
+                        ;(acc[t] ??= []).push(item); return acc
+                      }, {})) as [time, items]}
+                        <div class="tree-slot">
+                          <div class="tree-time">{time}</div>
+                          {#each items as item}
+                            <div class="tree-card"><ScheduleCard data={item.media} variables={textVars} {resolvedView} /></div>
+                          {/each}
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <div class="items-container" style={itemsStyle}>
+                      {#each group.items as { media }}
+                        <ScheduleCard data={media} variables={textVars} {resolvedView} />
+                      {/each}
+                    </div>
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -347,11 +363,22 @@
   .hidden-search { display:none !important; }
   .text-scroll-wrap, .grid-scroll-wrap { overflow-y:auto; height:calc(100vh - 50px); }
   .text-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; }
-  .text-grid { display:grid; grid-template-columns:var(--cols); gap:1.5rem; padding:1rem; align-items:start; }
+  .text-grid { display:grid; gap:1.5rem; padding:1rem; align-items:start; }
   .text-grid.single-col { grid-template-columns:1fr; max-width:780px; margin:0 auto; }
   .text-col { display:flex; flex-direction:column; min-width:0; width:100%; scroll-margin-top:70px; }
   .items-container { display:flex; flex-direction:column; gap:0.8rem; width:100%; }
   .text-day-header { padding:1em 0; font-size:1.1em; font-weight:900; color:var(--accent-color); text-transform:uppercase; border-bottom:1px solid #222; margin-bottom:1em; }
+
+  /* TREE VIEW */
+  .tree-wrap { display:flex; flex-direction:column; font-family:monospace; }
+  .tree-slot { display:flex; flex-direction:column; }
+  .tree-slot-line { display:flex; align-items:center; gap:0; padding:0.35em 0; line-height:1; }
+  .tree-vert { color:rgba(255,255,255,0.2); font-size:1em; width:1.2em; flex-shrink:0; }
+  .tree-time { font-size:0.85em; font-weight:700; color:var(--accent-color); letter-spacing:0.05em; font-variant-numeric:tabular-nums; padding:0 0.4em; }
+  .tree-horiz { color:rgba(255,255,255,0.15); font-size:1em; letter-spacing:-0.1em; }
+  .tree-item { display:flex; align-items:flex-start; }
+  .tree-indent { color:rgba(255,255,255,0.15); font-size:1em; white-space:pre; padding-top:0.6em; flex-shrink:0; line-height:1; }
+  .tree-card { flex:1; min-width:0; }
 
   :global(.schedule-root.hide-stats) :global(.stats-col) { display:none !important; }
   :global(.schedule-root.compact-cards) :global(.schedule-card) { height:75px !important; }
