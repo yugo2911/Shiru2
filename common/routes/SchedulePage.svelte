@@ -155,6 +155,7 @@
 
   // all layout settings are independent per resolved view
   $: gridCols   = $settings[VK('cols', resolvedView)] ?? 'auto'
+  $: gridRows   = $settings[VK('gridrows', resolvedView)] ?? 0
   $: schedRows  = $settings[VK('rows', resolvedView)] ?? 0
   $: fontSize   = $settings[VK('font', resolvedView)] ?? 100
   $: cardW      = $settings.cardW      ?? 38
@@ -165,6 +166,7 @@
 
   $: cardVars   = `--card-w:${cardW}rem;--card-h:${cardH}rem;--card-img:${cardImg}rem;--compact-img:${compactImg}px;--compact-card-h:${compactH}px;--sched-font:${fontSize}%`
   $: itemsStyle = schedRows ? `display:grid;grid-template-rows:repeat(${schedRows},auto);grid-auto-flow:column;gap:0.8rem;align-items:start` : ''
+  $: gridStyle  = gridRows  ? `grid-auto-flow:column;grid-template-rows:repeat(${gridRows},1fr);grid-template-columns:unset` : `grid-template-columns:${gridCols === 'auto' ? 'repeat(auto-fill,minmax(350px,1fr))' : `repeat(${gridCols},1fr)`}`
 </script>
 
 <div class="vmw">
@@ -183,8 +185,20 @@
         </div>
       </div>
       <div class="og">
-        <span>Rows <em>{schedRows || 'Auto'}</em></span>
-        <input type="range" min="0" max="20" step="1" value={schedRows} on:input={e => $settings[VK('rows', resolvedView)] = +e.target.value} />
+        <span>Grid Rows</span>
+        <div class="row">
+          {#each ['auto', 1, 2, 3, 4] as r}
+            <button class:active={gridRows === (r === 'auto' ? 0 : r)} on:click={() => $settings[VK('gridrows', resolvedView)] = r === 'auto' ? 0 : r}>{r}</button>
+          {/each}
+        </div>
+      </div>
+      <div class="og">
+        <span>Rows per col</span>
+        <div class="row">
+          {#each ['auto', 1, 2, 3, 4] as r}
+            <button class:active={schedRows === (r === 'auto' ? 0 : r)} on:click={() => $settings[VK('rows', resolvedView)] = r === 'auto' ? 0 : r}>{r}</button>
+          {/each}
+        </div>
       </div>
     {/if}
     {#if resolvedView === 'grid'}
@@ -274,7 +288,7 @@
       {:else}
         <div class='text-grid-wrap' style="--cols:{gridCols === 'auto' ? 'repeat(auto-fill,minmax(350px,1fr))' : `repeat(${gridCols},1fr)`}">
           {#if textGroups.length}
-            <div class='text-grid' class:single-col={resolvedView === 'agenda'}>
+            <div class='text-grid' class:single-col={resolvedView === 'agenda'} style={gridStyle}>
               {#each textGroups as group}
                 <div class='text-col' id='day-col-{group.day}'>
                   <div class='text-day-header'>{group.day}</div>
