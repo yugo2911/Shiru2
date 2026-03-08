@@ -1,22 +1,18 @@
 i came to realize its just more pretty big card!
 
 todo
-    multiple views
-    calendar type view button (save if last selected)
-    single button to cycle small-medium-large cards for schedule(save last selected)
-    weekday menu like https://animeschedule.net/ only in calendar maybe?
-    phone friedly structure? mode on phone type display
-    replace manual svg code
-    desktop weekday colums using mobile view type view we have
+    tier1, 
+    https://anichart.net/archive,https://anichart.net/tba (notice how instead of weekdays they od grouping by format, MOVIES,TV,OVA,etc) this is really important to implment but it surely belogs in search? not schedule
+    limit number of schedule views
+    text only mode is too early rn
 
 fix seasonal popularity popularity
 white gradiant on colored countdown
 
 TV,MOVIE etc. secions diffriencation
-Sorting options like anichart
+Filtering options like anichart intresting how anichart does not allow filtering airing shows.
 my list button
-check css better to use defined for theme concistanacy
-create color.js - color logic does not belog in schedule
+check defined vars from css --accent etc
 i think status editor is avialable at many places so there is no point putting once again in schedule but
 can we instead put status selection button here
 

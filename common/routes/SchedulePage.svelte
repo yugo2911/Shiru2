@@ -271,15 +271,16 @@
         </div>
       </div>
     {/if}
-    {#if resolvedView === 'grid'} <div class="og"><span>Card Width <em>{cardW}rem</em></span><input type="range" min="20" max="60" step="1" value={cardW} on:input={e => set('cardW', +e.target.value)} /></div>
-      <div class="og"><span>Card Height <em>{cardH}rem</em></span><input type="range" min="16" max="55" step="1" value={cardH} on:input={e => set('cardH', +e.target.value)} /></div>
-      <div class="og"><span>Image Width <em>{cardImg}rem</em></span><input type="range" min="8" max="35" step="1" value={cardImg} on:input={e => set('cardImg', +e.target.value)} /></div>
+    {#if resolvedView === 'grid'}
+      <div class="og"><span>Card Width <em>{cardW}rem</em></span><input type="range" min="20" max="60" step="1" value={cardW} on:input={e => set('cardW', +(e.currentTarget as HTMLInputElement).value)} /></div>
+      <div class="og"><span>Card Height <em>{cardH}rem</em></span><input type="range" min="16" max="55" step="1" value={cardH} on:input={e => set('cardH', +(e.currentTarget as HTMLInputElement).value)} /></div>
+      <div class="og"><span>Image Width <em>{cardImg}rem</em></span><input type="range" min="8" max="35" step="1" value={cardImg} on:input={e => set('cardImg', +(e.currentTarget as HTMLInputElement).value)} /></div>
     {/if}
     {#if resolvedView === 'compact'}
-      <div class="og"><span>Thumb Width <em>{compactImg}px</em></span><input type="range" min="40" max="200" step="4" value={compactImg} on:input={e => set('compactImg', +e.target.value)} /></div>
-      <div class="og"><span>Row Height <em>{compactH}px</em></span><input type="range" min="50" max="200" step="4" value={compactH} on:input={e => set('compactH', +e.target.value)} /></div>
+      <div class="og"><span>Thumb Width <em>{compactImg}px</em></span><input type="range" min="40" max="200" step="4" value={compactImg} on:input={e => set('compactImg', +(e.currentTarget as HTMLInputElement).value)} /></div>
+      <div class="og"><span>Row Height <em>{compactH}px</em></span><input type="range" min="50" max="200" step="4" value={compactH} on:input={e => set('compactH', +(e.currentTarget as HTMLInputElement).value)} /></div>
     {/if}
-    <div class="og"><span>Font Size <em>{fontSize}%</em></span><input type="range" min="60" max="160" step="5" value={fontSize} on:input={e => $settings[VK('font', resolvedView)] = +e.target.value} /></div>
+    <div class="og"><span>Font Size <em>{fontSize}%</em></span><input type="range" min="60" max="160" step="5" value={fontSize} on:input={e => $settings[VK('font', resolvedView)] = +(e.currentTarget as HTMLInputElement).value} /></div>
     <div class="og">
       <span>Cards</span>
       <div class="row col">

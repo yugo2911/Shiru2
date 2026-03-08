@@ -37,13 +37,23 @@
   $: watchStatus = media?.mediaListEntry?.status ?? null
 
   onMount(() => {
-    _airingAt = media && variables?.scheduleList && airingAt(media, variables)
-    if (variables?.scheduleList) airingInterval = setInterval(() => { airingInfo = getAiringInfo(_airingAt) }, 60_000)
-  })
-  onDestroy(() => { if (airingInterval) clearInterval(airingInterval); unsubCache() })
+  /** @type {any} */
+  const v = variables;
+  _airingAt = media && v?.scheduleList && airingAt(media, v);
+  if (v?.scheduleList) {
+    airingInterval = setInterval(() => { airingInfo = getAiringInfo(_airingAt) }, 60_000);
+  }
+});
 
-  const viewMedia = () => variables?.fileEdit ? variables.fileEdit(media) : modal.open(modal.ANIME_DETAILS, media)
-  const onMouseMove = e => { mouseX = e.clientX; mouseY = e.clientY }
+onDestroy(() => { if (airingInterval) clearInterval(airingInterval); unsubCache(); });
+
+const viewMedia = () => {
+  /** @type {any} */
+  const v = variables;
+  return v?.fileEdit ? v.fileEdit(media) : modal.open(modal.ANIME_DETAILS, media);
+};
+
+const onMouseMove = e => { mouseX = e.clientX; mouseY = e.clientY };
 </script>
 
 {#if data?.__dayHeader}
