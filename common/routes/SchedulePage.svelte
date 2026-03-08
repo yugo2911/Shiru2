@@ -42,7 +42,7 @@
     }).filter(Boolean)
 
     if ((variables.hideMyAnime||variables.showMyAnime) && Helper.isAuthorized()) {
-      const statuses=(variables.hideMyAnime ? variables.hideStatus : variables.showStatus)
+      const statuses=variables.hideMyAnime ? variables.hideStatus : variables.showStatus
       const userIds=await Helper.userLists(variables).then(res => {
         if (!res?.data && res?.errors) throw res.errors[0]
         if (Helper.isAniAuth()) return Array.from(new Set(res.data.MediaListCollection.lists.filter(({status})=>statuses.includes(status)).flatMap(l=>l.entries.map(({media})=>media.id))))
@@ -108,8 +108,8 @@
   import ScheduleCard from '@/components/cards/ScheduleCard.svelte'
 
   const MOBILE_LG=900, MOBILE_SM=600
-  const VIEWS=['auto','grid','compact','list','agenda','guide']
-  const VIEW_LABELS={auto:'Auto',grid:'Grid',compact:'Compact',list:'List',agenda:'Agenda',guide:'Guide'}
+  const VIEWS=['auto','grid','compact','list','guide']
+  const VIEW_LABELS={auto:'Auto',grid:'Grid',compact:'Compact',list:'List',guide:'Guide'}
   const VK=(k,v)=>`sched_${k}_${v}`
 
   const TODAY=DAYS[new Date().getDay()], todayIdx=DAYS.indexOf(TODAY)
@@ -124,16 +124,16 @@
 
   onMount(()=>{
     screenWidth=window.innerWidth
-    const onResize=()=>{screenWidth=window.innerWidth}
+    const onResize=()=>{ screenWidth=window.innerWidth }
     window.addEventListener('resize',onResize)
-    const t=setInterval(()=>{now=new Date()},1000)
-    return ()=>{window.removeEventListener('resize',onResize);clearInterval(t)}
+    const t=setInterval(()=>{ now=new Date() },1000)
+    return ()=>{ window.removeEventListener('resize',onResize); clearInterval(t) }
   })
 
   function trackMouse(node) {
-    const fn=e=>{node.style.setProperty('--mx',e.clientX+'px');node.style.setProperty('--my',e.clientY+'px')}
+    const fn=e=>{ node.style.setProperty('--mx',e.clientX+'px'); node.style.setProperty('--my',e.clientY+'px') }
     node.addEventListener('mousemove',fn)
-    return {destroy:()=>node.removeEventListener('mousemove',fn)}
+    return { destroy:()=>node.removeEventListener('mousemove',fn) }
   }
 
   const scrollToDay=day=>{
@@ -152,27 +152,26 @@
   $search.load=(_,__,variables)=>{
     textVars=variables
     const raw=fetchAllScheduleEntries(variables,get(selectedSeason))
-    raw.then(r=>{textGroups=processMediaData(r?.data?.Page?.media??[],variables)}).catch(()=>{textGroups=[]})
+    raw.then(r=>{ textGroups=processMediaData(r?.data?.Page?.media??[],variables) }).catch(()=>{ textGroups=[] })
     return SectionsManager.wrapResponse(raw,150)
   }
 
   $: currentSeasonKey=`${$selectedSeason?.season}-${$selectedSeason?.year}`
   $: if (currentSeasonKey && textVars && currentSeasonKey!==lastSeasonKey) {
     lastSeasonKey=currentSeasonKey
-    fetchAllScheduleEntries(textVars,$selectedSeason).then(r=>{textGroups=processMediaData(r?.data?.Page?.media??[],textVars)}).catch(()=>{textGroups=[]})
+    fetchAllScheduleEntries(textVars,$selectedSeason).then(r=>{ textGroups=processMediaData(r?.data?.Page?.media??[],textVars) }).catch(()=>{ textGroups=[] })
   }
 
-  $: autoView=screenWidth>=1400?'list':screenWidth>=MOBILE_LG?'compact':'agenda'
+  $: autoView=screenWidth>=1400?'list':screenWidth>=MOBILE_LG?'compact':'list'
   $: currentView=$settings.scheduleView||'auto'
   $: nextView=VIEWS[(VIEWS.indexOf(currentView)+1)%VIEWS.length]
   $: resolvedView=(()=>{
     const c=currentView==='auto'?autoView:currentView
-    if (screenWidth<MOBILE_SM&&(c==='grid'||c==='compact')) return 'agenda'
+    if (screenWidth<MOBILE_SM&&c==='grid') return 'compact'
     if (screenWidth<MOBILE_LG&&c==='grid') return 'compact'
     return c
   })()
-  $: isTextMode=resolvedView==='list'||resolvedView==='agenda'||resolvedView==='guide'||resolvedView==='compact'
-  $: isAgenda=resolvedView==='agenda'
+  $: isTextMode=resolvedView==='list'||resolvedView==='guide'||resolvedView==='compact'
   $: activeDays=new Set(textGroups.map(g=>g.day))
   $: todayGroup=textGroups.find(g=>g.day===TODAY)??null
   $: otherGroups=textGroups.filter(g=>g.day!==TODAY)
@@ -185,7 +184,7 @@
   $: compactImg=$settings.compactImg??80
   $: compactH=$settings.compactH??110
   $: cardVars=`--card-w:${cardW}rem;--card-h:${cardH}rem;--card-img:${cardImg}rem;--compact-img:${compactImg}px;--compact-card-h:${compactH}px;--sched-font:${fontSize}%`
-  $: colWidth=gridCols==='auto' ? '260px' : `${Math.floor(100/Number(gridCols))}vw`
+  $: colWidth=gridCols==='auto'?'260px':`${Math.floor(100/Number(gridCols))}vw`
 </script>
 
 <div class="vmw">
@@ -194,7 +193,7 @@
     <span class="fab-nxt">→ {VIEW_LABELS[nextView]}</span>
   </button>
   <div class="vopts">
-    {#if isTextMode && !isAgenda}
+    {#if isTextMode}
       <div class="og"><span>Column Width</span><div class="row">
         {#each ['auto',1,2,3,4] as c}
           <button class:active={($settings[VK('cols',resolvedView)]??'auto')===c} on:click={()=>$settings[VK('cols',resolvedView)]=c}>{c==='auto'?'auto':`1/${c}`}</button>
@@ -297,7 +296,7 @@
         {:else}<div class='text-loading'>Loading schedule…</div>{/if}
       {:else}
         <div class='text-grid-inner'>
-          <div class='text-grid' class:agenda={isAgenda} style={isAgenda?'':'--col-w:'+colWidth}>
+          <div class='text-grid' style='--col-w:{colWidth}'>
             {#if textGroups.length}
               {#each textGroups as group}
                 <div class='text-col' id='day-col-{group.day}'>
@@ -362,31 +361,21 @@
   /* LAYOUT */
   .hidden-search { display:none !important; }
   .grid-scroll-wrap { overflow-y:auto; height:calc(100vh - 50px); }
-
-  /* vertical scroll works exactly as before; inner div pans horizontally */
   .text-scroll-wrap { overflow-y:auto; overflow-x:hidden; height:calc(100vh - 100px); }
-  .text-grid-inner { overflow-x:auto; overflow-y:visible; }
-
-  /* day columns: one horizontal row, never wraps, natural height so page scroll works */
-  .text-grid { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:start; width:max-content; min-width:100%; }
-  .text-grid.agenda { flex-direction:column; width:100%; max-width:780px; margin:0 auto; padding:1rem; gap:1.5rem; }
-
+  .text-grid-inner { overflow-x:auto; }
+  .text-grid { display:flex; flex-wrap:nowrap; align-items:start; width:max-content; min-width:100%; }
   .text-col { flex:0 0 var(--col-w,260px); width:var(--col-w,260px); display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.05); }
-  .text-grid.agenda .text-col { flex:unset; width:100%; border-right:none; }
-
   .text-day-header { position:sticky; top:0; z-index:10; padding:0.75em 1em; font-size:0.75em; font-weight:900; color:var(--accent-color); text-transform:uppercase; letter-spacing:0.1em; background:hsl(var(--dark-color-hsl,220 13% 9%)); border-bottom:1px solid rgba(255,255,255,0.07); }
-  .text-grid.agenda .text-day-header { position:static; border-bottom:1px solid #222; margin-bottom:0.5em; }
-
-  .text-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; flex:1; }
+  .text-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; }
 
   /* TREE */
-  .tree-wrap { display:flex; flex-direction:column; flex:1; }
+  .tree-wrap { display:flex; flex-direction:column; }
   .tree-slot { display:flex; flex-direction:column; }
   .tree-time { font-size:0.72em; font-weight:700; color:rgba(255,255,255,0.18); letter-spacing:0.06em; font-variant-numeric:tabular-nums; padding:0.5em 1em 0.2em; border-top:1px solid rgba(255,255,255,0.04); margin-top:0.25em; }
   .tree-slot:first-child .tree-time { border-top:none; margin-top:0; }
   .tree-card { width:100%; }
 
-  /* global schedule-root toggles */
+  /* schedule-root toggles */
   :global(.schedule-root.hide-stats) :global(.stats-col) { display:none !important; }
   :global(.schedule-root.compact-cards) :global(.schedule-card) { height:75px !important; }
   :global(.schedule-root.compact-cards) :global(.img-col) { flex:0 0 55px !important; }
@@ -415,7 +404,6 @@
   @media (max-width:900px) {
     .guide-wrap { grid-template-columns:1fr; }
     .guide-now { border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); padding-bottom:2rem; margin-bottom:2rem; padding-right:0; margin-right:0; }
-    .text-scroll-wrap { overflow-x:auto; overflow-y:hidden; }
   }
 
   /* SEASON NAV */
