@@ -103,12 +103,15 @@
 <style>
 .guide-root { overflow-y:auto; height:100vh; }
 .guide-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; }
-.guide-wrap { display:flex; flex-wrap:wrap; padding:10vh 2rem 4rem 4rem; gap:100px; }
-.guide-now { min-width:250px; max-width:600px; width:100%; }
+.guide-wrap { display:flex; padding:10vh 4rem 4rem; gap:4rem; }
+
+.guide-now { flex:1; min-width:0; }
+
 .guide-now-header { margin-bottom:1.5rem; }
 .guide-now-title { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; }
 .guide-now-date { display:block; font-size:0.85em; color:rgba(255,255,255,0.3); margin-top:0.4em; }
-.guide-week { flex:1; min-width:250px; max-width:600px; }
+.guide-week { flex:1; min-width:0; }
+
 .guide-week-header { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; margin-bottom:1.5rem; }
 .guide-list { display:flex; flex-direction:column; }
 .guide-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.55em 0.25em; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; gap:1em; transition:background 0.12s; border-radius:4px; position:relative; }
