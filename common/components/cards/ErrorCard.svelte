@@ -60,7 +60,40 @@
 {/await}
 
 <style>
+  
+
   .h-410 {
     height: 41rem;
+  }
+  /* Error state container */
+  :global(.p-20.d-flex.align-items-center.justify-content-center.w-full.h-410) {
+    background: #0d0d10;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  /* "Ooops!" heading */
+  h1 {
+    font-family: 'Syne', sans-serif !important;
+    font-size: 3.2rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em !important;
+    color: #ededea !important;
+    margin-bottom: 1rem !important;
+  }
+  /* Primary error label */
+  .font-size-22 {
+    font-size: 1.3rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    color: #d4f55e !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    margin-bottom: 0.5rem !important;
+  }
+  /* Secondary error detail */
+  .font-size-20 {
+    font-size: 1.2rem !important;
+    color: rgba(237,237,234,0.38) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    line-height: 1.7 !important;
   }
 </style>

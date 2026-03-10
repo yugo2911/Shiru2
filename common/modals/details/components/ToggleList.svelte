@@ -88,14 +88,16 @@
 {/if}
 
 <style>
+  
+
   .scroll {
     overflow-x: scroll;
     flex-shrink: 0;
     scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.07) transparent;
   }
-  .scroll::-webkit-scrollbar {
-    display: none;
-  }
+  .scroll::-webkit-scrollbar { display: none; }
 
   .gallery :global(.first-in-row .small-card-ct .absolute-container) {
     left: -48% !important;

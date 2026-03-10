@@ -120,6 +120,37 @@
 </div>
 
 <style>
+  
+
+  .full-card-ct {
+    --bg:      #0d0d10;
+    --line:    rgba(255,255,255,0.07);
+    --fg:      #ededea;
+    --dim:     rgba(237,237,234,0.38);
+    --faint:   rgba(237,237,234,0.06);
+    --acc:     #d4f55e;
+    --acc-dim: rgba(212,245,94,0.1);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Card shell */
+  .card {
+    width: 52rem !important;
+    height: 27rem !important;
+    background: #131317 !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+    contain-intrinsic-height: 27rem;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    overflow: hidden;
+  }
+  .card:hover {
+    transform: scale(1.025);
+    box-shadow: 0 20px 56px rgba(0,0,0,0.8) !important;
+  }
+
+  /* Airing glow — keep pulse, swap color to accent */
   .airing::before {
     content: '';
     position: absolute;
@@ -130,58 +161,99 @@
     will-change: box-shadow, opacity;
   }
   @keyframes airing-pulse {
-    0%   { box-shadow: 0 0 0 0 var(--success-color); opacity: 0.9; }
-    25%  { box-shadow: 0 0 0 .7rem var(--dark-color); opacity: 0.6; }
-    40% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0.4; }
-    100% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0; }
+    0%   { box-shadow: 0 0 0 0 rgba(212,245,94,0.7); opacity: 0.9; }
+    25%  { box-shadow: 0 0 0 .7rem rgba(13,13,16,0.5); opacity: 0.6; }
+    40%  { box-shadow: 0 0 0 0 rgba(13,13,16,0.5); opacity: 0.4; }
+    100% { box-shadow: 0 0 0 0 rgba(13,13,16,0.5); opacity: 0; }
   }
+
+  /* Airing badge */
   .airing-badge {
     position: absolute;
     top: -.3rem;
     left: -.6rem;
-    font-size: 1rem;
-    padding: .35rem .9rem;
-    box-shadow: 0 .2rem .5rem hsla(var(--black-color-hsl), 0.2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: .3rem 1rem;
+    background: #d4f55e !important;
+    color: #0d0d10 !important;
+    border-radius: 3px;
+    box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
+
+  /* Inner panels */
+  .bg-very-dark {
+    background: #131317 !important;
+  }
+
+  /* Title */
   .title {
     display: -webkit-box !important;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     line-height: 1.2;
-    overflow: hidden
+    overflow: hidden;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 1.7rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: #ededea !important;
   }
-  .pre-wrap {
-    white-space: pre-wrap
-  }
+
+  /* Metadata badges */
   .details {
-    font-size: 1.3rem;
+    font-size: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    gap: 0.3rem;
   }
   .details > span:not(:last-child) {
     margin-right: .2rem;
     margin-bottom: .1rem;
   }
-  .card {
-    width: 52rem !important;
-    height: 27rem !important;
-    box-shadow: hsla(var(--dark-color-very-light-hsl), 0.3) 0px 7px 15px, hsla(var(--dark-color-very-light-hsl), 0.05) 0px 4px 4px;
-    contain-intrinsic-height: 27rem;
-    transition: transform 0.2s ease;
-  }
-  .card:hover{
-    transform: scale(1.03);
-  }
-  .card-grid {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+  .badge {
+    background: rgba(237,237,234,0.06) !important;
+    color: rgba(237,237,234,0.38) !important;
+    border-radius: 3px !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.04em;
+    font-family: 'IBM Plex Mono', monospace !important;
   }
   .badge-color {
     background-color: var(--color) !important;
     border-color: var(--color) !important;
+    color: #0d0d10 !important;
+    font-weight: 600 !important;
+    border-radius: 3px !important;
   }
+
+  /* Airing info line */
+  .text-success { color: #d4f55e !important; }
+  .text-light   { color: rgba(237,237,234,0.38) !important; }
+  .text-white   { color: #ededea !important; }
+
+  /* Description */
+  .card-desc {
+    color: rgba(237,237,234,0.38);
+    font-size: 1.15rem;
+    line-height: 1.65;
+    font-family: 'IBM Plex Mono', monospace;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.07) transparent;
+  }
+  .pre-wrap { white-space: pre-wrap; }
+
+  .card-grid {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
   .list-status-circle {
     background: var(--statusColor);
-    height: 1.1rem;
-    width: 1.1rem;
+    height: 1rem;
+    width: 1rem;
     border-radius: 50%;
   }
 </style>

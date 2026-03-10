@@ -232,9 +232,24 @@
 </div>
 
 <style>
+  
+
+  .episode-card {
+    --bg:      #0d0d10;
+    --line:    rgba(255,255,255,0.07);
+    --fg:      #ededea;
+    --dim:     rgba(237,237,234,0.38);
+    --faint:   rgba(237,237,234,0.06);
+    --acc:     #d4f55e;
+    --acc-dim: rgba(212,245,94,0.1);
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    transition: background 0.1s;
+  }
   .episode-card:hover {
     z-index: 30 !important;
-    /* fixes transform scaling on click causing z-index issues */
+    background: var(--faint);
   }
   .mt-3 {
     margin-top: 0.3rem;
@@ -250,6 +265,27 @@
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  /* title text */
+  .font-weight-very-bold {
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+    color: var(--fg) !important;
+  }
+  /* episode label */
+  .font-weight-bold {
+    font-family: 'IBM Plex Mono', monospace !important;
+    color: var(--acc) !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.06em;
+  }
+  /* muted subtitle */
+  .text-muted {
+    color: var(--dim) !important;
+    font-size: 1.1rem !important;
   }
   .image:after {
     background: var(--episode-card-gradient);
@@ -257,6 +293,18 @@
     position:absolute;
     left:0; top:0;
     width:100%; height:100%;
+  }
+  /* cover image — slight rounded corners */
+  :global(.cover-img) {
+    border-radius: 4px !important;
+  }
+  /* progress bar */
+  .progress {
+    background: rgba(255,255,255,0.08) !important;
+  }
+  .progress-bar {
+    background: var(--acc) !important;
+    height: 100%;
   }
   .item {
     width: 36rem;
@@ -266,8 +314,19 @@
   }
   .list-status-circle {
     background: var(--statusColor);
-    height: 1.1rem;
-    width: 1.1rem;
+    height: 1rem;
+    width: 1rem;
     border-radius: 50%;
+  }
+  /* badge pill for countdown etc */
+  :global(.t-badge), .badge-pill-acc {
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: var(--acc);
+    color: var(--bg);
+    padding: 0.2em 0.8em;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    font-family: 'IBM Plex Mono', monospace;
   }
 </style>

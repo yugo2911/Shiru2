@@ -191,38 +191,107 @@
 </div>
 
 <style>
+  
+
+  /* Preview popup card */
+  .absolute-container {
+    --bg:      #0d0d10;
+    --line:    rgba(255,255,255,0.07);
+    --fg:      #ededea;
+    --dim:     rgba(237,237,234,0.38);
+    --faint:   rgba(237,237,234,0.06);
+    --acc:     #d4f55e;
+    --acc-dim: rgba(212,245,94,0.1);
+    font-family: 'IBM Plex Mono', monospace;
+    background: #131317 !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--line) !important;
+    border-radius: 8px !important;
+    will-change: transform, opacity, bottom;
+    left: -100%;
+    right: -100%;
+    animation: pop 0.13s ease forwards;
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
   .overlay {
-    background-color: hsla(var(--black-color-hsl), 0.9);
+    background-color: rgba(13,13,16,0.92);
+    backdrop-filter: blur(4px);
   }
   .description {
     display: -webkit-box !important;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-  }
-  .absolute-container {
-    will-change: transform, opacity, bottom;
-    left: -100%;
-    right: -100%;
+    color: rgba(237,237,234,0.38);
+    font-size: 1.1rem;
+    line-height: 1.6;
   }
   .title {
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
+    font-family: 'IBM Plex Mono', monospace;
   }
+  .font-weight-very-bold {
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+    color: #ededea !important;
+    font-size: 1.5rem !important;
+  }
+  .font-weight-bold {
+    color: #d4f55e !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em;
+  }
+  .text-muted {
+    color: rgba(237,237,234,0.38) !important;
+  }
+  .text-white {
+    color: #ededea !important;
+  }
+  /* "Continue Anyway" button */
+  .cont-button {
+    font-family: 'IBM Plex Mono', monospace !important;
+    background: #d4f55e !important;
+    color: #0d0d10 !important;
+    border: none !important;
+    border-radius: 3px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em;
+    transition: opacity 0.12s;
+  }
+  .cont-button:hover { opacity: 0.85; }
+
   .image:after {
     content: '';
     position: absolute;
     left: 0;
     width: 100%;
-    bottom: -1px; /* Extend 1px below to cover gap */
-    height: calc(100% + 1px); /* Slightly taller */
+    bottom: -1px;
+    height: calc(100% + 1px);
     background: var(--episode-preview-card-gradient);
   }
   .list-status-circle {
     background: var(--statusColor);
-    height: 1.1rem;
-    width: 1.1rem;
+    height: 1rem;
+    width: 1rem;
     border-radius: 50%;
+  }
+  .progress {
+    background: rgba(255,255,255,0.08) !important;
+  }
+  .progress-bar {
+    background: #d4f55e !important;
+    height: 100%;
+  }
+  /* metadata row icons */
+  :global(.lucide) {
+    color: rgba(237,237,234,0.38);
   }
 </style>

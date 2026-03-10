@@ -142,58 +142,155 @@
 </div>
 
 <style>
+  
+
+  /* ── Gradients ───────────────────────────────────── */
   .gradient-bottom {
     background: var(--banner-gradient-bottom);
   }
   .gradient-left {
     background: var(--banner-gradient-left);
   }
-  .progress-badge {
-    transition: width .8s ease;
+
+  /* ── Banner content layer ────────────────────────── */
+  .banner {
+    animation: fadeIn 0.8s ease forwards;
+    will-change: opacity;
+    font-family: 'IBM Plex Mono', monospace;
   }
-  .progress-badge.active .progress-content {
-    animation: fill 15s linear;
-    will-change: width;
+  img {
+    animation: fadeIn 0.8s ease forwards;
+    will-change: opacity;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
-  @keyframes fill {
-    from {
-      width: 0;
-    }
-    to {
-      width: 100%;
-    }
-  }
-  .details span + span::before {
-    content: '•';
-    padding: 0 .5rem;
-    font-size: .6rem;
-    align-self: center;
-    white-space: normal;
-    color: var(--dm-muted-text-color) !important;
-  }
+  /* ── Title ───────────────────────────────────────── */
   .title {
     display: inline-block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    text-shadow: 2px 2px 4px hsla(var(--black-color-hsl), 1);
-  }
-  .banner, img {
-    animation: fadeIn ease .8s;
-    will-change: opacity;
-  }
-  .default-cursor {
-    cursor: default;
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 4vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #ededea;
+    /* layered shadow for legibility over any banner image */
+    text-shadow: 0 2px 20px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,1);
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+  /* ── Meta detail pills row ───────────────────────── */
+  .details {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: rgba(237,237,234,0.55);
+    letter-spacing: 0.04em;
+    gap: 0;
+    flex-wrap: wrap;
   }
+  /* dot separator between spans */
+  .details span + span::before {
+    content: '•';
+    padding: 0 0.6rem;
+    font-size: 0.55rem;
+    align-self: center;
+    white-space: normal;
+    color: rgba(237,237,234,0.28);
+  }
+
+  /* ── Description ─────────────────────────────────── */
+  .text-muted {
+    color: rgba(237,237,234,0.40) !important;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 300;
+    line-height: 1.65;
+  }
+  /* clamp to 4 lines */
+  .line-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ── Action buttons ──────────────────────────────── */
+
+  /* Primary — Watch/Continue */
+  .btn:first-of-type {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    background: #d4f55e !important;
+    color: #0d0d10 !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    transition: opacity 0.12s;
+  }
+  .btn:first-of-type:hover { opacity: 0.85; }
+
+  /* Secondary — View Details + favourite */
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    background: rgba(13,13,16,0.65) !important;
+    color: #ededea !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(8px);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn:hover {
+    background: rgba(237,237,234,0.10) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+  }
+  /* Square favourite / score btn */
+  .btn-square {
+    border-radius: 3px !important;
+    aspect-ratio: 1;
+  }
+
+  /* ── Progress indicator dots ─────────────────────── */
+  .badge-wrapper {
+    /* adds generous tap/click area without affecting visual */
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .progress-badge {
+    background: rgba(237,237,234,0.18) !important;
+    border-radius: 2px !important;
+    transition: width 0.8s ease;
+    height: 3px !important;
+  }
+  /* active indicator — accent colored */
+  .progress-badge.active {
+    background: rgba(212,245,94,0.25) !important;
+  }
+  .progress-badge.active .progress-content {
+    animation: fill 15s linear;
+    will-change: width;
+    background: #d4f55e !important;
+  }
+  /* inactive indicator */
+  .progress-badge:not(.active) .progress-content {
+    background: rgba(237,237,234,0.45) !important;
+    width: 100%;
+  }
+  @keyframes fill {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  /* ── Misc ────────────────────────────────────────── */
+  .default-cursor { cursor: default; }
 </style>

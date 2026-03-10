@@ -134,56 +134,130 @@
 </div>
 
 <style>
+  
+
+  /* ── Avatar ring ───────────────────────────── */
   .avatar {
-    transition: transform 0.2s ease;
+    transition: transform 0.18s ease;
+    border: 2px solid rgba(255,255,255,0.10) !important;
+    background: #131317 !important;
   }
-  .avatar:hover {
-    transform: translateY(-0.3rem);
-  }
+  .avatar:hover { transform: translateY(-0.3rem); }
+
+  /* ── Popover popup card ────────────────────── */
   .popover-container {
     width: 100%;
     max-width: 50rem;
   }
   .popover:focus-visible {
-    box-shadow: 0 0 0 .4rem var(--tertiary-color) !important;
+    box-shadow: 0 0 0 .4rem rgba(212,245,94,0.4) !important;
   }
   .popover-card {
-    box-shadow: 0 .8rem 3rem hsla(var(--dark-color-light-hsl), 0.7);
-    background: linear-gradient(var(--theme-base-color, var(--dark-color)), var(--dark-color-very-light));
+    font-family: 'IBM Plex Mono', monospace;
+    background: linear-gradient(180deg, rgba(20,20,24,0.98) 0%, #131317 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.07);
+    animation: pop 0.13s ease forwards;
   }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
   .top-inner {
     gap: 1rem;
     padding: .7rem;
   }
+
+  /* ── Username ───────────────────────────────── */
+  .font-weight-very-bold {
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: #ededea !important;
+    font-size: 1.8rem !important;
+    line-height: 1 !important;
+  }
+
+  /* ── Sub-labels (following you, joined) ──────── */
+  .text-muted {
+    color: rgba(237,237,234,0.38) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 1rem !important;
+  }
+
+  /* ── Status / score / progress badges ────────── */
+  .badge {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em !important;
+    background: rgba(237,237,234,0.06) !important;
+    color: rgba(237,237,234,0.55) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 3px !important;
+    padding: 0.2em 0.6em !important;
+  }
+
+  /* Moderator role badges — keep theme color but styled */
+  .font-weight-bold.badge {
+    font-weight: 500 !important;
+    border-radius: 3px !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  /* ── Stats row ──────────────────────────────── */
   .stats {
     gap: 1.2rem;
-    padding: 1.2rem 1.8rem;
-    border-top: var(--base-border-width) solid hsla(var(--white-color-hsl), 0.04);
+    padding: 1.1rem 1.6rem;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: rgba(237,237,234,0.38);
+    letter-spacing: 0.04em;
   }
+  .stats .text-nowrap {
+    color: rgba(237,237,234,0.38);
+  }
+
+  /* ── Blocked banner ─────────────────────────── */
   .blocked-banner {
     transform: rotate(-45deg);
-    background: var(--accent-color);
-    opacity: .75;
+    background: rgba(212,245,94,0.85);
+    color: #0d0d10;
+    opacity: .85;
     padding: 0.2rem 2rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
   }
+
+  /* ── Donator bubble — keep cycling animation ─── */
   .bubble {
     top: 4rem;
     right: 1.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    border-radius: 3px !important;
     animation: bubble-animation 10s linear infinite;
   }
   @keyframes bubble-animation {
-    0%   { background-color: rgba(0, 105, 255, .9); }
-    10%  { background-color: rgba(100, 0, 255, .9); }
-    20%  { background-color: rgba(255, 0, 139, .9); }
-    30%  { background-color: rgba(255, 0, 0, .9); }
-    40%  { background-color: rgba(255, 96, 0, .9); }
-    50%  { background-color: rgba(202, 255, 0, .9); }
-    60%  { background-color: rgba(0, 255, 139, .9); }
-    70%  { background-color: rgba(202, 255, 0, .9); }
-    80%  { background-color: rgba(255, 96, 0, .9); }
-    85%  { background-color: rgba(255, 0, 0, .9); }
-    90%  { background-color: rgba(255, 0, 139, .9); }
-    95%  { background-color: rgba(100, 0, 255, .9); }
-    100% { background-color: rgba(0, 105, 255, .9); }
+    0%   { background-color: rgba(0,105,255,.9); }
+    10%  { background-color: rgba(100,0,255,.9); }
+    20%  { background-color: rgba(255,0,139,.9); }
+    30%  { background-color: rgba(255,0,0,.9); }
+    40%  { background-color: rgba(255,96,0,.9); }
+    50%  { background-color: rgba(202,255,0,.9); }
+    60%  { background-color: rgba(0,255,139,.9); }
+    70%  { background-color: rgba(202,255,0,.9); }
+    80%  { background-color: rgba(255,96,0,.9); }
+    85%  { background-color: rgba(255,0,0,.9); }
+    90%  { background-color: rgba(255,0,139,.9); }
+    95%  { background-color: rgba(100,0,255,.9); }
+    100% { background-color: rgba(0,105,255,.9); }
   }
 </style>

@@ -17,7 +17,27 @@
 {/if}
 
 <style>
+  
+
   .btn {
     margin-top: -1rem;
+    /* Override default button styles with design system */
+    background: #131317 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    color: rgba(237,237,234,0.55) !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .btn:hover {
+    background: rgba(212,245,94,0.08) !important;
+    border-color: #d4f55e !important;
+    color: #d4f55e !important;
+  }
+
+  /* Divider line */
+  hr {
+    border-color: rgba(255,255,255,0.07) !important;
+    opacity: 1;
   }
 </style>

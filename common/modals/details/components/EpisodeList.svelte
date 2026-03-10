@@ -395,117 +395,184 @@
 </div>
 
 <style>
-  .icon-padding {
-    padding-top: .25rem;
-    padding-right: .25rem;
+  
+
+  /* ── Episode row card ───────────────────────── */
+  .episode-card {
+    font-family: 'IBM Plex Mono', monospace;
+    background: #131317 !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    transition: background 0.1s, border-color 0.1s;
   }
-  .unreleased {
-    filter: blur(.06rem) grayscale(50%);
+  .episode-card:hover,
+  .episode-card:focus {
+    background: rgba(237,237,234,0.05) !important;
+    border-color: rgba(255,255,255,0.13) !important;
+    outline: none;
   }
-  .unreleased:hover, .unreleased:focus {
-    filter: blur(0) grayscale(20%);
+  /* Next-to-watch target — accent left border */
+  .scale-target .episode-card {
+    border-left: 3px solid #d4f55e !important;
+    background: rgba(212,245,94,0.04) !important;
   }
-  .unreleased .summary {
-    color: var(--accent-color);
-  }
-  .unreleased-overlay {
-    background: repeating-linear-gradient(-45deg, hsla(var(--black-color-hsl), 0.3), hsla(var(--black-color-hsl), 0.3) 1rem, transparent 1rem, transparent 2rem);
-  }
-  .opacity-half {
-    opacity: 50%;
-  }
+
+  /* ── Title ──────────────────────────────────── */
   .title {
     display: -webkit-box !important;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 1.45rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: #ededea !important;
   }
+
+  /* ── Duration label ─────────────────────────── */
+  .ml-auto.pl-5 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: rgba(237,237,234,0.38);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  /* ── Summary text ───────────────────────────── */
+  .font-size-12 {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 1.1rem !important;
+    color: rgba(237,237,234,0.38) !important;
+    line-height: 1.6;
+  }
+
+  /* Unreleased episode summary — accent tint */
+  .unreleased .summary {
+    color: #d4f55e !important;
+    font-weight: 500 !important;
+  }
+
+  /* ── Unreleased dimming ──────────────────────── */
+  .unreleased {
+    filter: blur(.06rem) grayscale(50%);
+  }
+  .unreleased:hover,
+  .unreleased:focus {
+    filter: blur(0) grayscale(20%);
+  }
+  .unreleased-overlay {
+    background: repeating-linear-gradient(
+      -45deg,
+      rgba(0,0,0,0.22),
+      rgba(0,0,0,0.22) 1rem,
+      transparent 1rem,
+      transparent 2rem
+    );
+  }
+
+  /* ── Progress bar ───────────────────────────── */
+  .progress {
+    height: .2rem;
+    min-height: .2rem;
+    background: rgba(255,255,255,0.08) !important;
+    border-radius: 2px;
+  }
+  .progress-bar {
+    background: #d4f55e !important;
+    border-radius: 2px;
+  }
+
+  /* ── Filler / Recap badge ───────────────────── */
+  .bg-secondary {
+    background: rgba(237,237,234,0.10) !important;
+    color: rgba(237,237,234,0.55) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── Sub/Dub date labels ────────────────────── */
+  .bg-senary,
+  .bg-septenary {
+    background: rgba(237,237,234,0.08) !important;
+    color: rgba(237,237,234,0.55) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em;
+    border-radius: 3px 0 0 3px !important;
+  }
+  .bg-danger {
+    background: rgba(255,80,80,0.18) !important;
+    color: #ff8080 !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.06em;
+    border-radius: 3px !important;
+  }
+
+  /* ── Air date / Released text (bottom of card) */
+  .font-size-12.mt-auto {
+    color: rgba(237,237,234,0.38) !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Completed card ─────────────────────────── */
+  .bg-black { background: #0d0d10 !important; }
+  .opacity-half { opacity: 50%; }
+
+  /* ── Scale / hover lift ─────────────────────── */
   .scale {
     transition: opacity .2s ease-in-out, transform .2s ease-in-out, padding .1s ease-in-out;
   }
-  .scale:hover, .scale:focus {
-    transform: scale(1.035);
-  }
-  .scale-target:hover, .scale-target:focus {
-    transform: scale(1.015) !important;
-  }
+  .scale:hover, .scale:focus { transform: scale(1.035); }
+  .scale-target:hover, .scale-target:focus { transform: scale(1.015) !important; }
+
+  /* ── Torrent button reveal ──────────────────── */
   .episode-card .torrent-button-container {
     opacity: 0;
     will-change: opacity;
     transition: opacity .2s ease;
   }
-  .episode-card:hover .torrent-button-container {
-    opacity: 1;
-  }
-  .border {
-    --dm-border-color: white;
-  }
-  .progress {
-    height: .2rem;
-    min-height: .2rem;
-  }
-  @media (max-width: 310px), (min-width: 993px) and (max-width: 1300px) {
-    .lg-label {
-      display: none !important;
-    }
-    .sm-label {
-      display: inline !important;
-    }
-  }
-  @media (max-width: 576px) {
-    .line-sm-3 {
-      -webkit-line-clamp: 3 !important;
-    }
-    .line-sm-4 {
-      -webkit-line-clamp: 4 !important;
-    }
-    .episode-card:not(.smallCard) {
-      height: 32.6rem !important
-    }
-    .episode-card.android:not(.smallCard) {
-      height: 33.6rem !important
-    }
-    .flex-xsm-column {
-      flex-direction: column !important;
-    }
-    .scale {
-      height: auto !important;
-    }
-    .date-row {
-      justify-content: center !important;
-    }
+  .episode-card:hover .torrent-button-container { opacity: 1; }
+
+  .icon-padding {
+    padding-top: .25rem;
+    padding-right: .25rem;
   }
 
+  /* ── Responsive overrides ───────────────────── */
+  @media (max-width: 310px), (min-width: 993px) and (max-width: 1300px) {
+    .lg-label { display: none !important; }
+    .sm-label { display: inline !important; }
+  }
+  @media (max-width: 576px) {
+    .line-sm-3 { -webkit-line-clamp: 3 !important; }
+    .line-sm-4 { -webkit-line-clamp: 4 !important; }
+    .episode-card:not(.smallCard) { height: 32.6rem !important; }
+    .episode-card.android:not(.smallCard) { height: 33.6rem !important; }
+    .flex-xsm-column { flex-direction: column !important; }
+    .scale { height: auto !important; }
+    .date-row { justify-content: center !important; }
+  }
   @media (min-width: 1920px) {
-    .scale:hover, .scale:focus {
-      transform: scale(1.04);
-    }
-    .scale-target:hover, .scale-target:focus {
-      transform: scale(1.02) !important;
-    }
+    .scale:hover, .scale:focus { transform: scale(1.04); }
+    .scale-target:hover, .scale-target:focus { transform: scale(1.02) !important; }
   }
   @media (min-width: 2400px) {
-    .scale:hover, .scale:focus {
-      transform: scale(1.03);
-    }
-    .scale-target:hover, .scale-target:focus {
-      transform: scale(1.015) !important;
-    }
+    .scale:hover, .scale:focus { transform: scale(1.03); }
+    .scale-target:hover, .scale-target:focus { transform: scale(1.015) !important; }
   }
   @media (min-width: 3360px) {
-    .scale:hover, .scale:focus {
-      transform: scale(1.02);
-    }
-    .scale-target:hover, .scale-target:focus {
-      transform: scale(1.01) !important;
-    }
+    .scale:hover, .scale:focus { transform: scale(1.02); }
+    .scale-target:hover, .scale-target:focus { transform: scale(1.01) !important; }
   }
   @media (min-width: 4800px) {
-    .scale:hover, .scale:focus {
-      transform: scale(1.01);
-    }
-    .scale-target:hover, .scale-target:focus {
-      transform: scale(1.005) !important;
-    }
+    .scale:hover, .scale:focus { transform: scale(1.01); }
+    .scale-target:hover, .scale-target:focus { transform: scale(1.005) !important; }
   }
 </style>

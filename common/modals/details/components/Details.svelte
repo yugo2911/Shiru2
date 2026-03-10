@@ -68,7 +68,7 @@
   }
 </script>
 
-<div bind:this={scrollDetails} class='card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start bg-dark-light'>
+<div bind:this={scrollDetails} class='details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start bg-dark-light'>
   {#each detailsMap as detail}
     {#await getProperty(detail.property, media) then property}
       {#if property}
@@ -95,3 +95,55 @@
     {/await}
   {/each}
 </div>
+
+<style>
+  
+
+  .details-strip {
+    font-family: 'IBM Plex Mono', monospace !important;
+    background: #131317 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 0 !important;
+    scrollbar-width: none;
+    gap: 0;
+  }
+  .details-strip::-webkit-scrollbar { display: none; }
+
+  /* Each detail chip */
+  .details-strip :global(.d-flex.flex-row.mx-10.py-5) {
+    background: rgba(237,237,234,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 3px;
+    padding: 0.5rem 1rem !important;
+    margin: 0.4rem 0.4rem !important;
+    gap: 0.7rem;
+    white-space: nowrap;
+    transition: background 0.1s;
+  }
+  .details-strip :global(.d-flex.flex-row.mx-10.py-5:hover) {
+    background: rgba(237,237,234,0.08);
+  }
+
+  /* Icon color */
+  .details-strip :global(svg) {
+    color: #d4f55e !important;
+    flex-shrink: 0;
+  }
+  /* Native kanji icon */
+  .details-strip :global(.mr-10.d-flex.align-items-center) {
+    color: #d4f55e;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 500;
+  }
+
+  /* Value text */
+  .details-strip :global(.font-weight-bold.select-all) {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-weight: 500 !important;
+    font-size: 1.1rem !important;
+    color: #ededea !important;
+    letter-spacing: 0.02em;
+  }
+</style>

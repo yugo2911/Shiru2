@@ -153,6 +153,25 @@
 </div>
 
 <style>
+  
+
+  .small-card-ct {
+    --bg:      #0d0d10;
+    --line:    rgba(255,255,255,0.07);
+    --fg:      #ededea;
+    --dim:     rgba(237,237,234,0.38);
+    --faint:   rgba(237,237,234,0.06);
+    --acc:     #d4f55e;
+    font-family: 'IBM Plex Mono', monospace;
+    border-radius: 6px;
+    transition: background 0.1s;
+  }
+  .small-card-ct:hover {
+    z-index: 30;
+    background: rgba(237,237,234,0.04);
+  }
+
+  /* Airing glow — accent-tinted */
   .airing::before {
     content: '';
     position: absolute;
@@ -163,37 +182,79 @@
     will-change: box-shadow, opacity;
   }
   @keyframes airing-pulse {
-    0%   { box-shadow: 0 0 0 0 var(--success-color); opacity: 0.9; }
-    25%  { box-shadow: 0 0 0 .7rem var(--dark-color); opacity: 0.6; }
-    40% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0.4; }
-    100% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0; }
+    0%   { box-shadow: 0 0 0 0 rgba(212,245,94,0.6); opacity: 0.9; }
+    25%  { box-shadow: 0 0 0 .7rem rgba(13,13,16,0.4); opacity: 0.6; }
+    40%  { box-shadow: 0 0 0 0 rgba(13,13,16,0.4); opacity: 0.4; }
+    100% { box-shadow: 0 0 0 0 rgba(13,13,16,0.4); opacity: 0; }
   }
+
+  /* AIRING badge */
   .airing-badge {
     position: absolute;
     top: -1rem;
     right: -1rem;
-    font-size: 1rem;
-    padding: .35rem .9rem;
-    box-shadow: 0 .2rem .5rem hsla(var(--black-color-hsl), 0.2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    padding: .3rem .9rem;
+    background: #d4f55e !important;
+    color: #0d0d10 !important;
+    border-radius: 3px;
+    box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
-  .small-card-ct:hover {
-    z-index: 30;
-    /* fixes transform scaling on click causing z-index issues */
+
+  /* Cover image subtle rounding */
+  :global(.cover-ratio) {
+    border-radius: 4px !important;
   }
+
+  /* Anime title */
   .title {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-height: 1.2;
+    line-height: 1.25;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: #ededea !important;
+    margin-top: 0.7rem;
   }
+
+  /* Context type (likes/dislikes) */
+  .context-type {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: rgba(237,237,234,0.38);
+    padding-top: 0.5rem;
+  }
+
+  /* Airing countdown line above card */
+  .text-success { color: #d4f55e !important; }
+  .text-light   { color: rgba(237,237,234,0.38) !important; }
+
+  /* Bottom meta row (year, format) */
+  .font-weight-medium {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+    color: rgba(237,237,234,0.38) !important;
+    letter-spacing: 0.04em;
+  }
+
   .item {
     width: 100%;
     aspect-ratio: 152/296;
   }
+
   .list-status-circle {
     background: var(--statusColor);
-    height: 1.1rem;
-    width: 1.1rem;
+    height: 1rem;
+    width: 1rem;
     border-radius: 50%;
+    display: inline-flex;
+    overflow: hidden;
   }
 </style>

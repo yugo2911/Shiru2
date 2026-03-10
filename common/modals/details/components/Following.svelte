@@ -27,14 +27,23 @@
 {/await}
 
 <style>
+  
+
   .avatar {
     will-change: z-index;
     transition: z-index .05s;
   }
-  .avatar:has(*:focus) {
-    z-index: 10 !important;
-  }
-  .avatar:hover {
-    z-index: 10 !important;
+  .avatar:has(*:focus) { z-index: 10 !important; }
+  .avatar:hover       { z-index: 10 !important; }
+
+  /* Overflow count bubble */
+  :global(.bg-dark-light.rounded-circle.h-50.w-50) {
+    background: #131317 !important;
+    border: 2px solid rgba(255,255,255,0.10) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: rgba(237,237,234,0.55) !important;
+    letter-spacing: 0.04em;
   }
 </style>
