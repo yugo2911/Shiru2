@@ -117,8 +117,8 @@
 .guide-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.55em 0.25em; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; gap:1em; transition:background 0.12s; border-radius:4px; position:relative; }
 .guide-row:hover { background:rgba(255,255,255,0.04); }
 .guide-row:last-child { border-bottom:none; }
-.guide-name { font-size:1.3em; font-weight:400; color:rgba(255,255,255,0.75); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.guide-time { font-size:1.2em; font-weight:500; color:rgba(255,255,255,0.35); flex-shrink:0; font-variant-numeric:tabular-nums; }
+.guide-day-name { font-size:1.8em; font-weight:800; color:#fff; margin-bottom:0.75em; letter-spacing:-0.03em; }
+.guide-time { font-size:1.05em; font-weight:400; color:rgba(255,255,255,0.22); flex-shrink:0; font-variant-numeric:tabular-nums; }
 .guide-day-section { margin-bottom:2em; }
 .guide-day-name { font-size:1.8em; font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:0.75em; letter-spacing:-0.02em; }
 .guide-empty { color:rgba(255,255,255,0.2); font-size:0.85em; padding:1em 0; }
