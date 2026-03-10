@@ -5,14 +5,14 @@
 
   const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
-  async function fetchAllScheduleEntries (variables) {
+  async function fetchAllScheduleEntries () {
     const results = { data: { Page: { media: [] } } }
     const airingLists = await animeSchedule.subAiringLists.value
-    const ids = airingLists.map(entry => entry?.id ? { id: entry.id } : null).filter(Boolean)
-    const res = await anilistClient.searchAllIDS({ id: ids.map(({ id }) => id).filter(Boolean), page: 1, perPage: 50 })
+    const ids = airingLists.map(e => e?.id).filter(Boolean)
+    const res = await anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 })
     if (!res?.data && res?.errors) throw res.errors[0]
     results.data.Page.media = res.data.Page.media
-      .filter((media, index, self) => nextAiring(media?.airingSchedule?.nodes)?.airingAt && self.findIndex(m => m?.id === media?.id) === index)
+      .filter((m, i, self) => nextAiring(m?.airingSchedule?.nodes)?.airingAt && self.findIndex(x => x?.id === m?.id) === i)
       .sort((a, b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
     return results
   }
@@ -26,7 +26,9 @@
       const day = DAYS[new Date(node.airingAt * 1000).getDay()]
       ;(grouped[day] ??= []).push({ media: m, airingAt: node.airingAt })
     }
-    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)].filter(d => grouped[d]).map(day => ({ day, items: grouped[day] }))
+    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
+      .filter(d => grouped[d])
+      .map(day => ({ day, items: grouped[day] }))
   }
 </script>
 
@@ -36,30 +38,28 @@
   import { modal } from '@/modules/navigation.js'
 
   const TODAY = DAYS[new Date().getDay()]
-  const fmtTime = (ts) => ts ? new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : ''
+  const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : ''
   const fmtCountdown = (ts, now) => {
-    if (!ts) return ''
     const diff = ts - Math.floor(now.getTime() / 1000)
     if (diff <= 0) return 'Now'
-    const h = Math.floor(diff / 3600)
-    const m = Math.floor((diff % 3600) / 60)
-    const s = diff % 60
-    if (h > 0) return `${h}h ${m}m`
-    if (m > 0) return `${m}m ${s}s`
-    return `${s}s`
+    const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60
+    return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
   }
-  const isUpNext = (ts, now) => {
-    const diff = ts - Math.floor(now.getTime() / 1000)
-    return diff > 0 && diff < 3600
-  }
+  const isUpNext = (ts, now) => { const d = ts - Math.floor(now.getTime()/1000); return d > 0 && d < 3600 }
 
   let groups = [], now = new Date()
   let hoveredMedia = null, hoverX = 0, hoverY = 0
+  let weekEl
+  let activeDay = null
 
   onMount(() => {
     const t = setInterval(() => { now = new Date() }, 1000)
-    fetchAllScheduleEntries({ format: ['TV'] })
-      .then(r => { groups = buildGroups(r.data.Page.media) }).catch(() => { groups = [] })
+    fetchAllScheduleEntries()
+      .then(r => {
+        groups = buildGroups(r.data.Page.media)
+        activeDay = groups[0]?.day ?? null
+      })
+      .catch(() => { groups = [] })
     return () => clearInterval(t)
   })
 
@@ -69,421 +69,413 @@
     hoverY = e.clientY
   }
 
-  $: todayGroup = groups.find(g => g.day === TODAY) ?? null
+  function scrollToDay(day) {
+    activeDay = day
+    const el = weekEl?.querySelector(`[data-day="${day}"]`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  }
+
+  $: todayGroup  = groups.find(g => g.day === TODAY) ?? null
   $: otherGroups = groups.filter(g => g.day !== TODAY)
-  $: dayAbbr = (d) => d.slice(0, 3).toUpperCase()
 </script>
 
-<!-- Global hover art preview -->
-{#if hoveredMedia?.coverImage?.extraLarge}
-  <div class='preview-portal' style='--px:{hoverX}px;--py:{hoverY}px'>
-    <img src={hoveredMedia.coverImage.extraLarge} alt='' />
-    <div class='preview-title'>{anilistClient.title(hoveredMedia)}</div>
-  </div>
-{/if}
+<svelte:body on:mousemove={e => { if (hoveredMedia) { hoverX = e.clientX; hoverY = e.clientY } }} />
 
 <div class='root'>
   {#if !groups.length}
-    <div class='splash'>
-      <div class='splash-dot'></div>
-      Loading broadcast schedule…
-    </div>
+    <div class='splash'><span class='dot'></span>Loading schedule…</div>
   {:else}
-    <!-- Left column: TODAY -->
-    <aside class='col-today'>
-      <header class='col-header'>
-        <div class='col-eyebrow'>On Air</div>
-        <div class='col-title'>Today</div>
-        <div class='col-clock'>{now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}</div>
-        <div class='col-date'>{now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
-      </header>
 
-      <div class='today-list'>
+    <!-- LEFT: TODAY -->
+    <aside class='pane-today'>
+      <div class='pane-header'>
+        <div class='eyebrow'>On Air</div>
+        <div class='pane-title'>Today</div>
+        <div class='clock'>{now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}</div>
+        <div class='date-label'>{now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+      </div>
+
+      <div class='today-scroll'>
         {#if todayGroup}
-          {#each todayGroup.items as {media, airingAt}, i}
-            {@const upcoming = isUpNext(airingAt, now)}
-            {@const passed = airingAt < Math.floor(now.getTime()/1000)}
-            <div
-              class='today-row'
-              class:row-upcoming={upcoming}
-              class:row-passed={passed}
+          {#each todayGroup.items as {media, airingAt}}
+            {@const up = isUpNext(airingAt, now)}
+            {@const past = airingAt < Math.floor(now.getTime()/1000)}
+            <div class='t-row' class:t-up={up} class:t-past={past}
               use:click={()=>modal.open(modal.ANIME_DETAILS,media)}
-              on:mousemove={e => handleMouseMove(e, media)}
-              on:mouseleave={() => hoveredMedia = null}
-            >
-              <div class='row-num'>{String(i+1).padStart(2,'0')}</div>
-              <div class='row-body'>
-                <div class='row-name'>{anilistClient.title(media)}</div>
-                {#if upcoming}
-                  <div class='row-badge badge-live'>↑ {fmtCountdown(airingAt, now)}</div>
-                {/if}
-              </div>
-              <div class='row-time-block'>
-                <div class='row-time'>{fmtTime(airingAt)}</div>
-              </div>
+              on:mousemove={e=>handleMouseMove(e,media)}
+              on:mouseleave={()=>hoveredMedia=null}>
+              <span class='t-time'>{fmtTime(airingAt)}</span>
+              <span class='t-name'>{anilistClient.title(media)}</span>
+              {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
             </div>
           {/each}
         {:else}
-          <div class='empty-state'>No airings scheduled today</div>
+          <div class='empty'>No airings today</div>
         {/if}
       </div>
     </aside>
 
-    <!-- Right column: REST OF WEEK -->
-    <main class='col-week'>
-      <header class='col-header'>
-        <div class='col-eyebrow'>Schedule</div>
-        <div class='col-title'>This Week</div>
-      </header>
+    <!-- RIGHT: THIS WEEK -->
+    <div class='pane-week'>
 
-      <div class='week-grid'>
+      <!-- sticky header + day tabs -->
+      <div class='week-header'>
+        <div class='week-title-row'>
+          <div class='eyebrow'>Schedule</div>
+          <div class='pane-title'>This Week</div>
+        </div>
+        <nav class='day-tabs'>
+          {#each otherGroups as g}
+            <button class='tab' class:tab-active={activeDay===g.day} on:click={()=>scrollToDay(g.day)}>
+              {g.day.slice(0,3).toUpperCase()}
+              <span class='tab-count'>{g.items.length}</span>
+            </button>
+          {/each}
+        </nav>
+      </div>
+
+      <!-- Horizontal snap scroll — one row of fixed-width day columns -->
+      <div class='week-cols' bind:this={weekEl}>
         {#each otherGroups as group}
-          <section class='day-block'>
-            <div class='day-pill'>{dayAbbr(group.day)}<span class='day-full'>{group.day}</span></div>
-            <div class='day-list'>
+          <div class='day-col' data-day={group.day}>
+            <div class='day-heading'>
+              <span class='day-abbr'>{group.day.slice(0,3).toUpperCase()}</span>
+              <span class='day-full'>{group.day}</span>
+            </div>
+            <div class='day-entries'>
               {#each group.items as {media, airingAt}}
-                <div
-                  class='week-row'
+                <div class='w-row'
                   use:click={()=>modal.open(modal.ANIME_DETAILS,media)}
-                  on:mousemove={e => handleMouseMove(e, media)}
-                  on:mouseleave={() => hoveredMedia = null}
-                >
-                  <span class='week-time'>{fmtTime(airingAt)}</span>
-                  <span class='week-name'>{anilistClient.title(media)}</span>
+                  on:mousemove={e=>handleMouseMove(e,media)}
+                  on:mouseleave={()=>hoveredMedia=null}>
+                  <span class='w-time'>{fmtTime(airingAt)}</span>
+                  <span class='w-name'>{anilistClient.title(media)}</span>
                 </div>
               {/each}
             </div>
-          </section>
+          </div>
         {/each}
       </div>
-    </main>
+
+    </div>
   {/if}
 </div>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap');
+<!-- Preview portal outside root to avoid clipping -->
+{#if hoveredMedia?.coverImage?.extraLarge}
+  <div class='preview' style='--px:{hoverX}px;--py:{hoverY}px'>
+    <img src={hoveredMedia.coverImage.extraLarge} alt=''/>
+    <div class='preview-name'>{anilistClient.title(hoveredMedia)}</div>
+  </div>
+{/if}
 
-  :global(body) { background: #0c0c0f; }
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+  :global(body) { margin: 0; background: #0d0d10; }
 
   .root {
-    --fg: #f0eee8;
-    --fg-dim: rgba(240,238,232,0.35);
-    --fg-faint: rgba(240,238,232,0.1);
-    --accent: #e8c547;
-    --accent-dim: rgba(232,197,71,0.15);
-    --divider: rgba(240,238,232,0.07);
-    --row-h: 2.75rem;
-    font-family: 'DM Mono', monospace;
+    --bg:      #0d0d10;
+    --bg2:     #131317;
+    --line:    rgba(255,255,255,0.07);
+    --fg:      #ededea;
+    --dim:     rgba(237,237,234,0.38);
+    --faint:   rgba(237,237,234,0.06);
+    --acc:     #d4f55e;
+    --acc-dim: rgba(212,245,94,0.1);
+    --col-w:   340px;
+    font-family: 'IBM Plex Mono', monospace;
     display: flex;
-    min-height: 100vh;
-    background: #0c0c0f;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
     color: var(--fg);
-    overflow-x: hidden;
   }
 
-  /* ── Columns ─────────────────────────────── */
-  .col-today {
-    width: 400px;
+  /* ── LEFT pane ─────────────────────────── */
+  .pane-today {
+    width: 300px;
     flex-shrink: 0;
-    border-right: 1px solid var(--divider);
+    border-right: 1px solid var(--line);
     display: flex;
     flex-direction: column;
-    padding: 0;
-    position: sticky;
-    top: 0;
-    height: 100vh;
     overflow: hidden;
   }
 
-  .col-week {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 0 6rem 0;
+  .pane-header {
+    padding: 2rem 1.5rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
   }
 
-  /* ── Headers ─────────────────────────────── */
-  .col-header {
-    padding: 3rem 2.5rem 2rem;
-    border-bottom: 1px solid var(--divider);
-  }
-
-  .col-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
+  .eyebrow {
+    font-size: 0.58rem;
     font-weight: 500;
-    letter-spacing: 0.25em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.6rem;
+    color: var(--acc);
+    margin-bottom: 0.4rem;
   }
 
-  .col-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 3.25rem;
+  .pane-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
     line-height: 1;
     color: var(--fg);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
   }
 
-  .col-clock {
-    font-size: 0.8rem;
-    font-weight: 300;
-    color: var(--fg-dim);
-    margin-top: 1rem;
-    letter-spacing: 0.08em;
+  .clock {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-top: 0.8rem;
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
   }
 
-  .col-date {
-    font-size: 0.72rem;
-    color: rgba(240,238,232,0.2);
-    letter-spacing: 0.04em;
+  .date-label {
+    font-size: 0.65rem;
+    color: rgba(237,237,234,0.22);
     margin-top: 0.2rem;
   }
 
-  /* ── Today list ──────────────────────────── */
-  .today-list {
+  /* Today list */
+  .today-scroll {
     flex: 1;
     overflow-y: auto;
-    padding: 0.5rem 0;
     scrollbar-width: thin;
-    scrollbar-color: var(--divider) transparent;
+    scrollbar-color: var(--line) transparent;
   }
 
-  .today-row {
+  .t-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0 2rem 0 1.5rem;
-    height: var(--row-h);
-    cursor: pointer;
+    gap: 0.7rem;
+    padding: 0.55rem 1.5rem;
     border-left: 2px solid transparent;
-    transition: background 0.12s, border-color 0.12s;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
   }
+  .t-row:hover { background: var(--faint); border-left-color: var(--acc); }
+  .t-up        { background: var(--acc-dim); border-left-color: var(--acc) !important; }
+  .t-past      { opacity: 0.3; }
 
-  .today-row:hover {
-    background: var(--fg-faint);
-    border-left-color: var(--accent);
-  }
-
-  .row-upcoming {
-    background: var(--accent-dim) !important;
-    border-left-color: var(--accent) !important;
-  }
-
-  .row-passed {
-    opacity: 0.35;
-  }
-
-  .row-num {
-    font-size: 0.6rem;
-    font-weight: 500;
-    color: rgba(240,238,232,0.2);
-    width: 1.6rem;
+  .t-time {
+    font-size: 0.72rem;
+    color: var(--acc);
     flex-shrink: 0;
+    width: 2.5rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .row-body {
+  .t-name {
+    font-size: 0.9rem;
+    font-weight: 300;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--fg);
+  }
+
+  .t-badge {
+    font-size: 0.58rem;
+    font-weight: 500;
+    background: var(--acc);
+    color: var(--bg);
+    padding: 0.12em 0.5em;
+    border-radius: 2px;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── RIGHT pane ─────────────────────────── */
+  .pane-week {
     flex: 1;
     min-width: 0;
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .row-name {
-    font-size: 0.8rem;
-    font-weight: 400;
-    white-space: nowrap;
+    flex-direction: column;
     overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--fg);
-    letter-spacing: 0.01em;
   }
 
-  .row-badge {
-    font-size: 0.6rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    padding: 0.15em 0.5em;
-    border-radius: 2px;
+  .week-header {
     flex-shrink: 0;
+    padding: 2rem 2rem 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .week-title-row { margin-bottom: 1.1rem; }
+
+  /* Tab strip */
+  .day-tabs {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .day-tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+    margin-bottom: -1px;
     white-space: nowrap;
   }
+  .tab:hover  { color: var(--fg); }
+  .tab-active { color: var(--acc); border-bottom-color: var(--acc); }
 
-  .badge-live {
-    background: var(--accent);
-    color: #0c0c0f;
+  .tab-count {
+    font-size: 0.56rem;
+    background: var(--faint);
+    border-radius: 99px;
+    padding: 0.1em 0.45em;
+    color: var(--dim);
+  }
+  .tab-active .tab-count { background: var(--acc-dim); color: var(--acc); }
+
+  /* ── Week columns — always one row, horizontal scroll ── */
+  .week-cols {
+    flex: 1;
+    display: flex;           /* simple flexbox row — no grid wrapping */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
   }
 
-  .row-time-block {
+  .day-col {
+    width: var(--col-w);
+    min-width: var(--col-w);
     flex-shrink: 0;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    scroll-snap-align: start;
   }
 
-  .row-time {
-    font-size: 0.72rem;
-    font-weight: 300;
-    color: var(--fg-dim);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-  }
-
-  /* ── Week grid ───────────────────────────── */
-  .week-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0;
-    padding: 0;
-  }
-
-  .day-block {
-    border-right: 1px solid var(--divider);
-    border-bottom: 1px solid var(--divider);
-    padding: 2rem 2rem 1.5rem;
-  }
-
-  .day-pill {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2rem;
-    color: var(--fg);
-    letter-spacing: -0.02em;
-    margin-bottom: 1.25rem;
+  .day-heading {
     display: flex;
     align-items: baseline;
-    gap: 0.4rem;
+    gap: 0.5rem;
+    padding: 1.25rem 1.5rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
+  .day-abbr {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--fg);
+    letter-spacing: -0.02em;
   }
 
   .day-full {
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-    font-weight: 300;
+    font-size: 0.62rem;
+    color: var(--dim);
     letter-spacing: 0.08em;
-    color: var(--fg-dim);
     text-transform: uppercase;
   }
 
-  .day-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+  .day-entries {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
   }
 
-  .week-row {
+  .w-row {
     display: flex;
     align-items: baseline;
-    gap: 0.85rem;
-    padding: 0.45em 0.3em;
-    border-bottom: 1px solid var(--divider);
+    gap: 0.75rem;
+    padding: 0.55rem 1.5rem;
+    border-bottom: 1px solid var(--line);
     cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.1s;
+    transition: background 0.1s, padding-left 0.1s;
   }
+  .w-row:last-child { border-bottom: none; }
+  .w-row:hover { background: var(--faint); padding-left: 1.9rem; }
 
-  .week-row:last-child { border-bottom: none; }
-
-  .week-row:hover {
-    background: var(--fg-faint);
-    padding-left: 0.7em;
-  }
-
-  .week-time {
-    font-size: 0.65rem;
-    font-weight: 400;
-    color: var(--accent);
-    font-variant-numeric: tabular-nums;
+  .w-time {
+    font-size: 0.7rem;
+    color: var(--acc);
     flex-shrink: 0;
-    width: 2.8rem;
-    letter-spacing: 0.04em;
+    width: 2.5rem;
+    font-variant-numeric: tabular-nums;
   }
 
-  .week-name {
-    font-size: 0.75rem;
+  .w-name {
+    font-size: 0.9rem;
     font-weight: 300;
     color: var(--fg);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0.01em;
   }
 
-  /* ── Hover preview portal ────────────────── */
-  .preview-portal {
+  /* ── Hover preview ─────────────────────── */
+  .preview {
     position: fixed;
-    top: var(--py, -9999px);
-    left: var(--px, -9999px);
-    transform: translate(20px, -55%);
-    z-index: 9999;
+    top: var(--py);
+    left: var(--px);
+    transform: translate(18px, -55%);
     pointer-events: none;
-    animation: fadeIn 0.12s ease forwards;
+    z-index: 9999;
+    animation: pop 0.13s ease forwards;
   }
-
-  .preview-portal img {
-    width: 210px;
-    height: 290px;
-    object-fit: cover;
-    border-radius: 4px;
+  .preview img {
     display: block;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px var(--divider);
+    width: 195px;
+    height: 270px;
+    object-fit: cover;
+    border-radius: 5px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--line);
   }
-
-  .preview-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--fg-dim);
-    padding: 0.5rem 0.1rem 0;
-    max-width: 210px;
+  .preview-name {
+    font-size: 0.6rem;
+    color: var(--dim);
+    padding: 0.4rem 0.1rem 0;
+    max-width: 195px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.03em;
   }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translate(20px, -52%); }
-    to   { opacity: 1; transform: translate(20px, -55%); }
+  @keyframes pop {
+    from { opacity: 0; transform: translate(18px,-52%) scale(0.94); }
+    to   { opacity: 1; transform: translate(18px,-55%) scale(1); }
   }
 
-  /* ── Splash / Loading ────────────────────── */
+  /* ── Misc ──────────────────────────────── */
   .splash {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    height: 100vh;
-    font-size: 0.75rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--fg-dim);
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.75rem; height: 100vh;
+    font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim);
   }
-
-  .splash-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--acc);
     animation: pulse 1.2s ease-in-out infinite;
   }
-
   @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.2; transform:scale(0.6); }
   }
-
-  /* ── Empty state ────────────────────────── */
-  .empty-state {
-    font-size: 0.72rem;
-    color: rgba(240,238,232,0.18);
-    padding: 1.5rem 2rem;
-    letter-spacing: 0.05em;
-  }
-
-  /* ── Week column header ─────────────────── */
-  .col-week .col-header {
-    position: sticky;
-    top: 0;
-    background: #0c0c0f;
-    z-index: 10;
-    padding: 3rem 2.5rem 2rem;
-  }
+  .empty { font-size: 0.7rem; color: rgba(237,237,234,0.18); padding: 1.25rem 1.5rem; }
 </style>
