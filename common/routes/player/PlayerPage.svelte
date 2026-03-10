@@ -2052,7 +2052,7 @@
     </div>
   </div>
 
-<SoftModal class='p-0 w-700 mw-full rounded overflow-hidden' bind:showModal={jimakuShow} {closeJimaku} id='jimaku'
+<SoftModal class='p-0 w-700 mw-full rounded overflow-hidden' bind:showModal={jimakuShow} close={closeJimaku} id='jimaku'
   style='background: #131317; border: 1px solid rgba(255,255,255,0.07); font-family: "IBM Plex Mono", monospace; color: #ededea;'>
 
   <!-- Header -->
