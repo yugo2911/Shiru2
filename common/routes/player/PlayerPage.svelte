@@ -194,7 +194,13 @@
     }
     jimakuShow = true
     try {
-      const files = await jimakuClient.getFiles(media.media.id, { episode: media.episode })
+      const search = await jimakuClient.search({ anilist_id: media.media.id })
+      const entry = search?.[0]
+      if (!entry) {
+        jimakuFiles = []
+        return
+      }
+      const files = await jimakuClient.getFiles(entry.id, { episode: media.episode })
       jimakuFiles = files || []
     } catch (err) {
       toast.error('Jimaku Error', { description: err.message })
