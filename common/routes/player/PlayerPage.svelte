@@ -1264,7 +1264,7 @@
     for (const chapter of _chapters) { // Fix negative values
       if (typeof chapter.start === 'number' && chapter.start < 0) chapter.start = -chapter.start // Fixes negative start values, likely was a mistake and is actually correct if positive.
       if (typeof chapter.end === 'number' && chapter.end < 0) chapter.end = -chapter.end // Fixes negative end values, likely was a mistake and is actually correct if positive.
-    }
+    }asd
     if (first.start !== 0 && _chapters.some(ch => ch?.start === 0)) { // Fix incorrect order of chapters (when start === 0 is somewhere else)
       _chapters.sort((a, b) => (a?.start ?? 0) - (b?.start ?? 0))
     }
