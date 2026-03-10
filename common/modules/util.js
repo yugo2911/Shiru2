@@ -618,6 +618,7 @@ export const defaults = {
   enableRPC: 'full',
   cards: 'small',
   cardPreview: true,
+  jimakuKey: '',
   cardAudio: false,
   toggleList: !SUPPORTS.isAndroid,
   titleLang: 'romaji',

@@ -27,7 +27,9 @@
   import 'rvfc-polyfill'
   import { IPC, ELECTRON, ANDROID } from '@/modules/bridge.js'
   import WPC from '@/modules/wpc.js'
-  import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp } from 'lucide-svelte'
+  import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
+  import { jimakuClient } from '@/modules/jimaku.js'
+  import SoftModal from '@/components/modals/SoftModal.svelte'
   import Debug from 'debug'
   const debug = Debug('ui:player')
 
@@ -75,6 +77,8 @@
   let immerseTimeout = null
   let bufferTimeout = null
   let subHeaders = null
+  let jimakuShow = false
+  let jimakuFiles = []
   let pip = false
   // const presentationRequest = null
   // const presentationConnection = null
@@ -177,6 +181,43 @@
         }
       }
     }
+  }
+
+  async function exploreJimaku () {
+    if (!media?.media?.id) {
+      toast.error('No Media ID', { description: 'Unable to find media ID for Jimaku search' })
+      return
+    }
+    if (!settings.value.jimakuKey) {
+      toast.error('No API Key', { description: 'Please configure your Jimaku API key in Settings' })
+      return
+    }
+    jimakuShow = true
+    try {
+      const files = await jimakuClient.getFiles(media.media.id, { episode: media.episode })
+      jimakuFiles = files || []
+    } catch (err) {
+      toast.error('Jimaku Error', { description: err.message })
+      jimakuFiles = []
+    }
+  }
+  async function downloadJimakuFile (file) {
+    try {
+      const response = await fetch(file.url)
+      const blob = await response.blob()
+      const subtitleFile = new File([blob], file.name, { type: 'application/x-subrip' })
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(subtitleFile)
+      window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dataTransfer }))
+      toast.success('Subtitles Loaded', { description: file.name })
+      closeJimaku()
+    } catch (err) {
+      toast.error('Download Error', { description: err.message })
+    }
+  }
+  function closeJimaku () {
+    jimakuShow = false
+    jimakuFiles = []
   }
 
   // if ('PresentationRequest' in window) {
@@ -1978,6 +2019,11 @@
           </div>
         </div>
       {/if}
+      {#if media?.media && !externalPlayback}
+        <span class='icon text-white ctrl mr-5 d-flex align-items-center' title='Explore Jimaku Subtitles' use:click={exploreJimaku}>
+          <FolderOpen size='2.5rem' strokeWidth={2.5} />
+        </span>
+      {/if}
       <!--{#if 'PresentationRequest' in window && canCast && current}-->
       <!--  <span class='icon text-white ctrl mr-5 d-flex align-items-center text-white' title='Cast Video [D]' data-name='toggleCast' use:click={toggleCast}>-->
       <!--    {#if presentationConnection}-->
@@ -2005,8 +2051,27 @@
       </span>
     </div>
   </div>
-</div>
 
+  <SoftModal class='p-20 w-700 mw-full bg-dark rounded' bind:showModal={jimakuShow} {closeJimaku} id='jimaku'>
+    <h5 class='mb-20'>Jimaku Subtitles</h5>
+    {#if jimakuFiles.length}
+      <div class='overflow-y-auto' style='max-height: 60vh'>
+        {#each jimakuFiles as file}
+          <div class='d-flex justify-content-between align-items-center p-10 border-bottom border-secondary'>
+            <div class='overflow-hidden'>
+              <div class='text-truncate' style='max-width: 600px'>{file.name}</div>
+            </div>
+            <button class='btn btn-sm btn-primary' on:click={() => downloadJimakuFile(file)}>
+              <Download size='1rem' />
+            </button>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class='text-center p-20 text-muted'>No subtitles found for this series</div>
+    {/if}
+  </SoftModal>
+</div>
 <style>
   :global(.deband-canvas) {
     max-width: 100%;

@@ -74,6 +74,10 @@
     <label for='player-sub-blur'>{settings.disableSubtitleBlur ? 'On' : 'Off'}</label>
   </div>
 </SettingCard>
+<h4 class='mb-10 font-weight-bold'>Subtitle Integrations</h4>
+<SettingCard title='Jimaku API Key' description='API Key for Jimaku.cc. This enables the app to fetch japanese subtitles for your media.'>
+  <input type='text' class='form-control bg-dark mw-100 w-300 mw-full' placeholder='Enter API Key' bind:value={settings.jimakuKey} />
+</SettingCard>
 <SettingCard title='Subtitle Render Resolution Limit' description="Max resolution to render subtitles at. If your resolution is higher than this setting the subtitles will be upscaled lineary. This will GREATLY improve rendering speeds for complex typesetting for slower devices. It's best to lower this on mobile devices which often have high pixel density where their effective resolution might be ~1440p while having small screens and slow processors.">
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={settings.subtitleRenderHeight}>
     <option value='0' selected>None</option>
