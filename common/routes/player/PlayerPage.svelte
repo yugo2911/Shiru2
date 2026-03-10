@@ -1264,7 +1264,7 @@
     for (const chapter of _chapters) { // Fix negative values
       if (typeof chapter.start === 'number' && chapter.start < 0) chapter.start = -chapter.start // Fixes negative start values, likely was a mistake and is actually correct if positive.
       if (typeof chapter.end === 'number' && chapter.end < 0) chapter.end = -chapter.end // Fixes negative end values, likely was a mistake and is actually correct if positive.
-    }asd
+    }
     if (first.start !== 0 && _chapters.some(ch => ch?.start === 0)) { // Fix incorrect order of chapters (when start === 0 is somewhere else)
       _chapters.sort((a, b) => (a?.start ?? 0) - (b?.start ?? 0))
     }
@@ -1815,9 +1815,9 @@
         </button>
       {/if}
     {/if}
-    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-40 rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
+    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-50 pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
     {#if subDelayText}
-      <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
+      <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
     {/if}
   </div>
   <div class='bottom d-flex z-40 flex-column px-20'>
@@ -2335,7 +2335,7 @@
 
   @keyframes boostPulse {
     0%, 100% { color: var(--white-color); }
-    50% { color: var(--octonary-color); }
+    20% { color: var(--quindenary-color); }
   }
   .ui-volume.muted, .ui-volume.boosting {
     transition: opacity .3s ease-in-out, color .7s ease-in-out !important;
