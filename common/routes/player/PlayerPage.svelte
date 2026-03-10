@@ -2052,25 +2052,52 @@
     </div>
   </div>
 
-  <SoftModal class='p-20 w-700 mw-full bg-dark rounded' bind:showModal={jimakuShow} {closeJimaku} id='jimaku'>
-    <h5 class='mb-20'>Jimaku Subtitles</h5>
-    {#if jimakuFiles.length}
-      <div class='overflow-y-auto' style='max-height: 60vh'>
-        {#each jimakuFiles as file}
-          <div class='d-flex justify-content-between align-items-center p-10 border-bottom border-secondary'>
-            <div class='overflow-hidden'>
-              <div class='text-truncate' style='max-width: 600px'>{file.name}</div>
-            </div>
-            <button class='btn btn-sm btn-primary' on:click={() => downloadJimakuFile(file)}>
-              <Download size='1rem' />
-            </button>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div class='text-center p-20 text-muted'>No subtitles found for this series</div>
-    {/if}
-  </SoftModal>
+<SoftModal class='p-0 w-700 mw-full rounded overflow-hidden' bind:showModal={jimakuShow} {closeJimaku} id='jimaku'
+  style='background: #131317; border: 1px solid rgba(255,255,255,0.07); font-family: "IBM Plex Mono", monospace; color: #ededea;'>
+
+  <!-- Header -->
+  <div style='padding: 1.5rem 2rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: baseline; justify-content: space-between;'>
+    <div>
+      <div style='font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: #d4f55e; margin-bottom: 0.3rem;'>Subtitles</div>
+      <h5 style='margin: 0; font-family: "Syne", sans-serif; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; color: #ededea;'>Jimaku</h5>
+    </div>
+    <button on:click={closeJimaku}
+      style='background: none; border: none; color: rgba(237,237,234,0.38); cursor: pointer; font-size: 1.4rem; line-height: 1; padding: 0.25rem; transition: color 0.15s;'
+      on:mouseenter={e => e.target.style.color='#d4f55e'}
+      on:mouseleave={e => e.target.style.color='rgba(237,237,234,0.38)'}>✕</button>
+  </div>
+
+  <!-- Body -->
+  {#if jimakuFiles.length}
+    <div style='overflow-y: auto; max-height: 60vh; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.07) transparent;'>
+      {#each jimakuFiles as file, i}
+        <div style='display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.07); transition: background 0.1s, padding-left 0.1s; cursor: default;'
+          on:mouseenter={e => { e.currentTarget.style.background='rgba(237,237,234,0.06)'; e.currentTarget.style.paddingLeft='2.4rem'; }}
+          on:mouseleave={e => { e.currentTarget.style.background=''; e.currentTarget.style.paddingLeft='2rem'; }}>
+
+          <!-- Index -->
+          <span style='font-size: 0.78rem; color: #d4f55e; flex-shrink: 0; width: 1.5rem; font-variant-numeric: tabular-nums;'>{String(i + 1).padStart(2, '0')}</span>
+
+          <!-- Filename -->
+          <div style='flex: 1; min-width: 0; font-size: 1rem; font-weight: 300; color: #ededea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{file.name}</div>
+
+          <!-- Download button -->
+          <button on:click={() => downloadJimakuFile(file)}
+            style='flex-shrink: 0; background: rgba(212,245,94,0.1); border: 1px solid rgba(212,245,94,0.25); color: #d4f55e; padding: 0.35rem 0.85rem; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: background 0.15s, border-color 0.15s;'
+            on:mouseenter={e => { e.currentTarget.style.background='rgba(212,245,94,0.2)'; e.currentTarget.style.borderColor='rgba(212,245,94,0.5)'; }}
+            on:mouseleave={e => { e.currentTarget.style.background='rgba(212,245,94,0.1)'; e.currentTarget.style.borderColor='rgba(212,245,94,0.25)'; }}>
+            <Download size='0.85rem' />
+            DL
+          </button>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <div style='padding: 3rem 2rem; text-align: center; font-size: 0.88rem; color: rgba(237,237,234,0.18); letter-spacing: 0.08em; text-transform: uppercase;'>
+      No subtitles found for this series
+    </div>
+  {/if}
+</SoftModal>
 </div>
 <style>
   :global(.deband-canvas) {
