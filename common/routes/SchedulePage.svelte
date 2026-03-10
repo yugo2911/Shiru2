@@ -183,7 +183,7 @@
     --faint:   rgba(237,237,234,0.06);
     --acc:     #d4f55e;
     --acc-dim: rgba(212,245,94,0.1);
-    --col-w:   340px;
+    --col-w:   500px;
     font-family: 'IBM Plex Mono', monospace;
     display: flex;
     height: 100vh;
@@ -194,7 +194,7 @@
 
   /* ── LEFT pane ─────────────────────────── */
   .pane-today {
-    width: 300px;
+    width: 450px;
     flex-shrink: 0;
     border-right: 1px solid var(--line);
     display: flex;
@@ -203,23 +203,23 @@
   }
 
   .pane-header {
-    padding: 2rem 1.5rem 1.25rem;
+    padding: 3rem 2.25rem 2rem;
     border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
 
   .eyebrow {
-    font-size: 0.58rem;
+    font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--acc);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.6rem;
   }
 
   .pane-title {
     font-family: 'Syne', sans-serif;
-    font-size: 2.4rem;
+    font-size: 3.6rem;
     font-weight: 800;
     line-height: 1;
     color: var(--fg);
@@ -227,17 +227,17 @@
   }
 
   .clock {
-    font-size: 0.75rem;
+    font-size: 1.2rem;
     color: var(--dim);
-    margin-top: 0.8rem;
+    margin-top: 1.2rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.06em;
   }
 
   .date-label {
-    font-size: 0.65rem;
+    font-size: 1rem;
     color: rgba(237,237,234,0.22);
-    margin-top: 0.2rem;
+    margin-top: 0.3rem;
   }
 
   /* Today list */
@@ -251,9 +251,9 @@
   .t-row {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
-    padding: 0.55rem 1.5rem;
-    border-left: 2px solid transparent;
+    gap: 1rem;
+    padding: 0.8rem 2.25rem;
+    border-left: 3px solid transparent;
     cursor: pointer;
     transition: background 0.1s, border-color 0.1s;
   }
@@ -262,15 +262,15 @@
   .t-past      { opacity: 0.3; }
 
   .t-time {
-    font-size: 0.72rem;
+    font-size: 1.1rem;
     color: var(--acc);
     flex-shrink: 0;
-    width: 2.5rem;
+    width: 4rem;
     font-variant-numeric: tabular-nums;
   }
 
   .t-name {
-    font-size: 0.9rem;
+    font-size: 1.4rem;
     font-weight: 300;
     flex: 1;
     min-width: 0;
@@ -281,12 +281,12 @@
   }
 
   .t-badge {
-    font-size: 0.58rem;
+    font-size: 0.9rem;
     font-weight: 500;
     background: var(--acc);
     color: var(--bg);
-    padding: 0.12em 0.5em;
-    border-radius: 2px;
+    padding: 0.2em 0.8em;
+    border-radius: 3px;
     flex-shrink: 0;
     letter-spacing: 0.04em;
   }
@@ -302,12 +302,12 @@
 
   .week-header {
     flex-shrink: 0;
-    padding: 2rem 2rem 0;
+    padding: 3rem 3rem 0;
     border-bottom: 1px solid var(--line);
     background: var(--bg);
   }
 
-  .week-title-row { margin-bottom: 1.1rem; }
+  .week-title-row { margin-bottom: 1.7rem; }
 
   /* Tab strip */
   .day-tabs {
@@ -320,14 +320,14 @@
   .tab {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.55rem 1rem;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
     background: none;
     border: none;
-    border-bottom: 2px solid transparent;
+    border-bottom: 3px solid transparent;
     color: var(--dim);
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
+    font-size: 1.1rem;
     font-weight: 500;
     letter-spacing: 0.1em;
     cursor: pointer;
@@ -339,10 +339,10 @@
   .tab-active { color: var(--acc); border-bottom-color: var(--acc); }
 
   .tab-count {
-    font-size: 0.56rem;
+    font-size: 0.9rem;
     background: var(--faint);
     border-radius: 99px;
-    padding: 0.1em 0.45em;
+    padding: 0.2em 0.7em;
     color: var(--dim);
   }
   .tab-active .tab-count { background: var(--acc-dim); color: var(--acc); }
@@ -350,7 +350,7 @@
   /* ── Week columns — always one row, horizontal scroll ── */
   .week-cols {
     flex: 1;
-    display: flex;           /* simple flexbox row — no grid wrapping */
+    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
@@ -373,22 +373,22 @@
   .day-heading {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
-    padding: 1.25rem 1.5rem 0.9rem;
+    gap: 0.8rem;
+    padding: 1.9rem 2.25rem 1.4rem;
     border-bottom: 1px solid var(--line);
     flex-shrink: 0;
   }
 
   .day-abbr {
     font-family: 'Syne', sans-serif;
-    font-size: 1.5rem;
+    font-size: 2.4rem;
     font-weight: 800;
     color: var(--fg);
     letter-spacing: -0.02em;
   }
 
   .day-full {
-    font-size: 0.62rem;
+    font-size: 1rem;
     color: var(--dim);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -404,25 +404,25 @@
   .w-row {
     display: flex;
     align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.55rem 1.5rem;
+    gap: 1.1rem;
+    padding: 0.8rem 2.25rem;
     border-bottom: 1px solid var(--line);
     cursor: pointer;
     transition: background 0.1s, padding-left 0.1s;
   }
   .w-row:last-child { border-bottom: none; }
-  .w-row:hover { background: var(--faint); padding-left: 1.9rem; }
+  .w-row:hover { background: var(--faint); padding-left: 2.8rem; }
 
   .w-time {
-    font-size: 0.7rem;
+    font-size: 1.1rem;
     color: var(--acc);
     flex-shrink: 0;
-    width: 2.5rem;
+    width: 4rem;
     font-variant-numeric: tabular-nums;
   }
 
   .w-name {
-    font-size: 0.9rem;
+    font-size: 1.4rem;
     font-weight: 300;
     color: var(--fg);
     white-space: nowrap;
@@ -435,47 +435,47 @@
     position: fixed;
     top: var(--py);
     left: var(--px);
-    transform: translate(18px, -55%);
+    transform: translate(28px, -55%);
     pointer-events: none;
     z-index: 9999;
     animation: pop 0.13s ease forwards;
   }
   .preview img {
     display: block;
-    width: 195px;
-    height: 270px;
+    width: 300px;
+    height: 400px;
     object-fit: cover;
-    border-radius: 5px;
+    border-radius: 8px;
     box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--line);
   }
   .preview-name {
-    font-size: 0.6rem;
+    font-size: 1rem;
     color: var(--dim);
-    padding: 0.4rem 0.1rem 0;
-    max-width: 195px;
+    padding: 0.6rem 0.2rem 0;
+    max-width: 300px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.03em;
   }
   @keyframes pop {
-    from { opacity: 0; transform: translate(18px,-52%) scale(0.94); }
-    to   { opacity: 1; transform: translate(18px,-55%) scale(1); }
+    from { opacity: 0; transform: translate(28px,-52%) scale(0.94); }
+    to   { opacity: 1; transform: translate(28px,-55%) scale(1); }
   }
 
   /* ── Misc ──────────────────────────────── */
   .splash {
     display: flex; align-items: center; justify-content: center;
-    gap: 0.75rem; height: 100vh;
-    font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim);
+    gap: 1.1rem; height: 100vh;
+    font-size: 1.1rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim);
   }
   .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--acc);
+    width: 10px; height: 10px; border-radius: 50%; background: var(--acc);
     animation: pulse 1.2s ease-in-out infinite;
   }
   @keyframes pulse {
     0%,100% { opacity:1; transform:scale(1); }
     50%      { opacity:0.2; transform:scale(0.6); }
   }
-  .empty { font-size: 0.7rem; color: rgba(237,237,234,0.18); padding: 1.25rem 1.5rem; }
+  .empty { font-size: 1.1rem; color: rgba(237,237,234,0.18); padding: 1.9rem 2.25rem; }
 </style>
