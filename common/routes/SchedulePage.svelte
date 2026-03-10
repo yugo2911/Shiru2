@@ -101,27 +101,24 @@
 </div>
 
 <style>
-  .guide-root { overflow-y:auto; height:100vh; }
-  .guide-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; }
-  .guide-wrap { display:grid; grid-template-columns:320px 1fr; padding:2rem; max-width:800px; margin:0 auto; }
-  .guide-now { border-right:1px solid rgba(255,255,255,0.07); padding-right:2rem; margin-right:2rem; }
-  .guide-now-header { margin-bottom:1.5rem; }
-  .guide-now-title { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; }
-  .guide-now-date { display:block; font-size:0.85em; color:rgba(255,255,255,0.3); margin-top:0.4em; }
-  .guide-week-header { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; margin-bottom:1.5rem; }
-  .guide-list { display:flex; flex-direction:column; }
-  .guide-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.55em 0.25em; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; gap:1em; transition:background 0.12s; border-radius:4px; position:relative; }
-  .guide-row:hover { background:rgba(255,255,255,0.04); }
-  .guide-row:last-child { border-bottom:none; }
-  .guide-name { font-size:1.3em; font-weight:400; color:rgba(255,255,255,0.75); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .guide-time { font-size:1.2em; font-weight:500; color:rgba(255,255,255,0.35); flex-shrink:0; font-variant-numeric:tabular-nums; }
-  .guide-day-section { margin-bottom:2em; }
-  .guide-day-name { font-size:1.8em; font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:0.75em; letter-spacing:-0.02em; }
-  .guide-empty { color:rgba(255,255,255,0.2); font-size:0.85em; padding:1em 0; }
-  .guide-hover-art { position:fixed; width:225px; height:310px; object-fit:cover; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.75); pointer-events:none; z-index:9999; opacity:0; transform:scale(0.92) translate(16px,-50%); transition:opacity 0.15s,transform 0.15s; top:var(--my,-9999px); left:var(--mx,-9999px); }
-  .guide-row:hover .guide-hover-art { opacity:1; transform:scale(1) translate(16px,-50%); }
-  @media (max-width:900px) {
-    .guide-wrap { grid-template-columns:1fr; }
-    .guide-now { border-right:none; border-bottom:1px solid rgba(255,255,255,0.07); padding-bottom:2rem; margin-bottom:2rem; padding-right:0; margin-right:0; }
-  }
+.guide-root { overflow-y:auto; height:100vh; }
+.guide-loading { padding:3em; text-align:center; color:rgba(190,190,210,0.3); font-size:0.95em; letter-spacing:0.05em; }
+.guide-wrap { display:flex; flex-wrap:wrap; padding:10vh 2rem 4rem 4rem; gap:100px; }
+.guide-now { min-width:250px; max-width:600px; width:100%; }
+.guide-now-header { margin-bottom:1.5rem; }
+.guide-now-title { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; }
+.guide-now-date { display:block; font-size:0.85em; color:rgba(255,255,255,0.3); margin-top:0.4em; }
+.guide-week { flex:1; min-width:250px; max-width:600px; }
+.guide-week-header { display:block; font-size:2.5em; font-weight:700; color:#fff; letter-spacing:-0.02em; margin-bottom:1.5rem; }
+.guide-list { display:flex; flex-direction:column; }
+.guide-row { display:flex; justify-content:space-between; align-items:baseline; padding:0.55em 0.25em; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; gap:1em; transition:background 0.12s; border-radius:4px; position:relative; }
+.guide-row:hover { background:rgba(255,255,255,0.04); }
+.guide-row:last-child { border-bottom:none; }
+.guide-name { font-size:1.3em; font-weight:400; color:rgba(255,255,255,0.75); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.guide-time { font-size:1.2em; font-weight:500; color:rgba(255,255,255,0.35); flex-shrink:0; font-variant-numeric:tabular-nums; }
+.guide-day-section { margin-bottom:2em; }
+.guide-day-name { font-size:1.8em; font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:0.75em; letter-spacing:-0.02em; }
+.guide-empty { color:rgba(255,255,255,0.2); font-size:0.85em; padding:1em 0; }
+.guide-hover-art { position:fixed; width:225px; height:310px; object-fit:cover; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.75); pointer-events:none; z-index:9999; opacity:0; transform:scale(0.92) translate(16px,-50%); transition:opacity 0.15s,transform 0.15s; top:var(--my,-9999px); left:var(--mx,-9999px); }
+.guide-row:hover .guide-hover-art { opacity:1; transform:scale(1) translate(16px,-50%); }
 </style>
