@@ -94,6 +94,18 @@ streamingEpisodes {
   title,
   thumbnail
 },
+externalLinks {
+  id,
+  url,
+  site,
+  siteId,
+  type,
+  language,
+  color,
+  icon,
+  notes,
+  isDisabled
+},
 mediaListEntry {
   id,
   progress,
