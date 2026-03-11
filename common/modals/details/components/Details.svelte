@@ -9,87 +9,60 @@
   let scrollDetails
   $: if (media && scrollDetails) scrollDetails.scrollLeft = 0
 
-  const countryMap = {
-    JP: 'Japan',
-    KR: 'South Korea',
-    US: 'United States',
-    CN: 'China',
-    HK: 'Hong Kong',
-    TW: 'Taiwan'
-  }
+  const countryMap = { JP: 'Japan', KR: 'South Korea', US: 'United States', CN: 'China', HK: 'Hong Kong', TW: 'Taiwan' }
   const detailsMap = [
-    { property: 'season', label: 'Season', icon: CalendarRange, custom: 'property' },
     { property: 'status', label: 'Status', icon: MonitorPlay },
     { property: 'studios', label: 'Studio', icon: Building2, custom: 'property' },
     { property: 'source', label: 'Source', icon: FolderKanban },
     { property: 'countryOfOrigin', label: 'Country', icon: Earth, custom: 'property' },
     { property: 'isAdult', label: 'Adult', icon: Adult },
-    { property: 'english', label: 'English', icon: Type },
-    { property: 'romaji', label: 'Romaji', icon: Languages },
-    { property: 'native', label: 'Native', icon: '語', custom: 'icon' }
+    { property: 'titles', label: 'Titles', icon: Type, custom: 'titles' }
   ]
 
   let studio
-  let seasonal
   function getCustomProperty (property, media) {
-    if (property === 'averageScore') {
-      return media.averageScore + '%'
-    } else if (property === 'season') {
-      return seasonal
-    } else if (property === 'countryOfOrigin') {
-      return countryMap[media.countryOfOrigin]
-    } else if (property === 'studios') {
-      return studio
-    } else {
-      return media[property]
-    }
+    if (property === 'averageScore') return media.averageScore + '%'
+    if (property === 'countryOfOrigin') return countryMap[media.countryOfOrigin]
+    if (property === 'studios') return studio
+    return media[property]
   }
+
   async function getProperty (property, media) {
-    if (property === 'episode') {
-      return media.nextAiringEpisode?.episode
-    } else if (property === 'english' || property === 'romaji' || property === 'native') {
-      return media.title[property]
-    } else if (property === 'isAdult') {
-      return (media.isAdult === true ? 'Rated 18+' : false)
-    } else if (property === 'countryOfOrigin') {
-      return countryMap[media.countryOfOrigin]
-    } else if (property === 'studios') { // has to be manually fetched as studios returned by user lists are broken.
-      studio = ((await alt)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0] // sometimes this can still be wrong, so we just get the first studio in the list and assume that's correct.
+    if (property === 'episode') return media.nextAiringEpisode?.episode
+    if (property === 'titles') {
+      return {
+        main: media.title.romaji || media.title.english,
+        subs: [media.title.english, media.title.native].filter(t => t && t !== (media.title.romaji || media.title.english))
+      }
+    }
+    if (property === 'isAdult') return (media.isAdult === true ? 'Rated 18+' : false)
+    if (property === 'countryOfOrigin') return countryMap[media.countryOfOrigin]
+    if (property === 'studios') { 
+      studio = ((await alt)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0]
       return studio
-    } else if (property === 'season') {
-      const details = await (((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id))
-      const attributes = details?.included?.[0]?.attributes
-      const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())
-      const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()
-      seasonal = (season || seasonYear) ? [season, seasonYear].filter(f => f).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
-      return seasonal
     }
     return media[property]
   }
 </script>
 
-<div bind:this={scrollDetails} class='details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start bg-dark-light'>
+<div bind:this={scrollDetails} class='details-strip d-flex flex-row align-items-center flex-wrap'>
   {#each detailsMap as detail}
     {#await getProperty(detail.property, media) then property}
       {#if property}
-        <div class='d-flex flex-row mx-10 py-5 justify-content-center'>
-          {#if detail.custom !== 'icon'}
-            <svelte:component size='2rem' this={detail.icon} class='mr-10' />
-          {:else}
-            <div class='mr-10 d-flex align-items-center text-nowrap font-size-12 font-weight-bold line-height-normal'>
-              {detail.icon}
-            </div>
-          {/if}
-          <div class='d-flex flex-column justify-content-center text-nowrap'>
-            <div class='font-weight-bold select-all line-height-normal'>
-              {#if detail.custom === 'property'}
-                {getCustomProperty(detail.property, media)}
-              {:else}
-                {property.toString().replace(/_/g, ' ').toLowerCase()}
+        <div class='detail-item d-flex flex-row align-items-center' class:title-container={detail.custom === 'titles'}>
+          <svelte:component size='8px' this={detail.icon} class='mr-5' />
+          <span class='value-text'>
+            {#if detail.custom === 'property'}
+              {getCustomProperty(detail.property, media)}
+            {:else if detail.custom === 'titles'}
+              <span class="main-title">{property.main.toLowerCase()}</span>
+              {#if property.subs.length > 0}
+                <div class="tooltip-box">{property.subs.join(' • ').toLowerCase()}</div>
               {/if}
-            </div>
-            <div />
-          </div>
+            {:else}
+              {property.toString().replace(/_/g, ' ').toLowerCase()}
+            {/if}
+          </span>
         </div>
       {/if}
     {/await}
@@ -97,53 +70,66 @@
 </div>
 
 <style>
-  
-
   .details-strip {
     font-family: 'IBM Plex Mono', monospace !important;
-    background: #131317 !important;
-    border: none !important;
-    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
-    border-radius: 0 !important;
-    scrollbar-width: none;
-    gap: 0;
+    background: transparent !important;
+    padding: 4px 0;
+    gap: 8px;
+    position: relative;
   }
-  .details-strip::-webkit-scrollbar { display: none; }
 
-  /* Each detail chip */
-  .details-strip :global(.d-flex.flex-row.mx-10.py-5) {
-    background: rgba(237,237,234,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 3px;
-    padding: 0.5rem 1rem !important;
-    margin: 0.4rem 0.4rem !important;
-    gap: 0.7rem;
+  .detail-item {
+    color: #444;
+    position: relative;
+  }
+
+  .detail-item:not(:last-child) .value-text::after {
+    content: ',';
+    color: #222;
+    margin-right: 2px;
+  }
+
+  .value-text {
+    color: #777; /* Significantly lower brightness */
+    font-size: 8px; 
+    letter-spacing: -0.01em;
+  }
+
+  /* First item muted highlight */
+  .detail-item:first-child .value-text {
+    color: #5d6b2f; 
+    font-weight: bold;
+  }
+
+  :global(.details-strip svg) {
+    color: #5d6b2f;
+    opacity: 0.4;
+  }
+
+  /* Stable Hover (Tooltip Style) */
+  .title-container {
+    cursor: pointer;
+  }
+
+  .tooltip-box {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: #111;
+    color: #888;
+    padding: 4px 8px;
     white-space: nowrap;
-    transition: background 0.1s;
-  }
-  .details-strip :global(.d-flex.flex-row.mx-10.py-5:hover) {
-    background: rgba(237,237,234,0.08);
-  }
-
-  /* Icon color */
-  .details-strip :global(svg) {
-    color: #d4f55e !important;
-    flex-shrink: 0;
-  }
-  /* Native kanji icon */
-  .details-strip :global(.mr-10.d-flex.align-items-center) {
-    color: #d4f55e;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.2rem;
-    font-weight: 500;
+    border: 1px solid #222;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    font-size: 8px;
   }
 
-  /* Value text */
-  .details-strip :global(.font-weight-bold.select-all) {
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-weight: 500 !important;
-    font-size: 1.1rem !important;
-    color: #ededea !important;
-    letter-spacing: 0.02em;
+  .title-container:hover .tooltip-box {
+    visibility: visible;
+    opacity: 1;
   }
 </style>

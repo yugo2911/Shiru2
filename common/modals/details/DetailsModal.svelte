@@ -24,7 +24,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, ExternalLink } from 'lucide-svelte'
+  import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -33,8 +33,6 @@
 
   let _modal
   let container = null
-  let scrollTags = null
-  let scrollGenres = null
   let staticMedia
   $: media = mediaCache.value[view?.id] || view
   $: {
@@ -70,8 +68,7 @@
   $: staticMedia && (modal.length === 1 && $modal[modal.ANIME_DETAILS] && _modal?.focus())
   $: {
     if (staticMedia) {
-      if (scrollTags) scrollTags.scrollLeft = 0
-      if (scrollGenres) scrollGenres.scrollLeft = 0
+      // reset handled by key block on staticMedia.id
     }
   }
   function checkClose ({ keyCode }) {
@@ -228,47 +225,25 @@
                 </div>
               </div>
               <div class='pl-sm-20 ml-sm-20'>
-                <h1 class='font-weight-very-bold text-white select-all mb-0 font-scale-40'>{anilistClient.title(staticMedia)}</h1>
-                <div class='d-flex flex-row font-size-18 flex-wrap mt-5'>
+                <div class='anime-meta-label'>
+                  {#if staticMedia.seasonYear}{staticMedia.seasonYear}{/if}{#if staticMedia.season && staticMedia.seasonYear} · {/if}{#if staticMedia.season}<span class='text-capitalize'>{staticMedia.season.toLowerCase()}</span>{/if}{#if staticMedia.format} · {formatMap[staticMedia.format]}{/if}
+                </div>
+                <h1 class='anime-title select-all'>{anilistClient.title(staticMedia)}</h1>
+                <div class='anime-stats'>
                   {#if staticMedia.averageScore}
-                    <div class='d-flex flex-row mt-10' title='{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews'>
-                      <TrendingUp class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                        Rating: {staticMedia.averageScore + '%'}
-                      </span>
-                    </div>
-                  {/if}
-                  {#if staticMedia.format}
-                    <div class='d-flex flex-row mt-10'>
-                      <Tv class='mx-10' size='2.2rem' />
-                      <span class='mr-20 text-capitalize'>
-                        Format: {formatMap[staticMedia.format]}
-                      </span>
-                    </div>
+                    <span class='anime-stat-score'>{staticMedia.averageScore}%</span>
+                    <span class='anime-stat-sep'>·</span>
                   {/if}
                   {#if staticMedia.episodes !== 1}
                     {@const maxEp = getMediaMaxEp(staticMedia)}
-                    <div class='d-flex flex-row mt-10'>
-                      <Clapperboard class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                      Episodes: {maxEp && maxEp !== 0 ? maxEp : '?'}
-                      </span>
-                    </div>
+                    <span>{maxEp && maxEp !== 0 ? maxEp : '?'} episodes</span>
+                    <span class='anime-stat-sep'>·</span>
                   {:else if staticMedia.duration}
-                    <div class='d-flex flex-row mt-10'>
-                      <Timer class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                        Length: {staticMedia.duration + ' min'}
-                      </span>
-                    </div>
+                    <span>{staticMedia.duration} min</span>
+                    <span class='anime-stat-sep'>·</span>
                   {/if}
                   {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
-                    <div class='d-flex flex-row mt-10'>
-                      <Users class='mx-10' size='2.2rem' />
-                      <span class='mr-20' title='{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews'>
-                        Reviews: {anilistClient.reviews(staticMedia)}
-                      </span>
-                    </div>
+                    <span title='{anilistClient.reviews(staticMedia)} user reviews'>{anilistClient.reviews(staticMedia)} reviews</span>
                   {/if}
                 </div>
                 <div class='d-flex flex-row flex-wrap play'>
@@ -362,18 +337,28 @@
                 <Following media={staticMedia} />
               </div>
             </div>
-            <Details media={staticMedia} alt={recommendations} />
-            <div bind:this={scrollTags} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
-              {#each staticMedia.tags as tag}
-                <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center'>
-                  <Hash class='mr-5' size='1.8rem' /><span class='font-weight-bolder select-all'>{tag.name}</span><span class='font-weight-light'>: {tag.rank}%</span>
+            <div class='meta-block'>
+              <Details media={staticMedia} alt={recommendations} />
+              {#if staticMedia.genres?.length}
+                <div class='meta-row'>
+                  <span class='meta-key'>Genres</span>
+                  <span class='meta-val'>
+                    {#each staticMedia.genres as genre, i}
+                      <span class='meta-genre'><svelte:component this={genreIcons[genre]} size='1.1rem' />{genre}</span>{#if i < staticMedia.genres.length - 1}<span class='meta-inline-sep'>, </span>{/if}
+                    {/each}
+                  </span>
                 </div>
-              {/each}
-            </div>
-            <div bind:this={scrollGenres} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
-              {#each staticMedia.genres as genre}
-                <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center select-all'><svelte:component this={genreIcons[genre]} class='mr-5' size='1.8rem' /> {genre}</div>
-              {/each}
+              {/if}
+              {#if staticMedia.tags?.length}
+                <div class='meta-row'>
+                  <span class='meta-key'>Tags</span>
+                  <span class='meta-val meta-tags'>
+                    {#each staticMedia.tags as tag, i}
+                      <span class='meta-tag'>{tag.name}<span class='meta-tag-rank'> {tag.rank}%</span></span>{#if i < staticMedia.tags.length - 1}<span class='meta-inline-sep'>, </span>{/if}
+                    {/each}
+                  </span>
+                </div>
+              {/if}
             </div>
             {#if staticMedia.description}
               <div class='w-full d-flex flex-row align-items-center pt-20 mt-10'>
@@ -508,27 +493,112 @@
 
   .play { justify-content: center; }
 
-  /* ── Anime title ─────────────────────────────── */
-  :global(.font-scale-40) {
-    font-family: 'Syne', sans-serif !important;
-    font-size: clamp(2.4rem, 4vw, 4rem) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.03em !important;
-    color: #ededea !important;
-    line-height: 1.1 !important;
+  /* ── Anime meta label (year · season · format) ── */
+  .anime-meta-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #d4f55e;
+    margin-bottom: 0.7rem;
+    opacity: 0.9;
   }
 
-  /* ── Meta stat row (rating, format, episodes…) ── */
+  /* ── Anime title ─────────────────────────────── */
+  .anime-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 5vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #ededea;
+    line-height: 1.0;
+    margin: 0 0 1rem 0;
+  }
+
+  /* ── Inline stat row ─────────────────────────── */
+  .anime-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.35rem;
+    color: rgba(237,237,234,0.45);
+    margin-bottom: 1.8rem;
+  }
+  .anime-stat-score {
+    color: #d4f55e;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+  .anime-stat-sep {
+    margin: 0 0.6rem;
+    color: rgba(237,237,234,0.15);
+  }
+
+  /* ── Meta def-list block ─────────────────────── */
+  .meta-block {
+    padding: 1.6rem 0 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 1rem;
+  }
+  .meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .meta-key {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(237,237,234,0.25);
+    width: 5.5rem;
+    flex-shrink: 0;
+    padding-top: 0.15rem;
+  }
+  .meta-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: rgba(237,237,234,0.7);
+    line-height: 1.7;
+    flex: 1;
+  }
+  .meta-genre {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-transform: capitalize;
+  }
+  .meta-genre :global(svg) {
+    color: rgba(212,245,94,0.55);
+    flex-shrink: 0;
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+  .meta-inline-sep { color: rgba(237,237,234,0.18); }
+  .meta-tags { color: rgba(237,237,234,0.6); }
+  .meta-tag-rank {
+    color: rgba(237,237,234,0.2);
+    font-size: 0.8rem;
+    margin-left: 0.2rem;
+  }
+
+  /* ── Meta stat row (kept for compat) ────────── */
   :global(.font-size-18) {
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 1.15rem !important;
     color: rgba(237,237,234,0.45) !important;
     letter-spacing: 0.04em;
   }
-  /* Icon tint in stat row */
-  :global(.font-size-18 svg) {
-    color: #d4f55e !important;
-  }
+  :global(.font-size-18 svg) { color: #d4f55e !important; }
 
   /* ── Primary watch button ────────────────────── */
   :global(.btn-secondary) {
@@ -563,42 +633,7 @@
     color: #ededea !important;
   }
 
-  /* ── Tags strip ──────────────────────────────── */
-  :global(.px-20.py-10.mr-10.rounded.text-nowrap) {
-    font-family: 'IBM Plex Mono', monospace !important;
-    background: rgba(237,237,234,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
-    border-radius: 3px !important;
-    font-size: 1.05rem !important;
-    color: rgba(237,237,234,0.55) !important;
-    transition: background 0.1s;
-  }
-  :global(.px-20.py-10.mr-10.rounded.text-nowrap:hover) {
-    background: rgba(237,237,234,0.09) !important;
-  }
-  /* Tag rank % dimmer */
-  :global(.font-weight-light) {
-    color: rgba(237,237,234,0.28) !important;
-  }
-  /* Tag / genre icons */
-  :global(.px-20.py-10.mr-10.rounded svg) {
-    color: #d4f55e !important;
-  }
-
   /* ── Synopsis section header ─────────────────── */
-  :global(.font-weight-semi-bold) {
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.22em !important;
-    text-transform: uppercase !important;
-    color: rgba(237,237,234,0.38) !important;
-    white-space: nowrap;
-    background: #0d0d10;
-    padding: 0 1.4rem !important;
-  }
-
-  /* ── Dividers ────────────────────────────────── */
   hr {
     border-color: rgba(255,255,255,0.07) !important;
     opacity: 1;
