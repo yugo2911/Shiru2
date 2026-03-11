@@ -11,7 +11,7 @@
     "start": "cross-env NODE_ENV=development webpack build && concurrently --kill-others \"npm run web:watch\" \"npm run electron:start\"",
     "web:watch": "webpack serve",
     "web:build": "cross-env NODE_ENV=production webpack build",
-    "electron:start": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto electron ./build/main.js --enable-features=UseOzonePlatform --disable-gpu-rasterization --disable-gpu-compositing --disable-software-rasterizer,WaylandFractionalScaleV1",
+    "electron:start": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto electron ./build/main.js --enable-features=UseOzonePlatform --disable-gpu-rasterization --disable-gpu-compositing --disable-software-rasterizer,WaylandFractionalScaleV1 --ignore-certificate-errors",    
     "build": "npm run web:build && electron-builder",
     "electron:build": "electron-builder",
     "publish": "npm run web:build && electron-builder -p always"
