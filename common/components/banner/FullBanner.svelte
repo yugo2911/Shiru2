@@ -22,56 +22,29 @@
   function toggleFavourite() { current.isFavourite = anilistClient.favourite({ id: current.id }) }
   function currentIndex() { return mediaList.findIndex(media => media?.id === currentStatic?.id) }
 
-  /**
-   * Build a deduplicated pool of banner image URLs for a given media item.
-   * Priority order:
-   *   1. AniList bannerImage (the canonical wide crop)
-   *   2. YouTube trailer thumbnails (maxres → hq) — already varied per show
-   *   3. Kitsu cover/poster images fetched in Banner.svelte (stored on kitsuBanners)
-   *   4. AniList extraLarge cover (last resort / adult fallback)
-   *
-   * We then pick one at random from the pool so each carousel slot looks
-   * different even when the same show rotates back in.
-   */
   function buildImagePool(media) {
     const isAdultFallback = !media.bannerImage && !media.trailer?.id && settings.value.adult === 'hentai' && settings.value.hentaiBanner
-
     const pool = [
       media.bannerImage,
-      ...(media.trailer?.id
-        ? [
-            `https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`,
-            `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`
-          ]
-        : []),
+      ...(media.trailer?.id ? [`https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`] : []),
       ...(media.kitsuBanners ?? []),
       isAdultFallback ? media.coverImage?.extraLarge : null,
       './404_banner.png'
     ].filter(Boolean)
-
-    // Deduplicate while preserving order
     return [...new Set(pool)]
   }
 
-  /**
-   * Pick a random image from the pool each time a new slide becomes active.
-   * Avoids picking the same index twice in a row when possible.
-   */
   let lastPickedUrl = null
   function pickBannerImage(media) {
     const pool = buildImagePool(media)
     if (pool.length <= 1) return pool
     const candidates = pool.filter(u => u !== lastPickedUrl && u !== './404_banner.png')
-    const chosen = candidates.length
-      ? candidates[Math.floor(Math.random() * candidates.length)]
-      : pool[Math.floor(Math.random() * pool.length)]
+    const chosen = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : pool[Math.floor(Math.random() * pool.length)]
     lastPickedUrl = chosen
-    // Return as a single-element array so SmartImage still gets its fallback list
     const rest = pool.filter(u => u !== chosen)
     return [chosen, ...rest]
   }
 
-  // Recompute the image list whenever the active slide changes
   $: bannerImages = pickBannerImage(currentStatic)
 
   let timeout = schedule(currentIndex() + 1)
@@ -100,11 +73,19 @@
 </script>
 
 {#key currentStatic}
-  <div class='position-absolute h-full w-full overflow-hidden z--1'>
+  <div class='position-absolute h-full w-full overflow-hidden z--1 bg-black'>
     <SmartImage
       class={`img-cover position-absolute h-full w-full ${isRotated ? 'banner-rotated' : ''}`}
       images={bannerImages}
     />
+    {#if currentStatic.trailer?.id && currentStatic.trailer?.site === 'youtube'}
+      <iframe
+        class="position-absolute border-0 video-background"
+        src={`https://www.youtube.com/embed/${currentStatic.trailer.id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${currentStatic.trailer.id}&rel=0&showinfo=0&iv_load_policy=3&modestbranding=1&vq=hd1080&playback_quality=hd1080`}
+        title="Trailer"
+        allow="autoplay; encrypted-media"
+      ></iframe>
+    {/if}
   </div>
 {/key}
 
@@ -146,7 +127,7 @@
     </button>
     {#if Helper.isAuthorized()}<Scoring media={current} />{/if}
     {#if Helper.isAniAuth()}
-      <button class='btn bg-dark-light btn-square ml-10 d-flex align-items-center justify-content-center shadow-none border-0' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={current.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
+      <button class='btn bg-dark-light btn-square ml-10 d-flex align-items-center justify-content-center shadow-none border-0' use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
         <div class='favourite d-flex align-items-center justify-content-center'>
           <Heart color={current.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={current.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
         </div>
@@ -179,15 +160,22 @@
   .text-muted { color:rgba(237,237,234,0.40) !important; font-family:'IBM Plex Mono',monospace; font-size:1.15rem; font-weight:300; line-height:1.65; }
   .line-4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
   .btn:first-of-type { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:500; letter-spacing:0.08em; background:#d4f55e !important; color:#0d0d10 !important; border:none !important; border-radius:3px !important; box-shadow:none !important; transition:opacity 0.12s; }
-  .btn:first-of-type:hover { opacity:0.85; }
-  .btn { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:400; letter-spacing:0.06em; background:rgba(13,13,16,0.65) !important; color:#ededea !important; border:1px solid rgba(255,255,255,0.10) !important; border-radius:3px !important; box-shadow:none !important; backdrop-filter:blur(8px); transition:background 0.12s,border-color 0.12s; }
-  .btn:hover { background:rgba(237,237,234,0.10) !important; border-color:rgba(255,255,255,0.22) !important; }
+  .btn { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:400; letter-spacing:0.06em; background:rgba(13,13,16,0.65) !important; color:#ededea !important; border:1px solid rgba(255,255,255,0.10) !important; border-radius:3px !important; backdrop-filter:blur(8px); }
   .btn-square { border-radius:3px !important; aspect-ratio:1; }
-  .badge-wrapper { padding-top:10px; padding-bottom:10px; }
-  .progress-badge { background:rgba(237,237,234,0.18) !important; border-radius:2px !important; transition:width 0.8s ease; height:3px !important; }
-  .progress-badge.active { background:rgba(212,245,94,0.25) !important; }
-  .progress-badge.active .progress-content { animation:fill 15s linear; will-change:width; background:#d4f55e !important; }
-  .progress-badge:not(.active) .progress-content { background:rgba(237,237,234,0.45) !important; width:100%; }
+  .progress-badge { background:rgba(237,237,234,0.18) !important; transition:width 0.8s ease; height:3px !important; }
+  .progress-badge.active .progress-content { animation:fill 15s linear; background:#d4f55e !important; }
   @keyframes fill { from { width:0; } to { width:100%; } }
   .default-cursor { cursor:default; }
+
+  .video-background {
+    pointer-events: none;
+    object-fit: cover;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 56.25vw;
+    min-height: 100vh;
+    min-width: 177.77vh;
+    transform: translate(-50%, -50%) scale(1.15); /* Keep overscan for quality masking */
+  }
 </style>
