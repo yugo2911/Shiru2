@@ -174,24 +174,6 @@
 
   :global(body) { margin: 0; background: #0d0d10; }
 
-  .root {
-    --bg:      #0d0d10;
-    --bg2:     #131317;
-    --line:    rgba(255,255,255,0.07);
-    --fg:      --fg;
-    --dim:     rgba(237,237,234,0.38);
-    --faint:   rgba(237,237,234,0.06);
-    --acc:     var(--card-accent);
-    --acc-dim: rgba(212,245,94,0.1);
-    --col-w:   500px;
-    font-family: 'IBM Plex Mono', monospace;
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--fg);
-  }
-
   /* ── LEFT pane ─────────────────────────── */
   .pane-today {
     width: 450px;
