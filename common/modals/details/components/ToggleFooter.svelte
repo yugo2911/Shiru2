@@ -21,23 +21,22 @@
 
   .btn {
     margin-top: -1rem;
-    /* Override default button styles with design system */
-    background: #131317 !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    color: rgba(237,237,234,0.55) !important;
+    background: var(--card-surface) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-dim) !important;
     border-radius: 50% !important;
     box-shadow: none !important;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
   .btn:hover {
-    background: rgba(212,245,94,0.08) !important;
-    border-color: #d4f55e !important;
-    color: #d4f55e !important;
+    background: var(--card-accent-dim) !important;
+    border-color: var(--card-accent) !important;
+    color: var(--card-accent) !important;
   }
 
   /* Divider line */
   hr {
-    border-color: rgba(255,255,255,0.07) !important;
+    border-color: var(--card-line) !important;
     opacity: 1;
   }
 </style>

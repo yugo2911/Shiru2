@@ -156,7 +156,7 @@
   .banner {
     animation: fadeIn 0.8s ease forwards;
     will-change: opacity;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
   }
   img {
     animation: fadeIn 0.8s ease forwards;
@@ -174,18 +174,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    font-family: 'Syne', sans-serif;
+    font-family: var(--font-display);
     font-size: clamp(2.2rem, 4vw, 4rem);
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: #ededea;
+    color: var(--card-fg);
     /* layered shadow for legibility over any banner image */
     text-shadow: 0 2px 20px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,1);
   }
 
   /* ── Meta detail pills row ───────────────────────── */
   .details {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1.1rem;
     font-weight: 400;
     color: rgba(237,237,234,0.55);
@@ -200,35 +200,28 @@
     font-size: 0.55rem;
     align-self: center;
     white-space: normal;
-    color: rgba(237,237,234,0.28);
+    color: var(--card-line);
   }
 
   /* ── Description ─────────────────────────────────── */
   .text-muted {
     color: rgba(237,237,234,0.40) !important;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1.15rem;
     font-weight: 300;
     line-height: 1.65;
-  }
-  /* clamp to 4 lines */
-  .line-4 {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   /* ── Action buttons ──────────────────────────────── */
 
   /* Primary — Watch/Continue */
   .btn:first-of-type {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1.1rem;
     font-weight: 500;
     letter-spacing: 0.08em;
-    background: #d4f55e !important;
-    color: #0d0d10 !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     border: none !important;
     border-radius: 3px !important;
     box-shadow: none !important;
@@ -238,20 +231,20 @@
 
   /* Secondary — View Details + favourite */
   .btn {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1.1rem;
     font-weight: 400;
     letter-spacing: 0.06em;
     background: rgba(13,13,16,0.65) !important;
-    color: #ededea !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
+    color: var(--card-fg) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 3px !important;
     box-shadow: none !important;
     backdrop-filter: blur(8px);
     transition: background 0.12s, border-color 0.12s;
   }
   .btn:hover {
-    background: rgba(237,237,234,0.10) !important;
+    background: var(--card-faint) !important;
     border-color: rgba(255,255,255,0.22) !important;
   }
   /* Square favourite / score btn */
@@ -267,19 +260,19 @@
     padding-bottom: 10px;
   }
   .progress-badge {
-    background: rgba(237,237,234,0.18) !important;
+    background: var(--card-faint) !important;
     border-radius: 2px !important;
     transition: width 0.8s ease;
     height: 3px !important;
   }
   /* active indicator — accent colored */
   .progress-badge.active {
-    background: rgba(212,245,94,0.25) !important;
+    background: var(--card-accent-dim) !important;
   }
   .progress-badge.active .progress-content {
     animation: fill 15s linear;
     will-change: width;
-    background: #d4f55e !important;
+    background: var(--card-accent) !important;
   }
   /* inactive indicator */
   .progress-badge:not(.active) .progress-content {

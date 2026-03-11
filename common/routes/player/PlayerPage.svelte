@@ -2058,40 +2058,25 @@
     </div>
   </div>
 
-<SoftModal class='p-0 w-700 mw-full rounded overflow-hidden' bind:showModal={jimakuShow} close={closeJimaku} id='jimaku'
-  style='background: #131317; border: 1px solid rgba(255,255,255,0.07); font-family: "IBM Plex Mono", monospace; color: #ededea;'>
+<SoftModal class='p-0 w-700 mw-full rounded overflow-hidden jimaku-modal' bind:showModal={jimakuShow} close={closeJimaku} id='jimaku'>
 
   <!-- Header -->
-  <div style='padding: 1.5rem 2rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: baseline; justify-content: space-between;'>
+  <div class='jimaku-header'>
     <div>
-      <div style='font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: #d4f55e; margin-bottom: 0.3rem;'>Subtitles</div>
-      <h5 style='margin: 0; font-family: "Syne", sans-serif; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; color: #ededea;'>Jimaku</h5>
+      <div class='jimaku-label'>Subtitles</div>
+      <h5 class='jimaku-title'>Jimaku</h5>
     </div>
-    <button on:click={closeJimaku}
-      style='background: none; border: none; color: rgba(237,237,234,0.38); cursor: pointer; font-size: 1.4rem; line-height: 1; padding: 0.25rem; transition: color 0.15s;'
-      on:mouseenter={e => e.target.style.color='#d4f55e'}
-      on:mouseleave={e => e.target.style.color='rgba(237,237,234,0.38)'}>✕</button>
+    <button class='jimaku-close' on:click={closeJimaku}>✕</button>
   </div>
 
   <!-- Body -->
   {#if jimakuFiles.length}
-    <div style='overflow-y: auto; max-height: 60vh; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.07) transparent;'>
+    <div class='jimaku-list'>
       {#each jimakuFiles as file, i}
-        <div style='display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.07); transition: background 0.1s, padding-left 0.1s; cursor: default;'
-          on:mouseenter={e => { e.currentTarget.style.background='rgba(237,237,234,0.06)'; e.currentTarget.style.paddingLeft='2.4rem'; }}
-          on:mouseleave={e => { e.currentTarget.style.background=''; e.currentTarget.style.paddingLeft='2rem'; }}>
-
-          <!-- Index -->
-          <span style='font-size: 0.78rem; color: #d4f55e; flex-shrink: 0; width: 1.5rem; font-variant-numeric: tabular-nums;'>{String(i + 1).padStart(2, '0')}</span>
-
-          <!-- Filename -->
-          <div style='flex: 1; min-width: 0; font-size: 1rem; font-weight: 300; color: #ededea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{file.name}</div>
-
-          <!-- Download button -->
-          <button on:click={() => downloadJimakuFile(file)}
-            style='flex-shrink: 0; background: rgba(212,245,94,0.1); border: 1px solid rgba(212,245,94,0.25); color: #d4f55e; padding: 0.35rem 0.85rem; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: background 0.15s, border-color 0.15s;'
-            on:mouseenter={e => { e.currentTarget.style.background='rgba(212,245,94,0.2)'; e.currentTarget.style.borderColor='rgba(212,245,94,0.5)'; }}
-            on:mouseleave={e => { e.currentTarget.style.background='rgba(212,245,94,0.1)'; e.currentTarget.style.borderColor='rgba(212,245,94,0.25)'; }}>
+        <div class='jimaku-row'>
+          <span class='jimaku-index'>{String(i + 1).padStart(2, '0')}</span>
+          <div class='jimaku-name'>{file.name}</div>
+          <button class='jimaku-dl' on:click={() => downloadJimakuFile(file)}>
             <Download size='0.85rem' />
             DL
           </button>
@@ -2099,9 +2084,7 @@
       {/each}
     </div>
   {:else}
-    <div style='padding: 3rem 2rem; text-align: center; font-size: 0.88rem; color: rgba(237,237,234,0.18); letter-spacing: 0.08em; text-transform: uppercase;'>
-      No subtitles found for this series
-    </div>
+    <div class='jimaku-empty'>No subtitles found for this series</div>
   {/if}
 </SoftModal>
 </div>
@@ -2211,14 +2194,25 @@
     padding-top: 1.5rem;
     white-space: nowrap;
     font-weight: 600;
-    font-family: Roboto, Arial, Helvetica, sans-serif;
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
   }
   .skipPrompt {
     margin-top: 10rem;
-    font-family: Roboto, Arial, Helvetica, sans-serif;
+    font-family: var(--font-mono);
+    background: var(--card-surface) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-fg);
+    backdrop-filter: blur(12px);
   }
   .skipFont {
-    font-size: 1.8rem !important;
+    font-size: 1.6rem !important;
+    color: var(--card-dim);
+    line-height: 1.6;
+  }
+  .skipFont b {
+    color: var(--card-accent);
+    font-weight: 600;
   }
   .miniplayer {
     height: auto !important;
@@ -2232,8 +2226,10 @@
     position: relative !important;
   }
   .bg-tp {
-    background: hsla(var(--black-color-hsl), 0.73);
-    backdrop-filter: blur(10px);
+    background: hsla(var(--bg-hsl), 0.82);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--card-line);
+    border-radius: 6px;
   }
   .bg-tp .close {
     position: absolute;
@@ -2253,8 +2249,24 @@
   }
   .player {
     user-select: none;
-    font-family: Roboto, Arial, Helvetica, sans-serif;
+    font-family: var(--font-mono);
     background: var(--black-color);
+  }
+
+  /* ── Top bar title/subtitle ─────────────────── */
+  :global(.player .font-scale-23) {
+    font-family: var(--font-display) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--card-fg) !important;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.8);
+  }
+  :global(.player .font-scale-16) {
+    font-family: var(--font-mono) !important;
+    color: var(--card-dim) !important;
+    font-size: 1.3rem !important;
+    letter-spacing: 0.04em !important;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.8);
   }
 
   .pip :global(canvas:not(.w-full)) {
@@ -2363,11 +2375,20 @@
     filter: drop-shadow(0 0 8px var(--black-color));
   }
   .skip {
-    transition: 0.2s opacity ease 0s;
-    background: hsla(var(--white-color-hsl), 0.92);
+    transition: 0.2s opacity ease 0s, background 0.12s, border-color 0.12s;
+    font-family: var(--font-mono) !important;
+    font-size: 1.15rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: 0 2px 16px var(--card-acc-dim) !important;
   }
   .skip:hover {
-    background-color: var(--lm-button-bg-color-hover);
+    background: rgba(212,245,94,0.85) !important;
+    box-shadow: 0 4px 20px rgba(212,245,94,0.35) !important;
   }
 
   .bottom {
@@ -2450,12 +2471,15 @@
   }
 
   .bottom .ts {
-    color: hsla(var(--white-color-hsl), 0.92);
+    font-family: var(--font-mono);
+    color: var(--card-fg);
     white-space: nowrap;
     align-self: center;
     line-height: var(--base-line-height);
     padding: 0 1.56rem;
-    font-weight: 600;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
   }
 
   .seekbar {
@@ -2513,5 +2537,224 @@
       display: none !important;
     }
   }
+
+  /* ── Skip/Resolve prompt action buttons ────────── */
+  .skipPrompt :global(.btn-primary) {
+    font-family: var(--font-mono) !important;
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    background: transparent !important;
+    color: var(--card-dim) !important;
+    border: 1px solid var(--card-line) !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    min-width: 8rem;
+  }
+  .skipPrompt :global(.btn-primary:hover) {
+    background: var(--card-faint) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+    color: var(--card-fg) !important;
+  }
+  .skipPrompt :global(.btn-secondary) {
+    font-family: var(--font-mono) !important;
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.08em !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: 0 2px 14px rgba(212,245,94,0.2) !important;
+    min-width: 8rem;
+    transition: opacity 0.12s;
+  }
+  .skipPrompt :global(.btn-secondary:hover) { opacity: 0.85; }
+
+  /* ── Stats debug panel ──────────────────────────── */
+  :global(.text-monospace.rounded) {
+    font-family: var(--font-mono) !important;
+    font-size: 1rem !important;
+    background: var(--card-surface) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-fg) !important;
+    backdrop-filter: blur(12px);
+    border-radius: 4px !important;
+  }
+  :global(.text-monospace.rounded .pbf:hover) {
+    background: var(--card-accent-dim) !important;
+    color: var(--card-accent) !important;
+  }
+
+  /* ── Ctrl icon hover glow ───────────────────────── */
+  .ctrl {
+    cursor: pointer;
+    transition: color 0.12s, filter 0.12s;
+  }
+  .ctrl:hover {
+    color: var(--card-fg) !important;
+    filter: drop-shadow(0 0 6px var(--card-acc-dim));
+  }
+
+  /* ── Dropdown menu ──────────────────────────────── */
+  :global(.player .dropdown-menu),
+  :global(.player .bg-dark.rounded.dr-arrow) {
+    font-family: var(--font-mono) !important;
+    background: var(--card-surface) !important;
+    border: 1px solid var(--card-line) !important;
+    border-radius: 4px !important;
+    color: var(--card-fg) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7) !important;
+  }
+  :global(.player .option) {
+    font-family: var(--font-mono) !important;
+    font-size: 1.1rem !important;
+    color: var(--card-dim) !important;
+    transition: background 0.1s, color 0.1s;
+  }
+  :global(.player .option:hover) {
+    background: var(--card-faint) !important;
+    color: var(--card-fg) !important;
+  }
+  :global(.player .option svg) {
+    color: var(--card-accent);
+    filter: drop-shadow(0 0 4px var(--card-acc-dim));
+  }
+
+  /* ── Torrent stats bar (peers / speed) ─────────── */
+  .top .stats {
+    font-size: 1.8rem;
+    padding-top: 0;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--card-dim);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.9);
+  }
+  .top .icon {
+    color: var(--card-accent);
+    filter: drop-shadow(0 0 5px var(--card-acc-dim));
+    padding: 0.8rem 0.6rem;
+    text-shadow: none;
+  }
+
+
+  /* ══ Jimaku subtitle modal ═════════════════════════════════ */
+  :global(.jimaku-modal) {
+    background: var(--card-surface) !important;
+    border: 1px solid var(--card-line) !important;
+    font-family: var(--font-mono) !important;
+    color: var(--card-fg) !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85) !important;
+  }
+
+  /* Header */
+  :global(.jimaku-header) {
+    padding: 1.5rem 2rem 1.25rem;
+    border-bottom: 1px solid var(--card-line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  :global(.jimaku-label) {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--card-accent);
+    margin-bottom: 0.3rem;
+    filter: drop-shadow(0 0 5px var(--card-acc-dim));
+  }
+  :global(.jimaku-title) {
+    margin: 0;
+    font-family: var(--font-display) !important;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--card-fg);
+  }
+  :global(.jimaku-close) {
+    background: none;
+    border: none;
+    color: var(--card-dim);
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 0.25rem;
+    transition: color 0.15s;
+    font-family: var(--font-mono);
+  }
+  :global(.jimaku-close:hover) { color: var(--card-accent); }
+
+  /* File list */
+  :global(.jimaku-list) {
+    overflow-y: auto;
+    max-height: 60vh;
+    scrollbar-width: thin;
+    scrollbar-color: var(--card-line) transparent;
+  }
+  :global(.jimaku-row) {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 2rem;
+    border-bottom: 1px solid var(--card-line);
+    transition: background 0.1s, padding-left 0.15s;
+    cursor: default;
+  }
+  :global(.jimaku-row:hover) {
+    background: var(--card-faint);
+    padding-left: 2.4rem;
+  }
+  :global(.jimaku-index) {
+    font-size: 0.78rem;
+    color: var(--card-accent);
+    flex-shrink: 0;
+    width: 1.5rem;
+    font-variant-numeric: tabular-nums;
+    filter: drop-shadow(0 0 4px var(--card-acc-dim));
+  }
+  :global(.jimaku-name) {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    font-weight: 300;
+    color: var(--card-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+  }
+  :global(.jimaku-dl) {
+    flex-shrink: 0;
+    background: var(--card-accent-dim);
+    border: 1px solid var(--card-acc-dim);
+    color: var(--card-accent);
+    padding: 0.35rem 0.85rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  :global(.jimaku-dl:hover) {
+    background: var(--card-acc-dim) !important;
+    border-color: var(--card-accent) !important;
+    box-shadow: 0 0 10px var(--card-acc-dim) !important;
+  }
+  :global(.jimaku-empty) {
+    padding: 3rem 2rem;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--card-faint);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
 
 </style>

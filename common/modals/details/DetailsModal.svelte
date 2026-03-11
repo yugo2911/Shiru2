@@ -377,9 +377,9 @@
 
   /* ── Modal shell ─────────────────────────────── */
   :global(.modal-full .modal-content) {
-    background: #0d0d10 !important;
-    font-family: 'IBM Plex Mono', monospace;
-    color: #ededea;
+    background: var(--card-bg) !important;
+    font-family: var(--font-mono);
+    color: var(--card-fg);
   }
 
   /* ── Close button ────────────────────────────── */
@@ -388,19 +388,19 @@
     left: unset !important;
     right: 3rem !important;
     background: rgba(13,13,16,0.75) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
-    color: rgba(237,237,234,0.55) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-dim) !important;
     border-radius: 3px !important;
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 2rem !important;
     line-height: 1 !important;
     backdrop-filter: blur(8px);
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
   .close:hover {
-    background: rgba(237,237,234,0.10) !important;
+    background: var(--card-faint) !important;
     border-color: rgba(255,255,255,0.22) !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
   }
 
   /* ── Episode order toggle button ─────────────── */
@@ -408,16 +408,16 @@
     top: 7rem !important;
     left: -5rem !important;
     background: rgba(13,13,16,0.75) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
-    color: rgba(237,237,234,0.38) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-dim) !important;
     border-radius: 3px !important;
     backdrop-filter: blur(8px);
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
   .order:hover {
-    background: rgba(212,245,94,0.08) !important;
-    border-color: #d4f55e !important;
-    color: #d4f55e !important;
+    background: var(--card-accent-dim) !important;
+    border-color: var(--card-accent) !important;
+    color: var(--card-accent) !important;
   }
 
   /* ── Layout ──────────────────────────────────── */
@@ -440,34 +440,35 @@
 
   /* ── Anime title ─────────────────────────────── */
   :global(.font-scale-40) {
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-size: clamp(2.4rem, 4vw, 4rem) !important;
     font-weight: 800 !important;
     letter-spacing: -0.03em !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
     line-height: 1.1 !important;
   }
 
   /* ── Meta stat row (rating, format, episodes…) ── */
   :global(.font-size-18) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 1.15rem !important;
-    color: rgba(237,237,234,0.45) !important;
+    color: var(--card-dim) !important;
     letter-spacing: 0.04em;
   }
   /* Icon tint in stat row */
   :global(.font-size-18 svg) {
-    color: #d4f55e !important;
+    color: var(--card-accent) !important;
+    filter: drop-shadow(0 0 6px rgba(212,245,94,0.35));
   }
 
   /* ── Primary watch button ────────────────────── */
   :global(.btn-secondary) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 1.15rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.08em !important;
-    background: #d4f55e !important;
-    color: #0d0d10 !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     border: none !important;
     border-radius: 3px !important;
     box-shadow: none !important;
@@ -478,29 +479,29 @@
 
   /* ── Square icon buttons (fav, trailer, share…) ─ */
   :global(.btn.bg-dark-light) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     background: rgba(13,13,16,0.65) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
-    color: rgba(237,237,234,0.55) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-dim) !important;
     border-radius: 3px !important;
     box-shadow: none !important;
     backdrop-filter: blur(6px);
     transition: background 0.12s, border-color 0.12s, color 0.12s;
   }
   :global(.btn.bg-dark-light:hover) {
-    background: rgba(237,237,234,0.10) !important;
+    background: var(--card-faint) !important;
     border-color: rgba(255,255,255,0.22) !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
   }
 
   /* ── Tags strip ──────────────────────────────── */
   :global(.px-20.py-10.mr-10.rounded.text-nowrap) {
-    font-family: 'IBM Plex Mono', monospace !important;
-    background: rgba(237,237,234,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
+    font-family: var(--font-mono) !important;
+    background: var(--card-faint) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 3px !important;
     font-size: 1.05rem !important;
-    color: rgba(237,237,234,0.55) !important;
+    color: var(--card-dim) !important;
     transition: background 0.1s;
   }
   :global(.px-20.py-10.mr-10.rounded.text-nowrap:hover) {
@@ -510,33 +511,34 @@
   :global(.font-weight-light) {
     color: rgba(237,237,234,0.28) !important;
   }
-  /* Tag / genre icons */
+  /* Tag / genre icons — accent with subtle glow */
   :global(.px-20.py-10.mr-10.rounded svg) {
-    color: #d4f55e !important;
+    color: var(--card-accent) !important;
+    filter: drop-shadow(0 0 4px var(--card-acc-dim));
   }
 
   /* ── Synopsis section header ─────────────────── */
   :global(.font-weight-semi-bold) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 1rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.22em !important;
     text-transform: uppercase !important;
-    color: rgba(237,237,234,0.38) !important;
+    color: var(--card-dim) !important;
     white-space: nowrap;
-    background: #0d0d10;
+    background: var(--card-bg);
     padding: 0 1.4rem !important;
   }
 
   /* ── Dividers ────────────────────────────────── */
   hr {
-    border-color: rgba(255,255,255,0.07) !important;
+    border-color: var(--card-line) !important;
     opacity: 1;
   }
 
   /* ── Synopsis body text ──────────────────────── */
   :global(.font-size-16) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 1.15rem !important;
     font-weight: 300 !important;
     color: rgba(237,237,234,0.45) !important;
@@ -544,14 +546,14 @@
   }
   /* rendered markdown links in synopsis */
   :global(.font-size-16 a) {
-    color: #d4f55e !important;
+    color: var(--card-accent) !important;
     text-decoration: none;
   }
   :global(.font-size-16 a:hover) { text-decoration: underline; }
 
   /* ── Episode section reverse label ──────────── */
   :global(.more.text-muted) {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 0.9rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.14em !important;
@@ -559,7 +561,7 @@
     color: rgba(212,245,94,0.55) !important;
     transition: color 0.1s;
   }
-  :global(.more.text-muted:hover) { color: #d4f55e !important; }
+  :global(.more.text-muted:hover) { color: var(--card-accent) !important; }
 
   /* ── Banner fade overlay ─────────────────────── */
   :global(.anime-details) {

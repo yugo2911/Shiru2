@@ -13,30 +13,30 @@
   .title {
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 1rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.22em !important;
     text-transform: uppercase !important;
-    color: rgba(237,237,234,0.38) !important;
+    color: var(--card-dim) !important;
     white-space: nowrap;
-    background: #0d0d10;
+    background: var(--card-bg);
     padding: 0 1.4rem !important;
   }
 
   /* Section divider lines */
   hr {
-    border-color: rgba(255,255,255,0.07) !important;
+    border-color: var(--card-line) !important;
     opacity: 1;
   }
 
   /* Hover state when the section is togglable */
   @media (hover: hover) and (pointer: fine) {
     .more:hover .title {
-      color: #d4f55e !important;
+      color: var(--card-accent) !important;
     }
     .more:hover hr {
-      border-color: rgba(212,245,94,0.25) !important;
+      border-color: var(--card-accent-dim) !important;
     }
   }
 </style>

@@ -67,16 +67,16 @@
   }
   /* Error state container */
   :global(.p-20.d-flex.align-items-center.justify-content-center.w-full.h-410) {
-    background: #0d0d10;
-    font-family: 'IBM Plex Mono', monospace;
+    background: var(--card-bg);
+    font-family: var(--font-mono);
   }
   /* "Ooops!" heading */
   h1 {
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-size: 3.2rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.03em !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
     margin-bottom: 1rem !important;
   }
   /* Primary error label */
@@ -85,15 +85,15 @@
     font-weight: 500 !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
-    color: #d4f55e !important;
-    font-family: 'IBM Plex Mono', monospace !important;
+    color: var(--card-accent) !important;
+    font-family: var(--font-mono) !important;
     margin-bottom: 0.5rem !important;
   }
   /* Secondary error detail */
   .font-size-20 {
     font-size: 1.2rem !important;
-    color: rgba(237,237,234,0.38) !important;
-    font-family: 'IBM Plex Mono', monospace !important;
+    color: var(--card-dim) !important;
+    font-family: var(--font-mono) !important;
     line-height: 1.7 !important;
   }
 </style>

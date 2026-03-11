@@ -155,12 +155,12 @@
         {/if}
       </div>
       {#if completed}
-        <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-          <div class='progress-bar w-full' />
+        <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+          <div class='card-progress-bar w-full' />
         </div>
       {:else if $progress > 0}
-        <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-          <div class='progress-bar' style='width: {$progress}%' />
+        <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+          <div class='card-progress-bar' style='width: {$progress}%' />
         </div>
       {/if}
     </div>
@@ -244,9 +244,6 @@
     z-index: 30 !important;
     background: var(--card-faint);
   }
-  .mt-3 {
-    margin-top: 0.3rem;
-  }
   .mb-150 {
     margin-bottom: 15rem !important;
   }
@@ -291,35 +288,10 @@
   :global(.cover-img) {
     border-radius: 4px !important;
   }
-  /* progress bar */
-  .progress {
-    background: rgba(255,255,255,0.08) !important;
-  }
-  .progress-bar {
-    background: var(--card-accent) !important;
-    height: 100%;
-  }
   .item {
     width: 36rem;
     max-width: 100%;
     margin: 0 auto;
     contain-intrinsic-height: 25.7rem;
-  }
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-  }
-  /* badge pill for countdown etc */
-  :global(.t-badge), .badge-pill-acc {
-    font-size: 0.9rem;
-    font-weight: 500;
-    background: var(--card-accent);
-    color: var(--card-bg);
-    padding: 0.2em 0.8em;
-    border-radius: 3px;
-    letter-spacing: 0.04em;
-    font-family: var(--font-mono);
   }
 </style>

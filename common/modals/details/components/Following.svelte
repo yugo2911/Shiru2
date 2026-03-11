@@ -38,12 +38,12 @@
 
   /* Overflow count bubble */
   :global(.bg-dark-light.rounded-circle.h-50.w-50) {
-    background: #131317 !important;
-    border: 2px solid rgba(255,255,255,0.10) !important;
-    font-family: 'IBM Plex Mono', monospace !important;
+    background: var(--card-surface) !important;
+    border: 2px solid var(--card-line) !important;
+    font-family: var(--font-mono) !important;
     font-size: 1rem !important;
     font-weight: 500 !important;
-    color: rgba(237,237,234,0.55) !important;
+    color: var(--card-dim) !important;
     letter-spacing: 0.04em;
   }
 </style>

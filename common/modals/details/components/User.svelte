@@ -139,8 +139,8 @@
   /* ── Avatar ring ───────────────────────────── */
   .avatar {
     transition: transform 0.18s ease;
-    border: 2px solid rgba(255,255,255,0.10) !important;
-    background: #131317 !important;
+    border: 2px solid var(--card-line) !important;
+    background: var(--card-surface) !important;
   }
   .avatar:hover { transform: translateY(-0.3rem); }
 
@@ -150,19 +150,15 @@
     max-width: 50rem;
   }
   .popover:focus-visible {
-    box-shadow: 0 0 0 .4rem rgba(212,245,94,0.4) !important;
+    box-shadow: 0 0 0 .4rem var(--card-accent-dim) !important;
   }
   .popover-card {
-    font-family: 'IBM Plex Mono', monospace;
-    background: linear-gradient(180deg, rgba(20,20,24,0.98) 0%, #131317 100%);
-    border: 1px solid rgba(255,255,255,0.07);
+    font-family: var(--font-mono);
+    background: linear-gradient(180deg, rgba(20,20,24,0.98) 0%, var(--card-surface) 100%);
+    border: 1px solid var(--card-line);
     border-radius: 8px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.07);
-    animation: pop 0.13s ease forwards;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line);
+    animation: card-pop 0.13s ease forwards;
   }
 
   .top-inner {
@@ -172,30 +168,30 @@
 
   /* ── Username ───────────────────────────────── */
   .font-weight-very-bold {
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
     font-size: 1.8rem !important;
     line-height: 1 !important;
   }
 
   /* ── Sub-labels (following you, joined) ──────── */
   .text-muted {
-    color: rgba(237,237,234,0.38) !important;
-    font-family: 'IBM Plex Mono', monospace !important;
+    color: var(--card-dim) !important;
+    font-family: var(--font-mono) !important;
     font-size: 1rem !important;
   }
 
   /* ── Status / score / progress badges ────────── */
   .badge {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 0.9rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.06em !important;
-    background: rgba(237,237,234,0.06) !important;
-    color: rgba(237,237,234,0.55) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
+    background: var(--card-faint) !important;
+    color: var(--card-dim) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 3px !important;
     padding: 0.2em 0.6em !important;
   }
@@ -211,24 +207,24 @@
   .stats {
     gap: 1.2rem;
     padding: 1.1rem 1.6rem;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    font-family: 'IBM Plex Mono', monospace;
+    border-top: 1px solid var(--card-line);
+    font-family: var(--font-mono);
     font-size: 1rem;
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
     letter-spacing: 0.04em;
   }
   .stats .text-nowrap {
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
   }
 
   /* ── Blocked banner ─────────────────────────── */
   .blocked-banner {
     transform: rotate(-45deg);
     background: rgba(212,245,94,0.85);
-    color: #0d0d10;
+    color: var(--card-bg);
     opacity: .85;
     padding: 0.2rem 2rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.18em;
@@ -238,7 +234,7 @@
   .bubble {
     top: 4rem;
     right: 1.6rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1rem;
     font-weight: 500;
     letter-spacing: 0.08em;

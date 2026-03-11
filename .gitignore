@@ -19,4 +19,5 @@ package-lock.json
 .gitignore
 
 .idea
+backup_changes
 Shiru.iml

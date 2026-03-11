@@ -127,12 +127,12 @@
 
   /* Icon color */
   .details-strip :global(svg) {
-    color: #d4f55e !important;
+    color: var(--card-accent) !important;
     flex-shrink: 0;
   }
   /* Native kanji icon */
   .details-strip :global(.mr-10.d-flex.align-items-center) {
-    color: #d4f55e;
+    color: var(--card-accent);
     font-family: 'IBM Plex Mono', monospace;
     font-size: 1.2rem;
     font-weight: 500;
@@ -143,7 +143,7 @@
     font-family: 'IBM Plex Mono', monospace !important;
     font-weight: 500 !important;
     font-size: 1.1rem !important;
-    color: #ededea !important;
+    color: --fg !important;
     letter-spacing: 0.02em;
   }
 </style>

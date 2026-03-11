@@ -130,7 +130,7 @@
   .card {
     width: 52rem !important;
     height: 27rem !important;
-    background: #131317 !important;
+    background: var(--card-surface) !important;
     border: 1px solid var(--card-line) !important;
     border-radius: 6px !important;
     box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
@@ -153,33 +153,16 @@
     animation: airing-pulse 7.5s infinite;
     will-change: box-shadow, opacity;
   }
-  @keyframes airing-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(212,245,94,0.7); opacity: 0.9; }
-    25%  { box-shadow: 0 0 0 .7rem rgba(13,13,16,0.5); opacity: 0.6; }
-    40%  { box-shadow: 0 0 0 0 rgba(13,13,16,0.5); opacity: 0.4; }
-    100% { box-shadow: 0 0 0 0 rgba(13,13,16,0.5); opacity: 0; }
-  }
 
-  /* Airing badge */
-  .airing-badge {
-    position: absolute;
+  /* FullCard badge position override */
+  .img-col .airing-badge {
     top: -.3rem;
     left: -.6rem;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    padding: .3rem 1rem;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border-radius: 3px;
-    box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
 
   /* Inner panels */
   .bg-very-dark {
-    background: #131317 !important;
+    background: var(--card-surface) !important;
   }
 
   /* Title */
@@ -243,10 +226,4 @@
     grid-template-rows: auto 1fr auto;
   }
 
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-  }
 </style>

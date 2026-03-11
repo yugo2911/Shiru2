@@ -48,7 +48,7 @@
   }
 </script>
 
-<div class='position-absolute w-350 h-full absolute-container top-0 bottom-0 m-auto bg-dark-light z-30 rounded pointer fade-change overflow-hidden clip-0-rounded' in:fadeIn out:fadeOut bind:this={element} on:scroll={(e) => e.target.scrollTop = 0}>
+<div class='position-absolute w-350 h-full card-popup top-0 bottom-0 m-auto z-30 pointer fade-change overflow-hidden clip-0-rounded' in:fadeIn out:fadeOut bind:this={element} on:scroll={(e) => e.target.scrollTop = 0}>
   <div class='banner position-relative bg-black'>
     <div class='ratio-16-9 w-full h-full clip-0'>
       <SmartImage class='img-cover w-full h-full' images={[media.bannerImage, ...(media.trailer?.id ? [`https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`] : []), media.coverImage?.extraLarge ]}/>
@@ -170,21 +170,10 @@
 <style>
   
 
-  /* Popup preview panel */
-  .absolute-container {
-    font-family: var(--font-mono);
-    background: #131317 !important;
-    border: 1px solid var(--card-line) !important;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line) !important;
-    border-radius: 8px !important;
-    will-change: transform, opacity, bottom;
+  /* Position within parent */
+  :global(.card-popup.w-350) {
     left: -100%;
     right: -100%;
-    animation: pop 0.13s ease forwards;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
   }
 
   /* Anime title */
@@ -273,7 +262,7 @@
   }
 
   /* Mute button */
-  .mute { color: #ededea; }
+  .mute { color: --fg; }
 
   .preview-safe-area {
     margin-top: -1rem !important;
@@ -281,8 +270,6 @@
     width: calc(100% + 2rem) !important;
   }
 
-  .text-white { color: #ededea !important; }
-  .text-muted { color: rgba(237,237,234,0.38) !important; }
-  .text-success { color: #d4f55e !important; }
+  .text-success { color: var(--card-accent) !important; }
   .text-danger  { color: #ff6b6b !important; }
 </style>

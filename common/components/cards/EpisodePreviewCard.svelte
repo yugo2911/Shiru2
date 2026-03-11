@@ -34,7 +34,7 @@
   $: resolvedHash = media?.id && !data.failed && getHash(media.id, { episode: data?.episode, client: true, batchGuess: true }, false, true)
 </script>
 
-<div class='position-absolute w-400 mw-full mh-400 absolute-container top-0 m-auto bg-dark-light z-30 rounded overflow-hidden pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
+<div class='position-absolute w-400 mw-full mh-400 card-popup top-0 m-auto z-30 overflow-hidden pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
   <div class='image h-200 w-full position-relative d-flex justify-content-between align-items-end text-white'>
     <SmartImage class='img-cover w-full h-full position-absolute rounded p-0 m-0 {!(data.episodeData?.image || media?.bannerImage) && media?.genres?.includes(`Hentai`) ? `cover-rotated cr-400` : ``}' color={media?.coverImage.color || 'var(--tertiary-color)'} images={[episodeThumbnail, './404_episode.png']}/>
     {#if data.episodeData?.video && !animating}
@@ -72,12 +72,12 @@
       {/if}
     </div>
     {#if completed}
-      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='progress-bar w-full' />
+      <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+        <div class='card-progress-bar w-full' />
       </div>
     {:else if $progress > 0}
-      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='progress-bar' style='width: {$progress}%' />
+      <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+        <div class='card-progress-bar' style='width: {$progress}%' />
       </div>
     {/if}
   </div>
@@ -193,21 +193,10 @@
 <style>
   
 
-  /* Preview popup card */
-  .absolute-container {
-    font-family: var(--font-mono);
-    background: #131317 !important;
-    border: 1px solid var(--card-line) !important;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line) !important;
-    border-radius: 8px !important;
-    will-change: transform, opacity, bottom;
+  /* Position within parent — overrides card-popup defaults */
+  :global(.card-popup.mh-400) {
     left: -100%;
     right: -100%;
-    animation: pop 0.13s ease forwards;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
   }
 
   .overlay {
@@ -269,19 +258,6 @@
     bottom: -1px;
     height: calc(100% + 1px);
     background: var(--episode-preview-card-gradient);
-  }
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-  }
-  .progress {
-    background: rgba(255,255,255,0.08) !important;
-  }
-  .progress-bar {
-    background: var(--card-accent) !important;
-    height: 100%;
   }
   /* metadata row icons */
   :global(.lucide) {

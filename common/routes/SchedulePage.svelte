@@ -178,10 +178,10 @@
     --bg:      #0d0d10;
     --bg2:     #131317;
     --line:    rgba(255,255,255,0.07);
-    --fg:      #ededea;
+    --fg:      --fg;
     --dim:     rgba(237,237,234,0.38);
     --faint:   rgba(237,237,234,0.06);
-    --acc:     #d4f55e;
+    --acc:     var(--card-accent);
     --acc-dim: rgba(212,245,94,0.1);
     --col-w:   500px;
     font-family: 'IBM Plex Mono', monospace;
@@ -477,5 +477,5 @@
     0%,100% { opacity:1; transform:scale(1); }
     50%      { opacity:0.2; transform:scale(0.6); }
   }
-  .empty { font-size: 1.1rem; color: rgba(237,237,234,0.18); padding: 1.9rem 2.25rem; }
+  .empty { font-size: 1.1rem; color: var(--card-faint); padding: 1.9rem 2.25rem; }
 </style>

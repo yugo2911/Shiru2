@@ -175,27 +175,11 @@
     animation: airing-pulse 3.5s infinite;
     will-change: box-shadow, opacity;
   }
-  @keyframes airing-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(212,245,94,0.6); opacity: 0.9; }
-    25%  { box-shadow: 0 0 0 .7rem rgba(13,13,16,0.4); opacity: 0.6; }
-    40%  { box-shadow: 0 0 0 0 rgba(13,13,16,0.4); opacity: 0.4; }
-    100% { box-shadow: 0 0 0 0 rgba(13,13,16,0.4); opacity: 0; }
-  }
 
-  /* AIRING badge */
-  .airing-badge {
-    position: absolute;
+  /* SmallCard badge position override */
+  .d-inline-block .airing-badge {
     top: -1rem;
     right: -1rem;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    padding: .3rem .9rem;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border-radius: 3px;
-    box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
 
   /* Cover image subtle rounding */
@@ -243,12 +227,4 @@
     aspect-ratio: 152/296;
   }
 
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-    display: inline-flex;
-    overflow: hidden;
-  }
 </style>

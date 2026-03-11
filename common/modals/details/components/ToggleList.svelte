@@ -99,10 +99,10 @@
   }
   .scroll::-webkit-scrollbar { display: none; }
 
-  .gallery :global(.first-in-row .small-card-ct .absolute-container) {
+  .gallery :global(.first-in-row .small-card-ct .card-popup) {
     left: -48% !important;
   }
-  .gallery :global(.last-in-row .small-card-ct .absolute-container) {
+  .gallery :global(.last-in-row .small-card-ct .card-popup) {
     right: -48% !important;
   }
   .gallery :global(.item.small-card) {
