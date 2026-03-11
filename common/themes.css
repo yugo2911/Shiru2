@@ -1,11 +1,3 @@
-/* ============================================================
-   theme.css — design tokens for the entire app
-   Import this once at the app root.
-   ============================================================ */
-
-/* ── Fonts ──────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap');
-
 /* ── Root tokens ────────────────────────────────────────── */
 :root {
   /* Palette */
@@ -29,8 +21,7 @@
   --card-acc-dim:var(--acc-dim);
 
   /* Typography */
-  --font-mono:    'IBM Plex Mono', monospace;
-  --font-display: 'Syne', sans-serif;
+
 
   /* Gradients — referenced in cards */
   --episode-card-gradient:
