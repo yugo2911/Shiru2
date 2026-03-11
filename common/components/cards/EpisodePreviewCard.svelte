@@ -195,17 +195,10 @@
 
   /* Preview popup card */
   .absolute-container {
-    --bg:      #0d0d10;
-    --line:    rgba(255,255,255,0.07);
-    --fg:      #ededea;
-    --dim:     rgba(237,237,234,0.38);
-    --faint:   rgba(237,237,234,0.06);
-    --acc:     #d4f55e;
-    --acc-dim: rgba(212,245,94,0.1);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     background: #131317 !important;
-    border: 1px solid var(--line) !important;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--line) !important;
+    border: 1px solid var(--card-line) !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line) !important;
     border-radius: 8px !important;
     will-change: transform, opacity, bottom;
     left: -100%;
@@ -225,7 +218,7 @@
     display: -webkit-box !important;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
     font-size: 1.1rem;
     line-height: 1.6;
   }
@@ -234,32 +227,32 @@
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
   }
   .font-weight-very-bold {
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
     font-size: 1.5rem !important;
   }
   .font-weight-bold {
-    color: #d4f55e !important;
+    color: var(--card-accent) !important;
     font-size: 1rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.06em;
   }
   .text-muted {
-    color: rgba(237,237,234,0.38) !important;
+    color: var(--card-dim) !important;
   }
   .text-white {
-    color: #ededea !important;
+    color: var(--card-fg) !important;
   }
   /* "Continue Anyway" button */
   .cont-button {
-    font-family: 'IBM Plex Mono', monospace !important;
-    background: #d4f55e !important;
-    color: #0d0d10 !important;
+    font-family: var(--font-mono) !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     border: none !important;
     border-radius: 3px !important;
     font-weight: 500 !important;
@@ -287,11 +280,11 @@
     background: rgba(255,255,255,0.08) !important;
   }
   .progress-bar {
-    background: #d4f55e !important;
+    background: var(--card-accent) !important;
     height: 100%;
   }
   /* metadata row icons */
   :global(.lucide) {
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
   }
 </style>

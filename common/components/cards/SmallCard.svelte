@@ -156,13 +156,7 @@
   
 
   .small-card-ct {
-    --bg:      #0d0d10;
-    --line:    rgba(255,255,255,0.07);
-    --fg:      #ededea;
-    --dim:     rgba(237,237,234,0.38);
-    --faint:   rgba(237,237,234,0.06);
-    --acc:     #d4f55e;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     border-radius: 6px;
     transition: background 0.1s;
   }
@@ -193,13 +187,13 @@
     position: absolute;
     top: -1rem;
     right: -1rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 0.8rem;
     font-weight: 500;
     letter-spacing: 0.18em;
     padding: .3rem .9rem;
-    background: #d4f55e !important;
-    color: #0d0d10 !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     border-radius: 3px;
     box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
@@ -215,32 +209,32 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     line-height: 1.25;
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-size: 1.35rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
     margin-top: 0.7rem;
   }
 
   /* Context type (likes/dislikes) */
   .context-type {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 1rem;
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
     padding-top: 0.5rem;
   }
 
   /* Airing countdown line above card */
-  .text-success { color: #d4f55e !important; }
-  .text-light   { color: rgba(237,237,234,0.38) !important; }
+  .text-success { color: var(--card-accent) !important; }
+  .text-light   { color: var(--card-dim) !important; }
 
   /* Bottom meta row (year, format) */
   .font-weight-medium {
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
     font-weight: 500 !important;
     font-size: 1rem !important;
-    color: rgba(237,237,234,0.38) !important;
+    color: var(--card-dim) !important;
     letter-spacing: 0.04em;
   }
 

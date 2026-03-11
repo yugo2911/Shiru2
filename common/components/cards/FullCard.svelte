@@ -123,14 +123,7 @@
   
 
   .full-card-ct {
-    --bg:      #0d0d10;
-    --line:    rgba(255,255,255,0.07);
-    --fg:      #ededea;
-    --dim:     rgba(237,237,234,0.38);
-    --faint:   rgba(237,237,234,0.06);
-    --acc:     #d4f55e;
-    --acc-dim: rgba(212,245,94,0.1);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
   }
 
   /* Card shell */
@@ -138,7 +131,7 @@
     width: 52rem !important;
     height: 27rem !important;
     background: #131317 !important;
-    border: 1px solid var(--line) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 6px !important;
     box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
     contain-intrinsic-height: 27rem;
@@ -172,14 +165,14 @@
     position: absolute;
     top: -.3rem;
     left: -.6rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 0.85rem;
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     padding: .3rem 1rem;
-    background: #d4f55e !important;
-    color: #0d0d10 !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     border-radius: 3px;
     box-shadow: 0 .2rem .5rem rgba(0,0,0,0.4);
   }
@@ -196,17 +189,17 @@
     -webkit-box-orient: vertical;
     line-height: 1.2;
     overflow: hidden;
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-size: 1.7rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em !important;
-    color: #ededea !important;
+    color: var(--card-fg) !important;
   }
 
   /* Metadata badges */
   .details {
     font-size: 1rem;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     gap: 0.3rem;
   }
   .details > span:not(:last-child) {
@@ -214,32 +207,32 @@
     margin-bottom: .1rem;
   }
   .badge {
-    background: rgba(237,237,234,0.06) !important;
-    color: rgba(237,237,234,0.38) !important;
+    background: var(--card-faint) !important;
+    color: var(--card-dim) !important;
     border-radius: 3px !important;
     font-size: 1rem !important;
     letter-spacing: 0.04em;
-    font-family: 'IBM Plex Mono', monospace !important;
+    font-family: var(--font-mono) !important;
   }
   .badge-color {
     background-color: var(--color) !important;
     border-color: var(--color) !important;
-    color: #0d0d10 !important;
+    color: var(--card-bg) !important;
     font-weight: 600 !important;
     border-radius: 3px !important;
   }
 
   /* Airing info line */
-  .text-success { color: #d4f55e !important; }
-  .text-light   { color: rgba(237,237,234,0.38) !important; }
-  .text-white   { color: #ededea !important; }
+  .text-success { color: var(--card-accent) !important; }
+  .text-light   { color: var(--card-dim) !important; }
+  .text-white   { color: var(--card-fg) !important; }
 
   /* Description */
   .card-desc {
-    color: rgba(237,237,234,0.38);
+    color: var(--card-dim);
     font-size: 1.15rem;
     line-height: 1.65;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.07) transparent;
   }

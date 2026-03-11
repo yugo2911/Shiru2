@@ -235,21 +235,14 @@
   
 
   .episode-card {
-    --bg:      #0d0d10;
-    --line:    rgba(255,255,255,0.07);
-    --fg:      #ededea;
-    --dim:     rgba(237,237,234,0.38);
-    --faint:   rgba(237,237,234,0.06);
-    --acc:     #d4f55e;
-    --acc-dim: rgba(212,245,94,0.1);
-    font-family: 'IBM Plex Mono', monospace;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--card-line);
     transition: background 0.1s;
   }
   .episode-card:hover {
     z-index: 30 !important;
-    background: var(--faint);
+    background: var(--card-faint);
   }
   .mt-3 {
     margin-top: 0.3rem;
@@ -265,26 +258,26 @@
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
   }
   /* title text */
   .font-weight-very-bold {
-    font-family: 'Syne', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-weight: 800 !important;
     letter-spacing: -0.02em;
-    color: var(--fg) !important;
+    color: var(--card-fg) !important;
   }
   /* episode label */
   .font-weight-bold {
-    font-family: 'IBM Plex Mono', monospace !important;
-    color: var(--acc) !important;
+    font-family: var(--font-mono) !important;
+    color: var(--card-accent) !important;
     font-weight: 500 !important;
     font-size: 1rem !important;
     letter-spacing: 0.06em;
   }
   /* muted subtitle */
   .text-muted {
-    color: var(--dim) !important;
+    color: var(--card-dim) !important;
     font-size: 1.1rem !important;
   }
   .image:after {
@@ -303,7 +296,7 @@
     background: rgba(255,255,255,0.08) !important;
   }
   .progress-bar {
-    background: var(--acc) !important;
+    background: var(--card-accent) !important;
     height: 100%;
   }
   .item {
@@ -322,11 +315,11 @@
   :global(.t-badge), .badge-pill-acc {
     font-size: 0.9rem;
     font-weight: 500;
-    background: var(--acc);
-    color: var(--bg);
+    background: var(--card-accent);
+    color: var(--card-bg);
     padding: 0.2em 0.8em;
     border-radius: 3px;
     letter-spacing: 0.04em;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
   }
 </style>
