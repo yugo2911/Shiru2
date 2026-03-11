@@ -19,60 +19,13 @@
   $: current = mediaList[0]
   mediaCache.subscribe((value) => { if (current?.id && value && value[current?.id]?.id && (JSON.stringify(value[current?.id]) !== JSON.stringify(current))) { current = value[current?.id]; currentStatic = current } })
 
-  function toggleFavourite() { current.isFavourite = anilistClient.favourite({ id: current.id }) }
-  function currentIndex() { return mediaList.findIndex(media => media?.id === currentStatic?.id) }
-
-  /**
-   * Build a deduplicated pool of banner image URLs for a given media item.
-   * Priority order:
-   *   1. AniList bannerImage (the canonical wide crop)
-   *   2. YouTube trailer thumbnails (maxres → hq) — already varied per show
-   *   3. Kitsu cover/poster images fetched in Banner.svelte (stored on kitsuBanners)
-   *   4. AniList extraLarge cover (last resort / adult fallback)
-   *
-   * We then pick one at random from the pool so each carousel slot looks
-   * different even when the same show rotates back in.
-   */
-  function buildImagePool(media) {
-    const isAdultFallback = !media.bannerImage && !media.trailer?.id && settings.value.adult === 'hentai' && settings.value.hentaiBanner
-
-    const pool = [
-      media.bannerImage,
-      ...(media.trailer?.id
-        ? [
-            `https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`,
-            `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`
-          ]
-        : []),
-      ...(media.kitsuBanners ?? []),
-      isAdultFallback ? media.coverImage?.extraLarge : null,
-      './404_banner.png'
-    ].filter(Boolean)
-
-    // Deduplicate while preserving order
-    return [...new Set(pool)]
+  function toggleFavourite () {
+    current.isFavourite = anilistClient.favourite({ id: current.id })
   }
 
-  /**
-   * Pick a random image from the pool each time a new slide becomes active.
-   * Avoids picking the same index twice in a row when possible.
-   */
-  let lastPickedUrl = null
-  function pickBannerImage(media) {
-    const pool = buildImagePool(media)
-    if (pool.length <= 1) return pool
-    const candidates = pool.filter(u => u !== lastPickedUrl && u !== './404_banner.png')
-    const chosen = candidates.length
-      ? candidates[Math.floor(Math.random() * candidates.length)]
-      : pool[Math.floor(Math.random() * pool.length)]
-    lastPickedUrl = chosen
-    // Return as a single-element array so SmartImage still gets its fallback list
-    const rest = pool.filter(u => u !== chosen)
-    return [chosen, ...rest]
+  function currentIndex () {
+    return mediaList.findIndex(media => media?.id === currentStatic?.id)
   }
-
-  // Recompute the image list whenever the active slide changes
-  $: bannerImages = pickBannerImage(currentStatic)
 
   let timeout = schedule(currentIndex() + 1)
   function schedule (index) {
@@ -99,10 +52,7 @@
 
 {#key currentStatic}
   <div class='position-absolute h-full w-full overflow-hidden z--1'>
-    <SmartImage
-      class={`img-cover position-absolute h-full w-full ${isRotated ? 'banner-rotated' : ''}`}
-      images={bannerImages}
-    />
+    <SmartImage class={`img-cover position-absolute h-full w-full ${(!(currentStatic.bannerImage || currentStatic.trailer?.id) && settings.value.adult === 'hentai' && settings.value.hentaiBanner) ? 'banner-rotated' : ''}`} images={[currentStatic.bannerImage, ...(currentStatic.trailer?.id ? [`https://i.ytimg.com/vi/${currentStatic.trailer.id}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${currentStatic.trailer.id}/hqdefault.jpg`] : []), currentStatic.coverImage?.extraLarge, './404_banner.png']}/>
   </div>
 {/key}
 <div class='gradient-bottom z--1 h-full position-absolute top-0 w-full' />
@@ -171,7 +121,7 @@
       <Scoring media={current} />
     {/if}
     {#if Helper.isAniAuth()}
-      <button class='btn bg-dark-light btn-square ml-10 d-flex align-items-center justify-content-center shadow-none border-0' use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
+      <button class='btn bg-dark-light btn-square ml-10 d-flex align-items-center justify-content-center shadow-none border-0' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={current.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
         <div class='favourite d-flex align-items-center justify-content-center'>
           <Heart color={current.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={current.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
         </div>
@@ -192,26 +142,155 @@
 </div>
 
 <style>
-  .gradient-bottom { background:var(--banner-gradient-bottom); }
-  .gradient-left { background:var(--banner-gradient-left); }
-  .banner { animation:fadeIn 0.8s ease forwards; will-change:opacity; font-family:'IBM Plex Mono',monospace; }
-  img { animation:fadeIn 0.8s ease forwards; will-change:opacity; }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-  .title { display:inline-block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; font-family:'Syne',sans-serif; font-size:clamp(2.2rem,4vw,4rem); font-weight:800; letter-spacing:-0.03em; color:#ededea; text-shadow:0 2px 20px rgba(0,0,0,0.9),0 1px 4px rgba(0,0,0,1); }
-  .details { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:400; color:rgba(237,237,234,0.55); letter-spacing:0.04em; gap:0; flex-wrap:wrap; }
-  .details span + span::before { content:'•'; padding:0 0.6rem; font-size:0.55rem; align-self:center; white-space:normal; color:rgba(237,237,234,0.28); }
-  .text-muted { color:rgba(237,237,234,0.40) !important; font-family:'IBM Plex Mono',monospace; font-size:1.15rem; font-weight:300; line-height:1.65; }
-  .line-4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
-  .btn:first-of-type { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:500; letter-spacing:0.08em; background:#d4f55e !important; color:#0d0d10 !important; border:none !important; border-radius:3px !important; box-shadow:none !important; transition:opacity 0.12s; }
-  .btn:first-of-type:hover { opacity:0.85; }
-  .btn { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:400; letter-spacing:0.06em; background:rgba(13,13,16,0.65) !important; color:#ededea !important; border:1px solid rgba(255,255,255,0.10) !important; border-radius:3px !important; box-shadow:none !important; backdrop-filter:blur(8px); transition:background 0.12s,border-color 0.12s; }
-  .btn:hover { background:rgba(237,237,234,0.10) !important; border-color:rgba(255,255,255,0.22) !important; }
-  .btn-square { border-radius:3px !important; aspect-ratio:1; }
-  .badge-wrapper { padding-top:10px; padding-bottom:10px; }
-  .progress-badge { background:rgba(237,237,234,0.18) !important; border-radius:2px !important; transition:width 0.8s ease; height:3px !important; }
-  .progress-badge.active { background:rgba(212,245,94,0.25) !important; }
-  .progress-badge.active .progress-content { animation:fill 15s linear; will-change:width; background:#d4f55e !important; }
-  .progress-badge:not(.active) .progress-content { background:rgba(237,237,234,0.45) !important; width:100%; }
-  @keyframes fill { from { width:0; } to { width:100%; } }
-  .default-cursor { cursor:default; }
+  
+
+  /* ── Gradients ───────────────────────────────────── */
+  .gradient-bottom {
+    background: var(--banner-gradient-bottom);
+  }
+  .gradient-left {
+    background: var(--banner-gradient-left);
+  }
+
+  /* ── Banner content layer ────────────────────────── */
+  .banner {
+    animation: fadeIn 0.8s ease forwards;
+    will-change: opacity;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  img {
+    animation: fadeIn 0.8s ease forwards;
+    will-change: opacity;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* ── Title ───────────────────────────────────────── */
+  .title {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 4vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #ededea;
+    /* layered shadow for legibility over any banner image */
+    text-shadow: 0 2px 20px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,1);
+  }
+
+  /* ── Meta detail pills row ───────────────────────── */
+  .details {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: rgba(237,237,234,0.55);
+    letter-spacing: 0.04em;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  /* dot separator between spans */
+  .details span + span::before {
+    content: '•';
+    padding: 0 0.6rem;
+    font-size: 0.55rem;
+    align-self: center;
+    white-space: normal;
+    color: rgba(237,237,234,0.28);
+  }
+
+  /* ── Description ─────────────────────────────────── */
+  .text-muted {
+    color: rgba(237,237,234,0.40) !important;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 300;
+    line-height: 1.65;
+  }
+  /* clamp to 4 lines */
+  .line-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ── Action buttons ──────────────────────────────── */
+
+  /* Primary — Watch/Continue */
+  .btn:first-of-type {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    background: #d4f55e !important;
+    color: #0d0d10 !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    transition: opacity 0.12s;
+  }
+  .btn:first-of-type:hover { opacity: 0.85; }
+
+  /* Secondary — View Details + favourite */
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    background: rgba(13,13,16,0.65) !important;
+    color: #ededea !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(8px);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .btn:hover {
+    background: rgba(237,237,234,0.10) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+  }
+  /* Square favourite / score btn */
+  .btn-square {
+    border-radius: 3px !important;
+    aspect-ratio: 1;
+  }
+
+  /* ── Progress indicator dots ─────────────────────── */
+  .badge-wrapper {
+    /* adds generous tap/click area without affecting visual */
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .progress-badge {
+    background: rgba(237,237,234,0.18) !important;
+    border-radius: 2px !important;
+    transition: width 0.8s ease;
+    height: 3px !important;
+  }
+  /* active indicator — accent colored */
+  .progress-badge.active {
+    background: rgba(212,245,94,0.25) !important;
+  }
+  .progress-badge.active .progress-content {
+    animation: fill 15s linear;
+    will-change: width;
+    background: #d4f55e !important;
+  }
+  /* inactive indicator */
+  .progress-badge:not(.active) .progress-content {
+    background: rgba(237,237,234,0.45) !important;
+    width: 100%;
+  }
+  @keyframes fill {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  /* ── Misc ────────────────────────────────────────── */
+  .default-cursor { cursor: default; }
 </style>
