@@ -112,6 +112,7 @@
             {@const behind = getBehind(media, node)}
             <div class='t-row' class:t-up={up} class:t-past={past} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
               <span class='t-time'>{fmtTime(airingAt)}</span>
+              {#if status}<span class='status-dot' style='--sc:{status.color}' title={status.label}></span>{/if}
               <span class='t-name'>{anilistClient.title(media)}</span>
               {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
               {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
