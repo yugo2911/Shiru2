@@ -10,7 +10,7 @@
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
-  import { CalendarDays, Tv, ThumbsUp, ThumbsDown } from 'lucide-svelte'
+  import { ThumbsUp, ThumbsDown } from 'lucide-svelte'
 
   /** @type {import('@/modules/al.d.ts').Media} */
   export let data
@@ -138,7 +138,6 @@
     </div>
     <div class='d-flex flex-row mt-auto font-weight-medium justify-content-between w-full text-muted'>
       <div class='d-flex align-items-center pr-5'>
-        <CalendarDays class='pr-5' size='2.6rem' />
         {#await ((media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
           {@const attributes = details?.included?.[0]?.attributes}
           <span class='line-height-1'>{details.seasonYear || ((media.status === 'NOT_YET_RELEASED') && 'TBA') || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear()) || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
@@ -146,15 +145,12 @@
       </div>
       <div class='d-flex align-items-center text-nowrap text-right'>
         <span class='line-height-1'>{formatMap[media.format]}</span>
-        <Tv class='pl-5' size='2.6rem' />
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  
-
   .small-card-ct {
     font-family: var(--font-mono);
     border-radius: 6px;
@@ -203,16 +199,17 @@
     border-radius: 4px !important;
   }
 
-  /* Anime title */
+  /* Anime title - Using M PLUS 1 for Loud/Expressive JP support */
   .title {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-height: 1.25;
-    font-family: var(--font-display) !important;
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em !important;
+    line-height: 1.15;
+    /* M PLUS 1 provides the Syne-like loudness while being native to JP glyphs */
+    font-family: 'M PLUS 1', sans-serif !important; 
+    font-size: 1.4rem !important;
+    font-weight: 900 !important; 
+    letter-spacing: -0.01em !important;
     color: var(--card-fg) !important;
     margin-top: 0.7rem;
   }

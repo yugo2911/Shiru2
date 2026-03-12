@@ -51,14 +51,13 @@
     refreshSections(Helper.getClient().userLists, ['Dubbed Releases', 'Subbed Releases', 'Hentai Releases'], true)
     refreshSections(Helper.getClient().userLists, [continueWatching, 'Sequels You Missed', 'Stories You Missed', 'Planning List', 'Completed List', 'Paused List', 'Dropped List', 'Watching List', 'Rewatching List'])
   }
-  if (Helper.isMalAuth()) refreshSections(animeSchedule.subAiredLists, continueWatching) // When authorized with Anilist, this is already automatically handled.
+  if (Helper.isMalAuth()) refreshSections(animeSchedule.subAiredLists, continueWatching) 
   refreshSections(animeSchedule.dubAiredLists, continueWatching)
   function refreshSections(list, sections, schedule = false) {
     uniqueStore(list).subscribe(async (_value) => {
       const value = await _value
       if (!value) return
       for (const section of manager.sections) {
-        // remove preview value, to force UI to re-request data, which updates it once in viewport
         if (sections.includes(section.title) && !section.hide && (!schedule || section.isSchedule)) {
           const loaded = section.load(1, 50, section.variables)
           if (!section.preview.value || !equal(await resolveData(loaded), await resolveData(section.preview.value))) section.preview.value = loaded
@@ -67,7 +66,6 @@
     })
   }
 
-  // update AniSchedule 'Releases' feeds when a change is detected for the specified feed(s).
   WPC.listen('feedChanged', ({ updateFeeds, manifest }) => {
     for (const section of manager.sections) {
       try {
@@ -77,12 +75,11 @@
           })
         }
       } catch (error) {
-        debug(`Failed to update ${section.title} feed, this is likely a temporary connection issue:`, error)
+        debug(`Failed to update ${section.title} feed:`, error)
       }
     }
   })
 
-  // force update RSS feed when the user adjusts a series in the FileManager.
   window.addEventListener('fileEdit', async () => {
     for (const section of manager.sections) {
       if (section.isRSS && !section.isSchedule) {
@@ -105,17 +102,73 @@
     return false
   }
 </script>
+
 <script>
   import HomeSection from '@/routes/home/components/HomeSection.svelte'
   import Banner from '@/components/banner/Banner.svelte'
 </script>
 
-<div class='h-full w-full overflow-y-scroll root overflow-x-hidden'>
+<style>
+  :global(:root) {
+    --editorial-bg: #0a0a0c;
+    --accent-primary: #ff3e00;
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --font-display: 'Syncopate', sans-serif; /* Bold, industrial display font */
+  }
+
+  .magazine-root {
+    background-color: var(--editorial-bg);
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(255, 62, 0, 0.05) 0px, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    background-blend-mode: overlay;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 2rem;
+    padding: 0 4vw;
+    margin-top: -80px; /* Overlap the banner for depth */
+    position: relative;
+    z-index: 2;
+  }
+
+  .section-wrapper {
+    grid-column: span 12;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Asymmetric Layout Pattern */
+  .section-wrapper:nth-child(even) {
+    grid-column: 2 / span 11;
+  }
+
+  .section-wrapper:nth-child(3n) {
+    grid-column: 1 / span 10;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px; /* Industrial sharp corners */
+    padding: 1.5rem;
+    box-shadow: 20px 20px 60px rgba(0, 0, 0, 0.5);
+  }
+</style>
+
+<div class='h-full w-full overflow-y-scroll magazine-root overflow-x-hidden'>
   <Banner data={$bannerData} />
-  <div class='d-flex flex-column h-full w-full mt-15'>
+  
+  <div class='content-grid pb-20'>
     {#each manager.sections as section, i (i)}
       {#if !section.hide}
-        <HomeSection bind:opts={section} lastEpisode={isPreviousRSS(i)}/>
+        <div class="section-wrapper" style="transition-delay: {i * 100}ms">
+          <div class="glass-card">
+            <HomeSection bind:opts={section} lastEpisode={isPreviousRSS(i)}/>
+          </div>
+        </div>
       {/if}
     {/each}
   </div>

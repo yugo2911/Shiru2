@@ -45,7 +45,7 @@
   }
   .controls-container {
     -webkit-app-region: no-drag;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(0px);
     background: rgba(24, 24, 24, 0.2);
   }
   .ml-sb {

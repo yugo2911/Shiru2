@@ -180,11 +180,6 @@
     will-change: transform, opacity, bottom;
     left: -100%;
     right: -100%;
-    animation: pop 0.13s ease forwards;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
   }
 
   /* Anime title */

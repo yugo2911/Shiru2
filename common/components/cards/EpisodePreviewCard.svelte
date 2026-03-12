@@ -4,6 +4,7 @@
   import TorrentButton from '@/components/TorrentButton.svelte'
   import { CalendarDays, Play, Tv, RefreshCwOff } from 'lucide-svelte'
 </script>
+
 <script>
   import { statusColorMap, formatMap } from '@/modules/anime/anime.js'
   import { episodesList } from '@/modules/episodes.js'
@@ -20,7 +21,6 @@
   export let prompt
   export let element
   export let zeroEpisode = false
-  /** @type {import('@/modules/al.d.ts').Media | null} */
   const media = data.media && mediaCache.value[data.media.id]
   const episodeRange = episodesList.handleArray(data?.episode, data?.parseObject?.file_name)
   const lastEpisode = (data?.episodeRange || data?.parseObject?.episodeRange)?.last || episodeRange?.last || (isValidNumber(data?.episode) && (data?.episode + (zeroEpisode ? 1 : 0))) || (media?.episodes === 1 && media?.episodes)
@@ -34,24 +34,14 @@
   $: resolvedHash = media?.id && !data.failed && getHash(media.id, { episode: data?.episode, client: true, batchGuess: true }, false, true)
 </script>
 
-<div class='position-absolute w-400 mw-full mh-400 absolute-container top-0 m-auto bg-dark-light z-30 rounded overflow-hidden pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
+<div class='position-absolute w-400 mw-full mh-400 absolute-container top-0 m-auto z-30 pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
   <div class='image h-200 w-full position-relative d-flex justify-content-between align-items-end text-white'>
     <SmartImage class='img-cover w-full h-full position-absolute rounded p-0 m-0 {!(data.episodeData?.image || media?.bannerImage) && media?.genres?.includes(`Hentai`) ? `cover-rotated cr-400` : ``}' color={media?.coverImage.color || 'var(--tertiary-color)'} images={[episodeThumbnail, './404_episode.png']}/>
     {#if data.episodeData?.video && !animating}
-      <video src={data.episodeData.video}
-        class='img-cover w-full h-full position-absolute'
-        style='opacity: {hide ? 0 : 1}; transition: opacity .3s ease'
-        playsinline
-        preload='none'
-        loop
-        muted
-        on:loadeddata={() => { hide = false }}
-        autoplay />
+      <video src={data.episodeData.video} class='img-cover w-full h-full position-absolute' style='opacity: {hide ? 0 : 1}; transition: opacity .3s ease' playsinline preload='none' loop muted on:loadeddata={() => { hide = false }} autoplay />
     {/if}
     {#if data.failed}
-      <div class='pl-10 pt-10 z-10 position-absolute top-0 left-0 text-danger icon-shadow' title='Failed to resolve media'>
-        <RefreshCwOff size='3rem' />
-      </div>
+      <div class='pl-10 pt-10 z-10 position-absolute top-0 left-0 text-danger icon-shadow' title='Failed to resolve media'><RefreshCwOff size='3rem' /></div>
     {/if}
     {#if data.hash || resolvedHash}
       <div class='pr-5 pt-5 z-10 position-absolute top-0 right-0 text-danger icon-shadow'>
@@ -62,229 +52,86 @@
     <Play class='mb-5 ml-5 pl-10 pb-10 z-10' fill='currentColor' size='3rem' />
     <div class='pr-20 pb-10 font-size-16 font-weight-medium z-10'>
       {#if media?.duration}
-        {#if (data.episodeRange || data.parseObject?.episodeRange)}
-          {media.duration * (((data.episodeRange || data.parseObject?.episodeRange).last - (data.episodeRange || data.parseObject?.episodeRange).first) + 1)}m
-        {:else if episodeRange && isValidNumber(episodeRange.first) && isValidNumber(episodeRange.last)}
-          {media.duration * ((episodeRange.first - episodeRange.last) + 1)}m
-        {:else}
-          {media.duration}m
-        {/if}
+        {#if (data.episodeRange || data.parseObject?.episodeRange)}{media.duration * (((data.episodeRange || data.parseObject?.episodeRange).last - (data.episodeRange || data.parseObject?.episodeRange).first) + 1)}m
+        {:else if episodeRange && isValidNumber(episodeRange.first) && isValidNumber(episodeRange.last)}{media.duration * ((episodeRange.first - episodeRange.last) + 1)}m
+        {:else}{media.duration}m{/if}
       {/if}
     </div>
-    {#if completed}
-      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='progress-bar w-full' />
-      </div>
-    {:else if $progress > 0}
-      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='progress-bar' style='width: {$progress}%' />
-      </div>
-    {/if}
+    {#if completed}<div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'><div class='progress-bar w-full' /></div>
+    {:else if $progress > 0}<div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'><div class='progress-bar' style='width: {$progress}%' /></div>{/if}
   </div>
   <div class='w-full d-flex flex-column flex-grow-1 px-20 pb-15'>
     <div class='row pt-15'>
       <div class='col pr-10'>
-        <div class='text-white font-weight-very-bold font-size-16 title overflow-hidden' title={anilistClient.title(media) || data.parseObject.anime_title}>
-          {#if media?.mediaListEntry?.status}
-            <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-circle d-inline-flex overflow-hidden mr-5' title={media.mediaListEntry.status} />
-          {/if}
+        <div class='text-white font-weight-very-bold title overflow-hidden' title={anilistClient.title(media) || data.parseObject.anime_title}>
+          {#if media?.mediaListEntry?.status}<div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-circle d-inline-flex overflow-hidden mr-5' title={media.mediaListEntry.status} />{/if}
           {anilistClient.title(media) || data.parseObject.anime_title}
         </div>
         {#if data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
-          <div class='text-muted font-size-12 title overflow-hidden' title={data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}>
-            {data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
-          </div>
+          <div class='text-muted font-size-12 title overflow-hidden' title={data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}>{data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}</div>
         {:else if data.episode != null}
           {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
           {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
             {@const kitsuMappings = episode != null && mappings?.data?.find(ep => ep?.attributes?.number === Number(episode) || episode)?.attributes}
             {@const ep_title =  kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || ''}
-            <div class='text-muted font-size-12 title overflow-hidden' title={ep_title}>
-              {ep_title}
-            </div>
+            <div class='text-muted font-size-12 title overflow-hidden' title={ep_title}>{ep_title}</div>
           {/await}
         {/if}
       </div>
       <div class='col-auto d-flex flex-column align-items-end text-right mt-3' title={data.parseObject?.file_name} >
-        <div class='text-white font-weight-bold font-weight-very-bold'>
-          {#if data.episodeRange || data.parseObject?.episodeRange}
-            {`Episodes ${(data.episodeRange || data.parseObject.episodeRange).first} ~ ${(data.episodeRange || data.parseObject.episodeRange).last}`}
+        <div class='font-weight-bold'>
+          {#if data.episodeRange || data.parseObject?.episodeRange}{`Episodes ${(data.episodeRange || data.parseObject.episodeRange).first} ~ ${(data.episodeRange || data.parseObject.episodeRange).last}`}
           {:else if data.episode != null}
-            {#if episodeRange}
-              Episodes {episodeRange.first} ~ {episodeRange.last}
-            {:else if !Array.isArray(data.episode)}
-              Episode {isValidNumber(data.episode) ? Number(data.episode) : data.episode?.replace(/\D/g, '')}
-            {/if}
-          {:else if media?.format === 'MOVIE'}
-            Movie
-          {:else if data.parseObject?.anime_title?.match(/S(\d{2})/)}
-            Season {parseInt(data.parseObject.anime_title.match(/S(\d{2})/)[1], 10)}
-          {:else if (!data.similarity)}
-            Batch
-          {/if}
+            {#if episodeRange}Episodes {episodeRange.first} ~ {episodeRange.last}
+            {:else if !Array.isArray(data.episode)}Episode {isValidNumber(data.episode) ? Number(data.episode) : data.episode?.replace(/\D/g, '')}{/if}
+          {:else if media?.format === 'MOVIE'}Movie
+          {:else if data.parseObject?.anime_title?.match(/S(\d{2})/)}Season {parseInt(data.parseObject.anime_title.match(/S(\d{2})/)[1], 10)}
+          {:else if (!data.similarity)}Batch{/if}
         </div>
         <div class='d-flex align-items-center'>
-          <div class='text-nowrap font-size-12 title text-muted d-flex align-items-center'>
-            <AudioLabel {media} {data} banner={true} episode={true} />
-          </div>
-          {#if data.date}
-            {#if settings.value.cardAudio}
-              <div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>
-                •
-              </div>
-            {/if}
-            <div class='text-muted font-size-12 title overflow-hidden'>
-              {since(data.date)}
-            </div>
-          {:else if data.similarity}
-            {#if settings.value.cardAudio}
-              <div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>
-                •
-              </div>
-            {/if}
-            <div class='text-muted font-size-12 title overflow-hidden'>
-              Confidence: {Math.round(data.similarity * 100)}%
-            </div>
-          {/if}
+          <div class='text-nowrap font-size-12 title text-muted d-flex align-items-center'><AudioLabel {media} {data} banner={true} episode={true} /></div>
+          {#if data.date}{#if settings.value.cardAudio}<div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>•</div>{/if}<div class='text-muted font-size-12 title overflow-hidden'>{since(data.date)}</div>
+          {:else if data.similarity}{#if settings.value.cardAudio}<div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>•</div>{/if}<div class='text-muted font-size-12 title overflow-hidden'>Confidence: {Math.round(data.similarity * 100)}%</div>{/if}
         </div>
       </div>
     </div>
     <div class='w-full text-muted description overflow-hidden pt-15'>
-      {#if data.episodeData?.summary || data.episodeData?.overview}
-        {(data.episodeData?.summary || data.episodeData?.overview).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
+      {#if data.episodeData?.summary || data.episodeData?.overview}{(data.episodeData?.summary || data.episodeData?.overview).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
       {:else if data.episode != null}
         {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
         {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
           {@const kitsuMappings = data.episode != null && mappings?.data?.find(ep => ep?.attributes?.number === isValidNumber(episode) ? Number(episode) : episode)?.attributes}
           {(kitsuMappings?.synopsis || kitsuMappings?.description || media?.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
         {/await}
-      {:else}
-        {(media?.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
-      {/if}
+      {:else}{(media?.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}{/if}
     </div>
     {#if media}
       <div class='d-flex flex-row pt-15 font-weight-medium justify-content-between w-full text-muted'>
-        <div class='d-flex align-items-center' style='margin-left: -2px'>
-          <CalendarDays class='pr-5' size='2.6rem' />
-          <span class='line-height-1'>{media.seasonYear || 'N/A'}</span>
-        </div>
-        <div class='d-flex align-items-center'>
-          <span class='line-height-1'>{formatMap[media.format]}</span>
-          <Tv class='pl-5' size='2.6rem' />
-        </div>
+        <div class='d-flex align-items-center' style='margin-left: -2px'><CalendarDays class='pr-5' size='2.6rem' /><span class='line-height-1'>{media.seasonYear || 'N/A'}</span></div>
+        <div class='d-flex align-items-center'><span class='line-height-1'>{formatMap[media.format]}</span><Tv class='pl-5' size='2.6rem' /></div>
       </div>
     {/if}
   </div>
   <div class='overlay position-absolute w-full h-200 z-40 d-flex flex-column justify-content-center align-items-center transition-opacity' class:transparent={!prompt}>
-    <p class='ml-20 mr-20 font-size-24 text-white text-center'>
-      {#if !media?.mediaListEntry?.progress}
-        You Haven't Watched Any Episodes Yet!
-      {:else}
-        Your Current Progress Is At <b>Episode {media?.mediaListEntry?.progress - (zeroEpisode ? 1 : 0)}</b>
-      {/if}
-    </p>
-    <button class='cont-button btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mt-10' tabindex={!prompt ? '-1' : '0'} use:click={() => { data.onclick() || modal.open(modal.ANIME_DETAILS, media) }}>
-      <Play class='mr-10' fill='currentColor' size='1.6rem' />
-      Continue Anyway?
-    </button>
+    <p class='ml-20 mr-20 font-size-24 text-white text-center'>{#if !media?.mediaListEntry?.progress}You Haven't Watched Any Episodes Yet!{:else}Your Current Progress Is At <b>Episode {media?.mediaListEntry?.progress - (zeroEpisode ? 1 : 0)}</b>{/if}</p>
+    <button class='cont-button btn btn-lg w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mt-10' tabindex={!prompt ? '-1' : '0'} use:click={() => { data.onclick() || modal.open(modal.ANIME_DETAILS, media) }}><Play class='mr-10' fill='currentColor' size='1.6rem' />Continue Anyway?</button>
    </div>
 </div>
 
 <style>
-  
-
-  /* Preview popup card */
-  .absolute-container {
-    font-family: var(--font-mono);
-    background: #131317 !important;
-    border: 1px solid var(--card-line) !important;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line) !important;
-    border-radius: 8px !important;
-    will-change: transform, opacity, bottom;
-    left: -100%;
-    right: -100%;
-    animation: pop 0.13s ease forwards;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-
-  .overlay {
-    background-color: rgba(13,13,16,0.92);
-    backdrop-filter: blur(4px);
-  }
-  .description {
-    display: -webkit-box !important;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    color: var(--card-dim);
-    font-size: 1.1rem;
-    line-height: 1.6;
-  }
-  .title {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    word-break: break-all;
-    font-family: var(--font-mono);
-  }
-  .font-weight-very-bold {
-    font-family: var(--font-display) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
-    color: var(--card-fg) !important;
-    font-size: 1.5rem !important;
-  }
-  .font-weight-bold {
-    color: var(--card-accent) !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.06em;
-  }
-  .text-muted {
-    color: var(--card-dim) !important;
-  }
-  .text-white {
-    color: var(--card-fg) !important;
-  }
-  /* "Continue Anyway" button */
-  .cont-button {
-    font-family: var(--font-mono) !important;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border: none !important;
-    border-radius: 3px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em;
-    transition: opacity 0.12s;
-  }
+  .absolute-container { font-family: var(--font-mono); background: var(--card-bg) !important; border: 1px solid var(--card-line) !important; box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--card-line) !important; border-radius: 8px !important; will-change: transform, opacity, bottom; left: -100%; right: -100%; }
+  .overlay { background-color: var(--card-bg); opacity: 0.92; backdrop-filter: blur(4px); }
+  .description { display: -webkit-box !important; -webkit-line-clamp: 3; -webkit-box-orient: vertical; color: var(--card-dim); font-size: 1.1rem; line-height: 1.6; }
+  .title { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-all; font-family: var(--font-mono); }
+  .font-weight-very-bold { font-family: var(--font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em; color: var(--card-fg) !important; font-size: 1.5rem !important; }
+  .font-weight-bold { font-family: var(--font-mono) !important; color: var(--card-accent) !important; font-size: 1rem !important; font-weight: 500 !important; letter-spacing: 0.06em; }
+  .text-muted { color: var(--card-dim) !important; }
+  .text-white { color: var(--card-fg) !important; }
+  .cont-button { font-family: var(--font-mono) !important; background: var(--card-accent) !important; color: var(--card-bg) !important; border: none !important; border-radius: 3px !important; font-weight: 500 !important; letter-spacing: 0.08em; transition: opacity 0.12s; }
   .cont-button:hover { opacity: 0.85; }
-
-  .image:after {
-    content: '';
-    position: absolute;
-    left: 0;
-    width: 100%;
-    bottom: -1px;
-    height: calc(100% + 1px);
-    background: var(--episode-preview-card-gradient);
-  }
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-  }
-  .progress {
-    background: rgba(255,255,255,0.08) !important;
-  }
-  .progress-bar {
-    background: var(--card-accent) !important;
-    height: 100%;
-  }
-  /* metadata row icons */
-  :global(.lucide) {
-    color: var(--card-dim);
-  }
+  .image:after { content: ''; position: absolute; left: 0; width: 100%; bottom: -1px; height: calc(100% + 1px); background: var(--episode-preview-card-gradient); }
+  .list-status-circle { background: var(--statusColor); height: 1rem; width: 1rem; border-radius: 50%; }
+  .progress { background: var(--card-line) !important; }
+  .progress-bar { background: var(--card-accent) !important; height: 100%; }
+  :global(.lucide) { color: var(--card-dim); }
 </style>
