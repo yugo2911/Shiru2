@@ -114,9 +114,43 @@
 </div>
 
 <style>
+  /* Square-ish Tactical Button - Low Contrast & Black Icon on Hover */
   .btn {
-    border-radius: 2rem;
+    aspect-ratio: 1 / 1;
+    min-width: 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    text-transform: uppercase;
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    letter-spacing: 1px;
+    /* Subdued border - lowered opacity to prevent "neon" glow effect */
+    border: 1px solid rgba(212, 255, 0, 0.12); 
+    background: rgba(212, 255, 0, 0.02);
+    color: var(--accent-neon);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.5rem;
   }
+
+  .btn:hover {
+    /* Significantly darker hover - avoids the "blinding" brightness */
+    background: #afcc00; 
+    border-color: #afcc00;
+    color: #000 !important;
+  }
+
+  /* Ensure the stroke of icons/arrows turns black for visibility */
+  .btn :global(svg) {
+    transition: stroke 0.2s ease;
+  }
+
+  .btn:hover :global(svg) {
+    stroke: #000 !important;
+  }
+
+  /* Card Container Alignments */
   .gallery :global(.small-card-ct:first-child) :global(.absolute-container) {
     left: -45% !important;
   }
@@ -132,38 +166,55 @@
       right: -35% !important;
     }
   }
-  @media (hover: hover) and (pointer: fine) {
-    .glow:hover {
-      color: var(--dm-link-text-color-hover) !important;
-    }
-  }
+
+  /* Industrial Gallery Masking */
   .position-relative.isRSS .gallery::after {
     height: calc(100% - 15rem) !important;
     z-index: 1;
   }
+
   .gallery:after {
     content: '';
     position: absolute;
     right: 0;
     height: 100%;
-    width: 8rem;
+    width: 12rem;
     z-index: 30;
-    background: var(--section-end-gradient);
+    background: linear-gradient(to right, transparent, var(--editorial-bg, #080809));
     pointer-events: none;
   }
+
   .gallery {
     overflow-x: scroll;
     flex-shrink: 0;
     min-height: 25rem;
     cursor: grab;
+    padding: 1rem 0;
+    /* Subtle industrial grid lines */
+    background-image: linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, 0.01) 25%, rgba(255, 255, 255, 0.01) 26%, transparent 27%);
+    background-size: 100% 4rem;
   }
+
   .mv-10 {
     margin-top: -15rem !important;
     z-index: 0 !important;
   }
+
+  /* Card Sizing & Spacing */
   .gallery :global(.item.small-card) {
     width: 19rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.005);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease;
   }
+
+  .gallery :global(.item.small-card:hover) {
+    /* Subdued border on card hover */
+    border-color: rgba(175, 204, 0, 0.25);
+    background: rgba(255, 255, 255, 0.015);
+    transform: translateY(-4px);
+  }
+
   .gallery::-webkit-scrollbar {
     display: none;
   }
