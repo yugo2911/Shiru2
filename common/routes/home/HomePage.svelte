@@ -110,58 +110,63 @@
 
 <style>
   :global(:root) {
-    --editorial-bg: #0a0a0c;
-    --accent-primary: #ff3e00;
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --font-display: 'Syncopate', sans-serif; /* Bold, industrial display font */
+    --editorial-bg: #080809;
+    --accent-neon: #d4ff00; /* Neon yellow-green from industrial references */
+    --glass-border: rgba(212, 255, 0, 0.15);
+    --font-display: 'Syncopate', sans-serif;
   }
 
   .magazine-root {
     background-color: var(--editorial-bg);
     background-image: 
-      radial-gradient(at 0% 0%, rgba(255, 62, 0, 0.05) 0px, transparent 50%),
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      radial-gradient(at 0% 0%, rgba(212, 255, 0, 0.03) 0px, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
     background-blend-mode: overlay;
   }
 
-  .content-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 2rem;
+  .content-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rem;
     padding: 0 4vw;
-    margin-top: -80px; /* Overlap the banner for depth */
+    margin-top: 120px; /* Pushed down to clear banner focal point */
     position: relative;
     z-index: 2;
   }
 
   .section-wrapper {
-    grid-column: span 12;
+    width: 100%;
+    max-width: 1400px; /* Symmetrical centering */
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Asymmetric Layout Pattern */
-  .section-wrapper:nth-child(even) {
-    grid-column: 2 / span 11;
-  }
-
-  .section-wrapper:nth-child(3n) {
-    grid-column: 1 / span 10;
-  }
-
   .glass-card {
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(12px);
+    background: rgba(10, 10, 12, 0.85);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
-    border-radius: 4px; /* Industrial sharp corners */
-    padding: 1.5rem;
-    box-shadow: 20px 20px 60px rgba(0, 0, 0, 0.5);
+    border-radius: 2px; /* Precise, industrial edges */
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    position: relative;
+  }
+
+  /* Decorative marker for industrial aesthetic */
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 2rem;
+    width: 4rem;
+    height: 3px;
+    background: var(--accent-neon);
   }
 </style>
 
 <div class='h-full w-full overflow-y-scroll magazine-root overflow-x-hidden'>
   <Banner data={$bannerData} />
   
-  <div class='content-grid pb-20'>
+  <div class='content-column pb-40'>
     {#each manager.sections as section, i (i)}
       {#if !section.hide}
         <div class="section-wrapper" style="transition-delay: {i * 100}ms">
