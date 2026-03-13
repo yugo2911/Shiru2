@@ -5,6 +5,11 @@ playerpage
     skip torrents selection menu (fully auto select)(this belongs in more menu)
     fix signs from jp subs not loading correctly so fonts are not being loaded correctly. 
     as for example in mpv they are way diffrent lookin, and in shiru they look  arial or someshit its prob fails to load and defaults to what ever colors load correctly hm?
+-fix
+    delay keybinds are not firing instantly
+    subs do not update well on paused video
+
+
 
 schedulepage
     miniplayer prevents hover images appearing at all
@@ -12,7 +17,11 @@ schedulepage
     move all styles to css stroe as vars
     cached at runtime or i mean shiru already does this onload hm? well we just need names& air time fetched quickly
     relations
-    
+    play last played video file in banner area or play 
+    (mb this would be cool on small card? or episode or banner ares~)play last ep PV we can cofrim correct video chanell for pv based on official yt ch info anilist offers (or make a pool of correct yt channels)
+    always show next airing show single countdown so for next show only
+    color dots look bad. place smh next to some cue to the time or color time?
+
 
 jimaku
     use newly added css/vars
@@ -34,4 +43,13 @@ small cards
     show on hover airing status
     remove year
     choose/randomize cover artwork from other providers kitsu etc.
+
+
+searchpage
+    studios
+
+
+idea
+    anilist user activity so history
+    auto download next ep+ / and new eps that air for currently waching shows
 
