@@ -30,6 +30,7 @@
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
+    stopBannerAudio()
     modal.close(modal.ANIME_DETAILS)
   }
 
@@ -231,7 +232,57 @@
     }
   }
 
-  onDestroy(() => resizeObserver?.disconnect())
+  onDestroy(() => { resizeObserver?.disconnect(); stopBannerAudio() })
+
+  // Banner audio — random theme on load
+  let bannerAudio = null
+  let bannerPlaying = false
+  let bannerTheme = null
+
+  $: if (staticMedia?.id) {
+    stopBannerAudio()
+    bannerTheme = null
+    bannerPlaying = false
+    // auto-load and play on open
+    loadAndPlayBannerTheme()
+  }
+
+  async function loadAndPlayBannerTheme() {
+    const themes = await getAnimeThemes(staticMedia?.id)
+    if (!themes?.length) return
+    const allVideos = themes.flatMap(t =>
+      (t.entries || []).flatMap(e => (e.videos || []).map(v => ({ video: v, theme: t })))
+    ).filter(({ video }) => video?.link)
+    if (!allVideos.length) return
+    const pick = allVideos[Math.floor(Math.random() * allVideos.length)]
+    bannerTheme = pick.theme
+    playBannerAudio(pick.video.link)
+  }
+
+  function playBannerAudio(src) {
+    stopBannerAudio()
+    bannerAudio = new Audio(src)
+    bannerAudio.volume = 0.35
+    bannerAudio.play().then(() => { bannerPlaying = true }).catch(() => { bannerPlaying = false })
+    bannerAudio.onended = () => { bannerPlaying = false }
+  }
+
+  function stopBannerAudio() {
+    if (bannerAudio) {
+      bannerAudio.pause()
+      bannerAudio.src = ''
+      bannerAudio = null
+    }
+    bannerPlaying = false
+  }
+
+  function toggleBannerAudio() {
+    if (bannerPlaying) {
+      stopBannerAudio()
+    } else if (bannerTheme) {
+      loadAndPlayBannerTheme()
+    }
+  }
 </script>
 
 <div class='modal modal-full z-50' class:show={staticMedia} on:keydown={checkClose} tabindex='-1' role='button' bind:this={_modal}>
@@ -249,6 +300,16 @@
           metadata?.included?.[0]?.attributes?.coverImage?.small,
           metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
         () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
+      {#if bannerTheme}
+        <button class='banner-audio-btn' use:click={toggleBannerAudio}>
+          {#if bannerPlaying}
+            <span class='banner-bars'><span/><span/><span/><span/></span>
+          {:else}
+            <Music size='1.1rem' />
+          {/if}
+          <span class='banner-label'>{formatThemeLabel(bannerTheme)}{#if bannerTheme.song?.title} · {bannerTheme.song.title}{/if}</span>
+        </button>
+      {/if}
       <div class='row px-20'>
         <div class='col-lg-7 col-12 pb-10'>
           <div bind:this={leftColumn}>
@@ -919,6 +980,62 @@
     width: 100%;
     height: 100%;
     border: none;
+  }
+
+  /* ── Banner audio toggle ─────────────────────── */
+  .banner-audio-btn {
+    position: absolute;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(13,13,16,0.72);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 0.45rem 1rem 0.45rem 0.75rem;
+    color: rgba(237,237,234,0.75);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .banner-audio-btn:hover {
+    background: rgba(212,245,94,0.12);
+    border-color: rgba(212,245,94,0.35);
+    color: #d4f55e;
+  }
+  .banner-label {
+    max-width: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* animated bars when playing */
+  .banner-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 1.1rem;
+  }
+  .banner-bars span {
+    display: block;
+    width: 3px;
+    background: #d4f55e;
+    border-radius: 2px;
+    animation: banner-bar 0.8s ease-in-out infinite alternate;
+  }
+  .banner-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+  .banner-bars span:nth-child(2) { height: 80%; animation-delay: 0.15s; }
+  .banner-bars span:nth-child(3) { height: 60%; animation-delay: 0.3s; }
+  .banner-bars span:nth-child(4) { height: 100%; animation-delay: 0.45s; }
+  @keyframes banner-bar {
+    from { transform: scaleY(0.4); }
+    to   { transform: scaleY(1); }
   }
 
   /* ── Banner fade overlay ─────────────────────── */
