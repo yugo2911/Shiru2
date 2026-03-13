@@ -147,6 +147,13 @@ export const modal = (() => {
         return [MODALS.ANIME_DETAILS]
       }
     },
+    ANIME_THEME: {
+      id: 'anime_theme',
+      priority: 8,
+      get siblings() {
+        return [MODALS.ANIME_DETAILS]
+      }
+    },
     ANIME_DETAILS: {
       id: 'anime_details',
       priority: 9,
