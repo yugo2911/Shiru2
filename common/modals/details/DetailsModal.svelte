@@ -24,7 +24,8 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink, Music } from 'lucide-svelte'
+  import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink, Music, X } from 'lucide-svelte'
+  import SoftModal from '@/components/modals/SoftModal.svelte'
   import { getAnimeThemes, getBestVideo, formatThemeLabel } from '@/modules/animethemes.js'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
@@ -199,9 +200,17 @@
 
   function playThemeVideo(video) {
     if (!video?.link) return
-    IPC.emit('open', video.link)
+    activeThemeVideo = video
+    modal.toggle(modal.ANIME_THEME)
     showAnimeThemes = false
   }
+
+  function closeThemePlayer() {
+    modal.close(modal.ANIME_THEME)
+    activeThemeVideo = null
+  }
+
+  let activeThemeVideo = null
 
   let resizeObserver
   let leftColumn, rightColumn
@@ -291,6 +300,25 @@
                       </button>
                     {/if}
                     <TrailerModal {staticMedia} />
+                    <!-- Anime Theme Video Player Modal -->
+                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
+                      {#if activeThemeVideo}
+                        <div class='pointer-events-auto d-flex align-items-center rounded-top-5 w-full wm-calc bg-dark h-40'>
+                          <span class='title ml-20 font-weight-very-bold text-muted select-all mr-20 font-scale-18'>
+                            {activeThemeVideo.filename || 'Anime Theme'}
+                          </span>
+                          <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
+                        </div>
+                        <div class='pointer-events-auto ratio-16-9 position-relative w-full wm-calc overflow-hidden rounded-bottom-5 bg-black'>
+                          <video
+                            class='position-absolute w-full h-full top-0 left-0 rounded-bottom-5'
+                            src={activeThemeVideo.link}
+                            autoplay
+                            controls
+                          />
+                        </div>
+                      {/if}
+                    </SoftModal>
                     <div class='position-relative' use:closeOnClickOutside={() => showAnimeThemes = false}>
                       <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Anime Themes' use:click={() => { if(!showAnimeThemes) loadAnimeThemes(); showAnimeThemes = !showAnimeThemes }}>
                         <Music size='1.7rem' />
