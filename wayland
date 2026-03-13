@@ -1,0 +1,6 @@
+"electron:start": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto electron ./build/main.js --ozone-platform=x11 --force-device-scale-factor=1 --disable-features=WaylandFractionalScaleV1,AutofillServerCommunication,AutofillEnableAccountWalletStorage --disable-gpu-rasterization --disable-gpu-compositing --disable-software-rasterizer --ignore-certificate-errors --log-level=3",
+"electron:start": "cross-env ELECTRON_OZONE_PLATFORM_HINT=wayland electron ./build/main.js --ozone-platform=wayland --disable-features=WaylandFractionalScaleV1,AutofillServerCommunication,AutofillEnableAccountWalletStorage --log-level=3",
+"electron:start": "cross-env ELECTRON_OZONE_PLATFORM_HINT=auto electron ./build/main.js --enable-features=UseOzonePlatform --disable-gpu-rasterization --disable-gpu-compositing --disable-software-rasterizer,WaylandFractionalScaleV1 --ignore-certificate-errors",    
+
+list md file contents
+find . -name "*.md" -exec cat {} +

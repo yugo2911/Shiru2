@@ -24,7 +24,8 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink } from 'lucide-svelte'
+  import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink, Music, X } from 'lucide-svelte'
+  import { getAnimeThemes, getBestVideo, formatThemeLabel } from '@/modules/animethemes.js'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -77,7 +78,10 @@
 
   function clickOutside(node) {
     function handle(e) {
-      if (!node.contains(e.target)) showExternalLinks = false
+      if (!node.contains(e.target)) {
+        showExternalLinks = false
+        showAnimeThemes = false
+      }
     }
     document.addEventListener('mousedown', handle, true)
     return { destroy() { document.removeEventListener('mousedown', handle, true) } }
@@ -171,10 +175,47 @@
   let episodeList = []
   let episodeLoad
   let showExternalLinks = false
+  let showAnimeThemes = false
+  let animeThemesData = null
+  let animeThemesLoading = false
+  let prevMediaId = null
+  $: if (staticMedia?.id && staticMedia.id !== prevMediaId) {
+    prevMediaId = staticMedia.id
+    animeThemesData = null
+    showAnimeThemes = false
+  }
   $: if (episodeLoad) {
     episodeLoad.then(episodes => {
       episodeList = episodes
     })
+  }
+
+  async function loadAnimeThemes() {
+    if (animeThemesData || animeThemesLoading) return
+    animeThemesLoading = true
+    const anilistId = staticMedia?.id
+    if (anilistId) {
+      animeThemesData = await getAnimeThemes(anilistId)
+    }
+    animeThemesLoading = false
+  }
+
+  // Theme player state
+  let activeTheme = null      // { video, theme }
+  let themePlayerOpen = false
+  let themeVideoLoading = true
+
+  function playThemeVideo(video, theme) {
+    if (!video?.link) return
+    activeTheme = { video, theme }
+    themeVideoLoading = true
+    themePlayerOpen = true
+    showAnimeThemes = false
+  }
+
+  function closeThemePlayer() {
+    themePlayerOpen = false
+    activeTheme = null
   }
 
   let resizeObserver
@@ -265,6 +306,68 @@
                       </button>
                     {/if}
                     <TrailerModal {staticMedia} />
+                    <!-- Theme Player — simple fixed overlay, no SoftModal needed -->
+                    {#if themePlayerOpen && activeTheme}
+                      <div class='theme-player-overlay' role='dialog' aria-modal='true' on:keydown={e => e.key === 'Escape' && closeThemePlayer()}>
+                        <div class='theme-player-inner'>
+                          <div class='theme-player-header'>
+                            <span class='theme-player-title'>
+                              {formatThemeLabel(activeTheme.theme)}{#if activeTheme.theme.song?.title} — {activeTheme.theme.song.title}{/if}{#if activeTheme.theme.song?.artists?.[0]?.name} · {activeTheme.theme.song.artists[0].name}{/if}
+                            </span>
+                            <button type='button' class='theme-player-close btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
+                          </div>
+                          <div class='theme-player-video-wrap'>
+                            {#key activeTheme.video.link}
+                              {#if themeVideoLoading}
+                                <SmartImage
+                                  class='theme-player-thumb'
+                                  images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} />
+                              {/if}
+                              <video
+                                class='theme-player-video'
+                                class:d-none={themeVideoLoading}
+                                src={activeTheme.video.link}
+                                autoplay
+                                controls
+                                on:canplay={() => { themeVideoLoading = false }}
+                              />
+                            {/key}
+                          </div>
+                        </div>
+                      </div>
+                    {/if}
+                    <div class='position-relative' use:clickOutside>
+                      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Anime Themes' use:click={() => { if(!showAnimeThemes) loadAnimeThemes(); showAnimeThemes = !showAnimeThemes }}>
+                        <Music size='1.7rem' />
+                      </button>
+                      {#if showAnimeThemes}
+                        <div class='ext-dropdown position-absolute'>
+                          {#if animeThemesLoading}
+                            <div class='ext-group-label'>Loading...</div>
+                          {:else if !animeThemesData?.length}
+                            <div class='ext-group-label'>No themes found</div>
+                          {:else}
+                            {#each animeThemesData as theme}
+                              {@const entries = theme.entries || []}
+                              {@const videos = entries.flatMap(e => e.videos || [])}
+                              {@const bestVideo = getBestVideo(videos)}
+                              {#if bestVideo}
+                                <button class='ext-item d-flex align-items-center' use:click={() => playThemeVideo(bestVideo, theme)}>
+                                  <Music size='1.3rem' class='ext-icon-svg' />
+                                  <span class='ext-site'>{formatThemeLabel(theme)}</span>
+                                  {#if theme.song?.title}
+                                    <span class='ext-lang'>{theme.song.title}</span>
+                                  {/if}
+                                  {#if theme.song?.artists?.[0]?.name}
+                                    <span class='ext-tag'>{theme.song.artists[0].name}</span>
+                                  {/if}
+                                </button>
+                              {/if}
+                            {/each}
+                          {/if}
+                        </div>
+                      {/if}
+                    </div>
                     <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='AniList' use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)} on:contextmenu|preventDefault={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')}>
                       <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
                     </button>
@@ -735,8 +838,87 @@
     letter-spacing: 0.08em;
     flex-shrink: 0;
   }
+  .ext-tag {
+    font-size: 0.7rem;
+    color: rgba(212,245,94,0.6);
+    background: rgba(212,245,94,0.08);
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    margin-left: 0.4rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+  }
 
-  /* ── Banner fade overlay ─────────────────────── */
+  /* ── Theme player overlay ───────────────────────────── */
+  .theme-player-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
+  }
+  .theme-player-inner {
+    width: min(max(70vw, 60rem), calc(75vh * (16 / 9)));
+    max-width: calc(100vw - 4rem);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
+  .theme-player-header {
+    display: flex;
+    align-items: center;
+    background: #111116;
+    height: 4rem;
+    padding: 0 1.25rem 0 1.25rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    gap: 0.5rem;
+  }
+  .theme-player-title {
+    flex: 1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(237,237,234,0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .theme-player-close {
+    flex-shrink: 0;
+    color: rgba(237,237,234,0.55) !important;
+    transition: color 0.12s;
+  }
+  .theme-player-close:hover { color: #ededea !important; }
+  .theme-player-video-wrap {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 0 0 0.5rem 0.5rem;
+    overflow: hidden;
+  }
+  .theme-player-video-wrap :global(.theme-player-thumb) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .theme-player-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0 0 0.5rem 0.5rem;
+  }
+
+  /* ── Banner fade overlay ─────────────────────────────── */
   :global(.anime-details) {
     -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
     mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
