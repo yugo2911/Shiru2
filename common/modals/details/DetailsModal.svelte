@@ -300,7 +300,7 @@
                       </button>
                     {/if}
                     <TrailerModal {staticMedia} />
-                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
+                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
                       {#if activeTheme && activeVideo}
                         <div class='pointer-events-auto player-shell wm-calc'>
                           <div class='player-header'>
@@ -308,20 +308,22 @@
                             <span class='player-title'>
                               {#if activeTheme.song?.title}{activeTheme.song.title}{/if}{#if activeTheme.song?.artists?.[0]?.name} · {activeTheme.song.artists[0].name}{/if}
                             </span>
-                            <button type='button' class='player-close' use:click={closeThemePlayer}><X size='1.6rem' strokeWidth='2.5'/></button>
+                            <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
                           </div>
                           <div class='player-body'>
-                            {#key activeVideo.link}
-                              <SmartImage class='player-thumb' images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!themeLoading}/>
-                              <video
-                                class='player-video'
-                                class:d-none={themeLoading}
-                                src={activeVideo.link}
-                                autoplay
-                                controls
-                                on:canplay={() => { themeLoading = false }}
-                              />
-                            {/key}
+                            {#if $modal[modal.ANIME_THEME]}
+                              {#key activeVideo.link}
+                                <SmartImage class='player-thumb' images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!themeLoading}/>
+                                <video
+                                  class='player-video'
+                                  class:d-none={themeLoading}
+                                  src={activeVideo.link}
+                                  autoplay
+                                  controls
+                                  on:canplay={() => { themeLoading = false }}
+                                />
+                              {/key}
+                            {/if}
                           </div>
                         </div>
                       {/if}
