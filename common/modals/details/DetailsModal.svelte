@@ -25,8 +25,8 @@
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
   import { Heart, Play, ArrowDown01, ArrowUp10, ExternalLink, Music, X } from 'lucide-svelte'
-  import SoftModal from '@/components/modals/SoftModal.svelte'
   import { getAnimeThemes, getBestVideo, formatThemeLabel } from '@/modules/animethemes.js'
+  import SoftModal from '@/components/modals/SoftModal.svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -198,19 +198,19 @@
     animeThemesLoading = false
   }
 
-  function playThemeVideo(video) {
+  let activeTheme = null
+  let activeVideo = null
+  let themeLoading = true
+
+  function playThemeVideo(video, theme) {
     if (!video?.link) return
-    activeThemeVideo = video
+    activeVideo = video
+    activeTheme = theme
+    themeLoading = true
     modal.toggle(modal.ANIME_THEME)
     showAnimeThemes = false
   }
-
-  function closeThemePlayer() {
-    modal.close(modal.ANIME_THEME)
-    activeThemeVideo = null
-  }
-
-  let activeThemeVideo = null
+  function closeThemePlayer() { modal.close(modal.ANIME_THEME) }
 
   let resizeObserver
   let leftColumn, rightColumn
@@ -300,22 +300,29 @@
                       </button>
                     {/if}
                     <TrailerModal {staticMedia} />
-                    <!-- Anime Theme Video Player Modal -->
-                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
-                      {#if activeThemeVideo}
-                        <div class='pointer-events-auto d-flex align-items-center rounded-top-5 w-full wm-calc bg-dark h-40'>
-                          <span class='title ml-20 font-weight-very-bold text-muted select-all mr-20 font-scale-18'>
-                            {activeThemeVideo.filename || 'Anime Theme'}
-                          </span>
-                          <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
-                        </div>
-                        <div class='pointer-events-auto ratio-16-9 position-relative w-full wm-calc overflow-hidden rounded-bottom-5 bg-black'>
-                          <video
-                            class='position-absolute w-full h-full top-0 left-0 rounded-bottom-5'
-                            src={activeThemeVideo.link}
-                            autoplay
-                            controls
-                          />
+                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
+                      {#if activeTheme && activeVideo}
+                        <div class='pointer-events-auto player-shell wm-calc'>
+                          <div class='player-header'>
+                            <span class='player-badge'>{formatThemeLabel(activeTheme)}</span>
+                            <span class='player-title'>
+                              {#if activeTheme.song?.title}{activeTheme.song.title}{/if}{#if activeTheme.song?.artists?.[0]?.name} · {activeTheme.song.artists[0].name}{/if}
+                            </span>
+                            <button type='button' class='player-close' use:click={closeThemePlayer}><X size='1.6rem' strokeWidth='2.5'/></button>
+                          </div>
+                          <div class='player-body'>
+                            {#key activeVideo.link}
+                              <SmartImage class='player-thumb' images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!themeLoading}/>
+                              <video
+                                class='player-video'
+                                class:d-none={themeLoading}
+                                src={activeVideo.link}
+                                autoplay
+                                controls
+                                on:canplay={() => { themeLoading = false }}
+                              />
+                            {/key}
+                          </div>
                         </div>
                       {/if}
                     </SoftModal>
@@ -335,7 +342,7 @@
                               {@const videos = entries.flatMap(e => e.videos || [])}
                               {@const bestVideo = getBestVideo(videos)}
                               {#if bestVideo}
-                                <button class='ext-item d-flex align-items-center' use:click={() => playThemeVideo(bestVideo)}>
+                                <button class='ext-item d-flex align-items-center' use:click={() => playThemeVideo(bestVideo, theme)}>
                                   <Music size='1.3rem' class='ext-icon-svg' />
                                   <span class='ext-site'>{formatThemeLabel(theme)}</span>
                                   {#if theme.song?.title}
@@ -833,6 +840,83 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100px;
+  }
+
+  /* ── Theme / Trailer player shell (shared with TrailerModal pattern) ── */
+  :global(.player-shell) {
+    border-radius: 0.6rem;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08);
+    background: #0d0d10;
+  }
+  :global(.wm-calc) {
+    width: 100%;
+    max-width: min(max(70vw, 100rem), calc(75vh * (16 / 9)));
+  }
+  :global(.player-header) {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 0.75rem 0 1.4rem;
+    height: 4.2rem;
+    background: linear-gradient(90deg, rgba(212,245,94,0.06) 0%, transparent 60%);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  :global(.player-badge) {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: #d4f55e;
+    background: rgba(212,245,94,0.1);
+    border: 1px solid rgba(212,245,94,0.28);
+    border-radius: 3px;
+    padding: 0.18rem 0.5rem;
+    flex-shrink: 0;
+  }
+  :global(.player-title) {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: rgba(237,237,234,0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  :global(.player-close) {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: rgba(237,237,234,0.35);
+    cursor: pointer;
+    padding: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s;
+  }
+  :global(.player-close:hover) { color: #ededea; background: rgba(237,237,234,0.08); }
+  :global(.player-body) {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+  }
+  :global(.player-thumb) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  :global(.player-video) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
   }
 
   /* ── Banner fade overlay ─────────────────────── */
