@@ -28,55 +28,198 @@
   import { getAnimeThemes, getBestVideo, formatThemeLabel } from '@/modules/animethemes.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
 
+  // ── Modal open/close ──────────────────────────────────────────────────────
+
   $: view = $modal[modal.ANIME_DETAILS]?.data
-  function close () {
-    stopBannerAudio()
+
+  function close() {
+    stopBannerVideo()
     modal.close(modal.ANIME_DETAILS)
   }
+
+  function checkClose({ keyCode }) {
+    if (keyCode === 27) close()
+  }
+
+  // ── Core media state ──────────────────────────────────────────────────────
+  //
+  // `media`       — live, always reflects the latest cache value for the open entry.
+  // `staticMedia` — snapshot kept stable while the modal is visible so that the
+  //                 template doesn't flicker when the cache updates mid-render.
+  //                 It is only replaced when a *different* anime is opened, and
+  //                 cleared when the modal closes.
 
   let _modal
   let container = null
   let staticMedia
+
   $: media = mediaCache.value[view?.id] || view
+
+  // Keep staticMedia in sync: update on new id, clear on close.
   $: {
-    if (media && (!staticMedia || staticMedia?.id !== media?.id)) staticMedia = media
-    else if (!media && staticMedia) staticMedia = null
-  }
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
-  $: episodeOrder = !!staticMedia
-  $: watched = media?.mediaListEntry?.status === 'COMPLETED'
-  $: userProgress =  ['CURRENT', 'REPEATING', 'PAUSED', 'DROPPED'].includes(media?.mediaListEntry?.status) && media?.mediaListEntry?.progress
-  $: missingIds = staticMedia && []
-  $: recommendations = staticMedia && anilistClient.recommendations({ id: staticMedia.id })
-  $: searchIDS = staticMedia && (async () => {
-    const searchIDS = [...(staticMedia.relations?.edges?.filter(({ node }) => node.type === 'ANIME').map(({ node }) => node.id) || []), ...((await recommendations)?.data?.Media?.recommendations?.edges?.map(({ node }) => node.mediaRecommendation?.id) || [])]
-    if (searchIDS.length === 0) {
-      missingIds = searchIDS.filter(id => !mediaCache.value[id])
-      return Promise.resolve([])
+    if (media) {
+      if (!staticMedia || staticMedia.id !== media.id) staticMedia = media
+    } else {
+      staticMedia = null
     }
-    const result = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: searchIDS })
-    missingIds = searchIDS.filter(id => !mediaCache.value[id])
-    return Promise.resolve({
+  }
+
+  // Reflect live cache updates into `media` without a bare subscription leak.
+  // Using a reactive statement keyed on `view` means Svelte owns the lifecycle.
+  $: if (view?.id) {
+    const unsubscribe = mediaCache.subscribe(value => {
+      const fresh = value?.[view.id]
+      if (fresh && JSON.stringify(fresh) !== JSON.stringify(media)) media = fresh
+    })
+    // Svelte does not auto-clean $: subscriptions — destroy when view changes.
+    onDestroy(unsubscribe)
+  }
+
+  // Focus + scroll when a new anime is opened.
+  $: if (staticMedia) {
+    _modal?.focus()
+    container?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // ── Derived media state ───────────────────────────────────────────────────
+
+  $: watched = media?.mediaListEntry?.status === 'COMPLETED'
+  $: userProgress = ['CURRENT', 'REPEATING', 'PAUSED', 'DROPPED'].includes(media?.mediaListEntry?.status)
+    && media?.mediaListEntry?.progress
+
+  $: playButtonText = getPlayButtonText(media)
+
+  function getPlayButtonText(media) {
+    if (media?.mediaListEntry?.progress) {
+      return media.mediaListEntry.status === 'COMPLETED' ? 'Rewatch Now' : 'Continue Now'
+    }
+    return 'Watch Now'
+  }
+
+  // ── Relation / recommendation IDs ────────────────────────────────────────
+
+  $: missingIds = staticMedia ? [] : []
+  $: recommendations = staticMedia && anilistClient.recommendations({ id: staticMedia.id })
+
+  $: searchIDS = staticMedia && (async () => {
+    const ids = [
+      ...(staticMedia.relations?.edges
+        ?.filter(({ node }) => node.type === 'ANIME')
+        .map(({ node }) => node.id) || []),
+      ...((await recommendations)?.data?.Media?.recommendations?.edges
+        ?.map(({ node }) => node.mediaRecommendation?.id) || [])
+    ]
+
+    if (ids.length === 0) {
+      missingIds = []
+      return []
+    }
+
+    const result = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: ids })
+    missingIds = ids.filter(id => !mediaCache.value[id])
+
+    return {
       ...result,
       data: {
         ...result.data,
         Page: {
           ...result.data.Page,
-          media: (result?.data?.Page?.media || []).filter(media => mediaCache.value[media.id])
+          media: (result?.data?.Page?.media || []).filter(m => mediaCache.value[m.id])
         }
       }
-    })
+    }
   })()
-  $: staticMedia && (_modal?.focus(), (container && container.scrollTo({top: 0, behavior: 'smooth'})))
-  $: staticMedia && (modal.length === 1 && $modal[modal.ANIME_DETAILS] && _modal?.focus())
-  $: {
-    if (staticMedia) {
-      // reset handled by key block on staticMedia.id
+
+  // ── Play logic ────────────────────────────────────────────────────────────
+
+  function play(media, episode, force = false) {
+    if (!media) return
+    if (isValidNumber(episode)) return playAnime(media, episode, force)
+    if (media.status === 'NOT_YET_RELEASED') return
+    playMedia(media)
+  }
+
+  function handlePlay(id, episode, torrentOnly) {
+    const cachedMedia = mediaCache.value[id]
+    if (!cachedMedia) return
+    const cachedEpisode = isValidNumber(episode) ? episode : cachedMedia?.mediaListEntry?.progress
+    const desiredEpisode = isValidNumber(episode)
+      ? episode
+      : cachedEpisode && cachedEpisode !== 0 ? cachedEpisode + 1 : cachedEpisode
+    if (torrentOnly) {
+      if (desiredEpisode) return playAnime(cachedMedia, desiredEpisode)
+      if (cachedMedia?.status === 'NOT_YET_RELEASED') return
+      playMedia(cachedMedia)
+    } else {
+      play(cachedMedia, desiredEpisode)
     }
   }
-  function checkClose ({ keyCode }) {
-    if (keyCode === 27) close()
+
+  // IPC + window event listeners — all cleaned up in onDestroy.
+  IPC.on('play-anime', handlePlay)
+  IPC.on('play-torrent', (detail) => add(detail.magnet, null, null, null, detail.base64))
+
+  function onWindowPlayAnime(event) { handlePlay(event.detail.id, event.detail.episode, event.detail.torrentOnly) }
+  function onWindowPlayTorrent(event) { add(event.detail.magnet, null, null, null, event.detail.base64) }
+  window.addEventListener('play-anime', onWindowPlayAnime)
+  window.addEventListener('play-torrent', onWindowPlayTorrent)
+
+  // ── Favourite ─────────────────────────────────────────────────────────────
+
+  function toggleFavourite() {
+    media.isFavourite = anilistClient.favourite({ id: media.id })
   }
+
+  // ── Sanitize / markdown ───────────────────────────────────────────────────
+
+  function sanitize(body) {
+    if (!body) return ''
+    const cleanBody = body.trim()
+      .replace(/\.\.+(?=\s*$)/gm, '.')
+      .replace(/\n/g, '<br>')
+      .replace(/(<br\s*\/?>){2,}/gi, '<br><br>')
+      .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '')
+    marked.setOptions({ pedantic: false, breaks: true, gfm: true })
+    return DOMPurify.sanitize(marked.parse(cleanBody).trim(), {
+      ALLOWED_TAGS: [
+        'p', 'br', 'span', 'div',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
+        'ul', 'ol', 'li',
+        'blockquote', 'code', 'pre', 'a', 'img',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+        'hr', 'details', 'summary', 'input'
+      ],
+      ALLOWED_ATTR: [
+        'href', 'target', 'rel', 'title',
+        'src', 'alt', 'width', 'height',
+        'class', 'id', 'align',
+        'type', 'checked', 'disabled'
+      ]
+    })
+  }
+
+  // ── Episode list ──────────────────────────────────────────────────────────
+
+  let episodeList = []
+  let episodeLoad
+
+  // episodeOrder is user-toggled; reset only when the media id changes.
+  let episodeOrder = true
+  let _lastEpisodeMediaId = null
+  $: if (staticMedia?.id !== _lastEpisodeMediaId) {
+    _lastEpisodeMediaId = staticMedia?.id ?? null
+    episodeOrder = true
+  }
+
+  $: if (episodeLoad) {
+    episodeLoad.then(episodes => { episodeList = episodes })
+  }
+
+  // ── UI dropdowns ──────────────────────────────────────────────────────────
+
+  let showExternalLinks = false
+  let showAnimeThemes = false
 
   function closeOnClickOutside(node, onClose) {
     function handle(e) {
@@ -85,204 +228,113 @@
     document.addEventListener('mousedown', handle, true)
     return { destroy() { document.removeEventListener('mousedown', handle, true) } }
   }
-  function play (media, episode, force = false) {
-    if (!media) return
-    if (isValidNumber(episode)) return playAnime(media, episode, force)
-    if (media.status === 'NOT_YET_RELEASED') return
-    playMedia(media)
-  }
-  function getPlayButtonText (media) {
-    if (media?.mediaListEntry) {
-      const { status, progress } = media.mediaListEntry
-      if (progress) {
-        if (status === 'COMPLETED') {
-          return 'Rewatch Now'
-        } else {
-          return 'Continue Now'
-        }
-      }
-    }
-    return 'Watch Now'
-  }
-  $: playButtonText = getPlayButtonText(media)
-  function toggleFavourite () {
-    media.isFavourite = anilistClient.favourite({ id: media.id })
-  }
 
-  function handlePlay(id, episode, torrentOnly) {
-    const cachedMedia = mediaCache.value[id]
-    if (!cachedMedia) return
-    const cachedEpisode = isValidNumber(episode) ? episode : cachedMedia?.mediaListEntry?.progress
-    const desiredEpisode = (isValidNumber(episode) ? episode : cachedEpisode && cachedEpisode !== 0 ? cachedEpisode + 1 : cachedEpisode)
-    if (torrentOnly) {
-      if (desiredEpisode) return playAnime(cachedMedia, desiredEpisode)
-      if (cachedMedia?.status === 'NOT_YET_RELEASED') return
-      playMedia(cachedMedia)
-    } else play(cachedMedia, desiredEpisode)
-  }
+  // ── Anime themes (dropdown list) ──────────────────────────────────────────
 
-  IPC.on('play-anime', (id, episode, torrentOnly) => {
-    handlePlay(id, episode, torrentOnly)
-  })
-
-  window.addEventListener('play-anime', (event) => {
-    const { id, episode, torrentOnly } = event.detail
-    handlePlay(id, episode, torrentOnly)
-  })
-
-  window.addEventListener('play-torrent', (event) => add(event.detail.magnet, null, null, null, event.detail.base64))
-
-  IPC.on('play-torrent', (detail) => add(detail.magnet, null, null, null, detail.base64))
-
-  function sanitize(body) {
-    if (!body) return ''
-    const cleanBody = body.trim()
-      .replace(/\.\.+(?=\s*$)/gm, '.') // Remove excessive trailing "..."
-      .replace(/\n/g, '<br>')  // Convert all \n to <br>
-      .replace(/(<br\s*\/?>){2,}/gi, '<br><br>') // Then collapse 2+ <br> to exactly 2
-      .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '') // Remove any prepended or appended <br>.
-    marked.setOptions({
-      pedantic: false,
-      breaks: true,
-      gfm: true
-    })
-    return DOMPurify.sanitize(marked.parse(cleanBody).trim(), {
-      ALLOWED_TAGS: [
-        'p', 'br', 'span', 'div',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
-        'ul', 'ol', 'li',
-        'blockquote',
-        'code', 'pre',
-        'a',
-        'img',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-        'hr',
-        'details', 'summary',
-        'input'
-      ],
-      ALLOWED_ATTR: [
-        'href', 'target', 'rel', 'title',
-        'src', 'alt', 'width', 'height',
-        'class', 'id',
-        'align',
-        'type', 'checked', 'disabled'
-      ]
-    })
-  }
-
-  let episodeList = []
-  let episodeLoad
-  let showExternalLinks = false
-  let showAnimeThemes = false
   let animeThemesData = null
   let animeThemesLoading = false
-  let prevMediaId = null
-  $: if (staticMedia?.id && staticMedia.id !== prevMediaId) {
-    prevMediaId = staticMedia.id
+
+  // Reset themes state when the anime changes.
+  $: if (staticMedia?.id) {
     animeThemesData = null
     showAnimeThemes = false
-  }
-  $: if (episodeLoad) {
-    episodeLoad.then(episodes => {
-      episodeList = episodes
-    })
+    showExternalLinks = false
   }
 
   async function loadAnimeThemes() {
     if (animeThemesData || animeThemesLoading) return
     animeThemesLoading = true
-    const anilistId = staticMedia?.id
-    if (anilistId) {
-      animeThemesData = await getAnimeThemes(anilistId)
-    }
+    if (staticMedia?.id) animeThemesData = await getAnimeThemes(staticMedia.id)
     animeThemesLoading = false
   }
 
+  // ── Theme video player (modal) ────────────────────────────────────────────
+
   let activeTheme = null
   let activeVideo = null
-  let themeLoading = true
+  let themeLoading = false
 
   function playThemeVideo(video, theme) {
     if (!video?.link) return
     activeVideo = video
     activeTheme = theme
     themeLoading = true
-    modal.toggle(modal.ANIME_THEME)
     showAnimeThemes = false
+    modal.toggle(modal.ANIME_THEME)
   }
+
   function closeThemePlayer() { modal.close(modal.ANIME_THEME) }
+
+  // ── Column height sync ────────────────────────────────────────────────────
 
   let resizeObserver
   let leftColumn, rightColumn
+
   function syncHeights() {
-    if (leftColumn && rightColumn) {
-      const leftHeight = leftColumn.offsetHeight
-      if (rightColumn.style.height !== `${leftHeight}px`) {
-        rightColumn.style.height = `${leftHeight}px`
-      }
-    }
+    if (!leftColumn || !rightColumn) return
+    const h = `${leftColumn.offsetHeight}px`
+    if (rightColumn.style.height !== h) rightColumn.style.height = h
   }
 
   $: {
     resizeObserver?.disconnect()
-    if (staticMedia) {
+    if (staticMedia && leftColumn) {
       resizeObserver = new ResizeObserver(syncHeights)
-      if (leftColumn) resizeObserver.observe(leftColumn)
+      resizeObserver.observe(leftColumn)
     }
   }
 
-  onDestroy(() => { resizeObserver?.disconnect(); stopBannerAudio() })
+  // ── Banner video ──────────────────────────────────────────────────────────
 
-  // Banner audio — random theme on load
-  let bannerAudio = null
+  let bannerVideoUrl = null
+  let bannerMuted = true
   let bannerPlaying = false
   let bannerTheme = null
+  let bannerVideoEl = null
 
   $: if (staticMedia?.id) {
-    stopBannerAudio()
+    stopBannerVideo()
     bannerTheme = null
-    bannerPlaying = false
-    // auto-load and play on open
+    bannerMuted = true
     loadAndPlayBannerTheme()
   }
 
   async function loadAndPlayBannerTheme() {
     const themes = await getAnimeThemes(staticMedia?.id)
     if (!themes?.length) return
-    const allVideos = themes.flatMap(t =>
-      (t.entries || []).flatMap(e => (e.videos || []).map(v => ({ video: v, theme: t })))
-    ).filter(({ video }) => video?.link)
+    const allVideos = themes
+      .flatMap(t => (t.entries || []).flatMap(e => (e.videos || []).map(v => ({ video: v, theme: t }))))
+      .filter(({ video }) => video?.link)
     if (!allVideos.length) return
     const pick = allVideos[Math.floor(Math.random() * allVideos.length)]
     bannerTheme = pick.theme
-    playBannerAudio(pick.video.link)
+    bannerVideoUrl = pick.video.link
+    bannerPlaying = true
   }
 
-  function playBannerAudio(src) {
-    stopBannerAudio()
-    bannerAudio = new Audio(src)
-    bannerAudio.volume = 0.35
-    bannerAudio.play().then(() => { bannerPlaying = true }).catch(() => { bannerPlaying = false })
-    bannerAudio.onended = () => { bannerPlaying = false }
-  }
-
-  function stopBannerAudio() {
-    if (bannerAudio) {
-      bannerAudio.pause()
-      bannerAudio.src = ''
-      bannerAudio = null
-    }
+  function stopBannerVideo() {
     bannerPlaying = false
+    bannerVideoUrl = null
+    if (bannerVideoEl) {
+      bannerVideoEl.pause()
+      bannerVideoEl.src = ''
+    }
   }
 
   function toggleBannerAudio() {
-    if (bannerPlaying) {
-      stopBannerAudio()
-    } else if (bannerTheme) {
-      loadAndPlayBannerTheme()
-    }
+    if (!bannerVideoEl) return
+    bannerMuted = !bannerMuted
+    bannerVideoEl.muted = bannerMuted
   }
+
+  // ── Cleanup ───────────────────────────────────────────────────────────────
+
+  onDestroy(() => {
+    resizeObserver?.disconnect()
+    stopBannerVideo()
+    window.removeEventListener('play-anime', onWindowPlayAnime)
+    window.removeEventListener('play-torrent', onWindowPlayTorrent)
+  })
 </script>
 
 <div class='modal modal-full z-50' class:show={staticMedia} on:keydown={checkClose} tabindex='-1' role='button' bind:this={_modal}>
@@ -300,9 +352,21 @@
           metadata?.included?.[0]?.attributes?.coverImage?.small,
           metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
         () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
+      {#if bannerVideoUrl}
+        <video
+          bind:this={bannerVideoEl}
+          class='w-full cover-img anime-details position-absolute banner-video'
+          src={bannerVideoUrl}
+          autoplay
+          muted
+          loop
+          playsinline
+          on:canplay={() => { bannerVideoEl.muted = bannerMuted }}
+        />
+      {/if}
       {#if bannerTheme}
         <button class='banner-audio-btn' use:click={toggleBannerAudio}>
-          {#if bannerPlaying}
+          {#if !bannerMuted}
             <span class='banner-bars'><span/><span/><span/><span/></span>
           {:else}
             <Music size='1.1rem' />
@@ -1042,5 +1106,9 @@
   :global(.anime-details) {
     -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
     mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
+  }
+  .banner-video {
+    object-fit: cover;
+    pointer-events: none;
   }
 </style>
