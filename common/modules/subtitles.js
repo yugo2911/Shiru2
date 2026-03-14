@@ -27,6 +27,48 @@ Style: Default, ${settings.value.font?.name || 'Roboto Medium'},54,&H00FFFFFF,&H
 
 // capture full style line (name and properties)
 const stylesRx = /^Style:\s*([^\r\n]+)/gmi
+// compact JP test set (expanded)
+export const JP_SUB_COMMON_EXT = "、。「」『』（）【】〈〉《》・ー〜～—–‑…⋯々ぁぃぅぇぉゃゅょっゎァィゥェォャュョッヮ\uFF66-\uFF9D゛゜︙︰︱︳︴♪♫※★☆→←↑↓℃％°＃＠＆Ａ-Ｚａ-ｚ０-９，．：；！？"
+
+// remove control and zero-width characters
+export function stripInvisible(text) {
+  if (!text) return text
+  return text.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\uFEFF]/g, '')
+}
+
+// normalize common variants (wave dash, tilde, fullwidth ASCII -> canonical)
+export function normalizeVariants(text) {
+  if (!text) return text
+  return text
+    .replace(/\u301C/g, '\uFF5E')   // map U+301C to fullwidth tilde
+    .replace(/\u223C/g, '\uFF5E')   // map tilde operator to fullwidth tilde
+    .replace(/\u2014/g, '\u2013')   // em dash -> en dash (optional)
+    .replace(/~/g, '\uFF5E')        // ascii tilde -> fullwidth tilde
+}
+
+// canvas glyph test: returns true if canvas width differs from fallback marker
+export function hasGlyphCanvas(fontFamily, ch) {
+  try {
+    const c = document.createElement('canvas')
+    const ctx = c.getContext('2d')
+    ctx.font = `32px ${fontFamily}, monospace`
+    const w1 = ctx.measureText(ch).width
+    ctx.font = '32px monospace'
+    const w2 = ctx.measureText(ch).width
+    return w1 !== w2
+  } catch (e) {
+    return true // assume present if canvas fails
+  }
+}
+
+// test a set of characters and return missing ones (uses canvas fallback)
+export function findMissingGlyphsCanvas(chars, fontFamily) {
+  const missing = []
+  for (const ch of Array.from(chars)) {
+    if (!hasGlyphCanvas(fontFamily, ch)) missing.push(ch)
+  }
+  return missing
+}
 
 /**
  * Convert common HTML inline tags to ASS override tags.
