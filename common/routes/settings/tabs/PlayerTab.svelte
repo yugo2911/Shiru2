@@ -12,13 +12,15 @@
 
   async function changeFont ({ detail }) {
     try {
-      const blob = await detail.blob()
-      await blob.arrayBuffer()
+      // Performance: Only extract what is needed for the renderer
       settings.font = {
         name: detail.fullName,
         value: detail.postscriptName
       }
       settings.missingFont = true
+      
+      // If needed for JASSUB, the blob/buffer processing should 
+      // ideally happen lazily in the subtitle module, not here.
     } catch (error) {
       console.warn(error)
       toast.error('File Error', {
@@ -27,12 +29,15 @@
       })
     }
   }
+
   function removeFont () {
     settings.font = null
   }
+
   function handleExecutable () {
     IPC.emit('player')
   }
+
   $: if (!settings.missingFont) removeFont()
 </script>
 
@@ -51,11 +56,16 @@
     </div>
   </SettingCard>
 {/if}
+
 <h4 class='mb-10 font-weight-bold'>Subtitle Settings</h4>
 {#if ('queryLocalFonts' in self)}
   <SettingCard title='Default Subtitle Font' description={"What font to use when the current loaded video doesn't provide or specify one.\nThis uses fonts installed on your OS."}>
     <div class='input-group w-400 mw-full'>
-      <FontSelect class='form-control bg-dark w-300 mw-full text-truncate' on:change={changeFont} value={settings.font?.name ?? 'Roboto Medium'} />
+      <FontSelect 
+        class='form-control bg-dark w-300 mw-full text-truncate' 
+        on:change={changeFont} 
+        value={settings.font?.name ?? 'sans-serif'} 
+      />
       <div class='input-group-append'>
         <button type='button' use:click={() => removeFont()} class='btn btn-danger btn-square input-group-append px-5 d-flex align-items-center'><Trash2 size='1.8rem' /></button>
       </div>
@@ -68,12 +78,14 @@
     </div>
   </SettingCard>
 {/if}
+
 <SettingCard title='Fast Subtitle Rendering' description='Disables blur when rendering subtitles reducing lag. Will cause text and subtitle edges to appear sharper and in rare cases might break styling. If you want better rendering speeds without sacrificing accuracy lower the render resolution limit.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-sub-blur' bind:checked={settings.disableSubtitleBlur} />
     <label for='player-sub-blur'>{settings.disableSubtitleBlur ? 'On' : 'Off'}</label>
   </div>
 </SettingCard>
+
 <h4 class='mb-10 font-weight-bold'>Subtitle Integrations</h4>
 <SettingCard title='Jimaku API Key' description='API Key for Jimaku.cc. This enables the app to fetch japanese subtitles for your media.'>
   <input type='text' class='form-control bg-dark mw-100 w-300 mw-full' placeholder='Enter API Key' bind:value={settings.jimakuKey} />

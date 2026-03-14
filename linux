@@ -4,3 +4,35 @@
 
 list md file contents
 find . -name "*.md" -exec cat {} +
+
+#  this to create the entry automatically
+cat > ~/.local/share/applications/shiru.desktop <<EOF
+[Desktop Entry]
+Name=Shiru
+Exec=$(pwd)/shiru
+Icon=$(pwd)/resources/icon.png
+Type=Application
+Categories=Development;
+Terminal=false
+EOF
+
+# Update the database
+update-desktop-database ~/.local/share/applications
+
+
+or
+If you want the application menu entry to be handled 
+automatically during the build/install process, add the desktop configuration to your package.json.
+"build": {
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Development",
+    "executableName": "shiru",
+    "desktop": {
+      "Name": "Shiru",
+      "Type": "Application",
+      "Exec": "shiru",
+      "Icon": "icon"
+    }
+  }
+}

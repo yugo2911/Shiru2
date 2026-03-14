@@ -7,6 +7,9 @@ import { jimakuClient } from '@/modules/jimaku.js'
 import clipboard from '@/modules/clipboard.js'
 import { SUPPORTS } from '@/modules/support.js'
 
+/**
+ * MPV-like default ASS header (tweak fonts/names to your environment)
+ */
 const defaultHeader = `[Script Info]
 Title: English (US)
 ScriptType: v4.00+
@@ -17,11 +20,34 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default, ${settings.value.font?.name.toLowerCase() || 'Roboto Medium'},52,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2.6,0,2,20,20,46,1
+Style: Default, ${settings.value.font?.name || 'Roboto Medium'},54,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,3,0,2,20,20,40,1
 [Events]
 
 `
-const stylesRx = /^Style:[^,]*/gm
+
+// capture full style line (name and properties)
+const stylesRx = /^Style:\s*([^\r\n]+)/gmi
+
+/**
+ * Convert common HTML inline tags to ASS override tags.
+ * Supports <b>, <i>, <u>, <br>, <font color="#RRGGBB">.
+ */
+function htmlToAss (text) {
+  if (!text) return ''
+  text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, '\\h')
+  text = text.replace(/<br\s*\/?>/gi, '\\N')
+  text = text.replace(/<b>(.*?)<\/b>/gi, '{\\b1}$1{\\b0}')
+  text = text.replace(/<i>(.*?)<\/i>/gi, '{\\i1}$1{\\i0}')
+  text = text.replace(/<u>(.*?)<\/u>/gi, '{\\u1}$1{\\u0}')
+  text = text.replace(/<font\s+color=["']#?([0-9a-f]{6})["']>(.*?)<\/font>/gi, (m, col, inner) => {
+    const r = col.slice(0, 2), g = col.slice(2, 4), b = col.slice(4, 6)
+    return `{\\c&H${b}${g}${r}&}${inner}{\\c}`
+  })
+  // strip any remaining tags but keep content
+  text = text.replace(/<\/?[^>]+(>|$)/g, '')
+  return text
+}
+
 export default class Subtitles {
   constructor (video, files, selected, onHeader) {
     this.video = video
@@ -41,14 +67,36 @@ export default class Subtitles {
     this.videoFiles = files.filter(file => videoRx.test(file.name))
     this.subtitleFiles = []
     this.timeout = null
+
+    // renderer readiness promise helpers
+    this.rendererReady = Promise.resolve()
+    this._resolveRendererReady = null
+
     this.handleFile = ({ detail }) => {
       if (this.selected) {
         const uint8 = hex2arr(bin2hex(detail))
         this.fonts.push(uint8)
-        this.renderer?.addFont(uint8)
+        // if renderer exists, add font immediately and nudge readiness
+        if (this.renderer && typeof this.renderer.addFont === 'function') {
+          try {
+            this.renderer.addFont(uint8)
+            // small delay to allow font registration
+            if (this._resolveRendererReady) {
+              clearTimeout(this._rendererReadyTimeout)
+              this._rendererReadyTimeout = setTimeout(() => {
+                this._resolveRendererReady()
+                this._resolveRendererReady = null
+              }, 80)
+            }
+          } catch (e) {
+            console.error('addFont failed:', e)
+          }
+        }
       }
     }
-    this.handleSubtitle = ({ detail }) => {
+
+    // make handler async so we can await renderer readiness before creating events
+    this.handleSubtitle = async ({ detail }) => {
       const { subtitle, trackNumber } = detail
       if (this.selected) {
         const string = JSON.stringify(subtitle)
@@ -56,7 +104,14 @@ export default class Subtitles {
           this._tracksString[trackNumber].add(string)
           const assSub = this.constructSub(subtitle, this.headers[trackNumber].type !== 'ass', this.tracks[trackNumber].length, trackNumber)
           this.tracks[trackNumber].push(assSub)
-          if (this.current === trackNumber) this.renderer?.createEvent(assSub)
+          if (this.current === trackNumber && this.renderer) {
+            await this._waitRendererReady()
+            try {
+              this.renderer.createEvent(assSub)
+            } catch (e) {
+              console.error('createEvent failed:', e)
+            }
+          }
         }
       }
     }
@@ -70,13 +125,21 @@ export default class Subtitles {
             this.tracks[track.number] = []
             this._tracksString[track.number] = new Set()
             this.headers[track.number] = track
-            this._stylesMap[track.number] = {
-              Default: 0
+            this._stylesMap[track.number] = { Default: 'Default' }
+
+            // parse style names from header
+            let m
+            stylesRx.lastIndex = 0
+            const styleMatches = []
+            while ((m = stylesRx.exec(track.header)) !== null) {
+              // m[1] contains the full style line after "Style:"
+              const styleLine = m[1].trim()
+              // style name is the first comma-separated token
+              const styleName = styleLine.split(',')[0].trim()
+              styleMatches.push(styleName)
             }
-            const styleMatches = track.header.match(stylesRx) ?? []
-            for (let i = 0; i < styleMatches.length; ++i) {
-              const style = styleMatches[i].replace('Style:', '').trim()
-              this._stylesMap[track.number][style] = i + 1
+            for (const name of styleMatches) {
+              this._stylesMap[track.number][name] = name
             }
 
             this.onHeader()
@@ -103,6 +166,7 @@ export default class Subtitles {
         }
       }
     }
+
     this.handleClipboardText = ({ detail }) => {
       for (const { text, type } of detail) {
         if (text.startsWith('[Script Info]')) this.addSingleSubtitleFile(new File([text], 'Subtitle', { type }))
@@ -123,13 +187,34 @@ export default class Subtitles {
     client.on('subtitleFile', this.handleSubtitleFile)
     clipboard.on('text', this.handleClipboardText)
     clipboard.on('files', this.handleClipboardFiles)
-    
+
     if (settings.value.jimakuKey) this.loadJimakuSubtitles()
   }
 
   /**
-   * Searches and loads subtitles from Jimaku.cc for the current media and episode.
+   * Wait for renderer readiness; resolves immediately if already ready.
    */
+  _waitRendererReady () {
+    return this._waitRendererReadyInternal ? this._waitRendererReadyInternal() : Promise.resolve()
+  }
+
+  _createRendererReadyPromise () {
+    if (this._waitRendererReadyInternal) return
+    this.rendererReady = new Promise(resolve => {
+      this._resolveRendererReady = resolve
+      // safety timeout in case renderer doesn't emit ready
+      this._rendererReadyTimeout = setTimeout(() => {
+        if (this._resolveRendererReady) {
+          this._resolveRendererReady()
+          this._resolveRendererReady = null
+        }
+      }, 200)
+    })
+    this._waitRendererReadyInternal = async () => {
+      await this.rendererReady
+    }
+  }
+
   async loadJimakuSubtitles () {
     const aniId = this.selected?.media?.media?.id
     const episode = this.selected?.media?.episode
@@ -143,7 +228,6 @@ export default class Subtitles {
       let files = await jimakuClient.getFiles(entry.id, { episode })
       if (!files?.length) return
 
-      // prefer groups with proper timing; live‑TV uploads often have offset due to ad-breaks
       files = files
         .filter(file => subRx.test(file.name))
         .map(file => {
@@ -203,12 +287,10 @@ export default class Subtitles {
   }
 
   async addSingleSubtitleFile (file) {
-    // lets hope there's no more than 100 subtitle tracks in a file
     const index = 100 + this.headers.length
     this.subtitleFiles[index] = file
     const type = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase()
     const subname = file.name.slice(0, file.name.lastIndexOf('.'))
-    // sub name could contain video name with or without extension, possibly followed by lang, or not.
     const name = subname.includes(this.selected.name)
       ? subname.replace(this.selected.name, '')
       : subname.replace(this.selected.name.slice(0, this.selected.name.lastIndexOf('.')), '')
@@ -241,7 +323,7 @@ export default class Subtitles {
         fonts: this.fonts,
         offscreenRender: SUPPORTS.offscreenRender,
         libassMemoryLimit: 1024,
-        libassGlyphLimit: 80000,
+        libassGlyphLimit: 120000,
         maxRenderHeight: parseInt(settings.value.subtitleRenderHeight) || 0,
         fallbackFont: settings.value.font?.name || 'roboto medium',
         availableFonts: {
@@ -253,10 +335,33 @@ export default class Subtitles {
         legacyWasmUrl: new URL('jassub/dist/jassub-worker.wasm.js', import.meta.url).toString(),
         modernWasmUrl: new URL('jassub/dist/jassub-worker-modern.wasm', import.meta.url).toString(),
         useLocalFonts: settings.value.missingFont,
-        dropAllBlur: settings.value.disableSubtitleBlur
+        dropAllBlur: settings.value.disableSubtitleBlur === true ? false : false
       }
       if (SUPPORTS.isAndroid) JASSUB._hasBitmapBug = true
       this.renderer = new JASSUB(options)
+      // create renderer readiness promise and resolve after worker init or 'ready' event
+      this._createRendererReadyPromise()
+      if (typeof this.renderer.on === 'function') {
+        try {
+          this.renderer.on('ready', () => {
+            if (this._resolveRendererReady) {
+              this._resolveRendererReady()
+              this._resolveRendererReady = null
+            }
+          })
+        } catch (e) {
+          // ignore if not supported
+        }
+      }
+      // fallback resolve shortly after creation
+      if (this._resolveRendererReady) {
+        setTimeout(() => {
+          if (this._resolveRendererReady) {
+            this._resolveRendererReady()
+            this._resolveRendererReady = null
+          }
+        }, 120)
+      }
       this.renderer?.setDefaultFont('noto sans cjk regular')
     }
   }
@@ -269,7 +374,6 @@ export default class Subtitles {
       for (const split of replaced.split(/\r?\n\r?\n/)) {
         const match = split.match(srtRx)
         if (match) {
-          // timestamps
           match[1] = match[1].match(/.*[.,]\d{2}/)[0]
           match[2] = match[2].match(/.*[.,]\d{2}/)[0]
           if (match[1].length === 9) {
@@ -288,11 +392,10 @@ export default class Subtitles {
             }
           }
           match[2].replace(',', '.')
-          // create array of all tags
           const matches = match[4].match(/<[^>]+>/g)
           if (matches) {
             matches.forEach(matched => {
-              if (/<\//.test(matched)) { // check if its a closing tag
+              if (/<\//.test(matched)) {
                 match[4] = match[4].replace(matched, matched.replace('</', '{\\').replace('>', '0}'))
               } else {
                 match[4] = match[4].replace(matched, matched.replace('<', '{\\').replace('>', '1}'))
@@ -304,14 +407,14 @@ export default class Subtitles {
       }
       return subtitles
     }
-    const subRx = /[{[](\d+)[}\]][{[](\d+)[}\]](.+)/i
+    const subRxLocal = /[{[](\d+)[}\]][{[](\d+)[}\]](.+)/i
     const sub = text => {
       const subtitles = []
       const replaced = text.replace(/\r/g, '')
-      let frames = 1000 / Number(replaced.match(subRx)[3])
+      let frames = 1000 / Number(replaced.match(subRxLocal)[3])
       if (!frames || isNaN(frames)) frames = 41.708
       for (const split of replaced.split('\r?\n')) {
-        const match = split.match(subRx)
+        const match = split.match(subRxLocal)
         if (match) subtitles.push('Dialogue: 0,' + toTS((match[1] * frames) / 1000, 1) + ',' + toTS((match[2] * frames) / 1000, 1) + ',Default,,0,0,0,,' + match[3].replace('|', '\\N'))
       }
       return subtitles
@@ -324,31 +427,22 @@ export default class Subtitles {
     } else if (type === 'sub') {
       return sub(text)
     } else {
-      // subbers have a tendency to not set the extensions properly
       if (srtRx.test(text)) return srt(text)
-      if (subRx.test(text)) return sub(text)
+      if (subRxLocal.test(text)) return sub(text)
     }
   }
 
   constructSub (subtitle, isNotAss, subtitleIndex, trackNumber) {
-    if (isNotAss === true) { // converts VTT or other to SSA
-      const matches = subtitle.text.match(/<[^>]+>/g) // create array of all tags
-      if (matches) {
-        matches.forEach(match => {
-          if (/<\//.test(match)) { // check if its a closing tag
-            subtitle.text = subtitle.text.replace(match, match.replace('</', '{\\').replace('>', '0}'))
-          } else {
-            subtitle.text = subtitle.text.replace(match, match.replace('<', '{\\').replace('>', '1}'))
-          }
-        })
-      }
-      // replace all html special tags with normal ones
-      subtitle.text = subtitle.text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, '\\h').replace(/\r?\n/g, '\\N')
+    if (isNotAss === true) {
+      // convert HTML to ASS override tags
+      subtitle.text = htmlToAss(subtitle.text)
+      subtitle.text = subtitle.text.replace(/\r?\n/g, '\\N')
     }
     return {
       Start: subtitle.time,
       Duration: subtitle.duration,
-      Style: this._stylesMap[trackNumber][subtitle.style || 'Default'] || 0,
+      // use style name (string) not numeric index
+      Style: this._stylesMap[trackNumber][subtitle.style || 'Default'] || 'Default',
       Name: subtitle.name || '',
       MarginL: Number(subtitle.marginL) || 0,
       MarginR: Number(subtitle.marginR) || 0,
@@ -361,14 +455,23 @@ export default class Subtitles {
     }
   }
 
-  selectCaptions (trackNumber) {
+  async selectCaptions (trackNumber) {
     if (trackNumber != null) {
       this.current = Number(trackNumber)
       this.onHeader()
       if (this.headers) {
         this.renderer?.setTrack(this.current !== -1 ? this.headers[this.current].header.slice(0, -1) : defaultHeader)
         if (this.tracks[this.current]) {
-          if (this.renderer) for (const subtitle of this.tracks[this.current]) this.renderer.createEvent(subtitle)
+          if (this.renderer) {
+            await this._waitRendererReady()
+            for (const subtitle of this.tracks[this.current]) {
+              try {
+                this.renderer.createEvent(subtitle)
+              } catch (e) {
+                console.error('createEvent failed in selectCaptions:', e)
+              }
+            }
+          }
         }
       }
     }

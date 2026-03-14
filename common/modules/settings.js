@@ -15,7 +15,7 @@ export let malToken = JSON.parse(localStorage.getItem('MALviewer')) || null
  * Ensures that the webtorrent service is reloaded when the app is reloaded.
  * This is triggered by a `location.reload()` or force reload event.
  */
-const _onbeforeunload = window.onbeforeunload
+const _onbeforeunload = window.oneforeunload
 window.onbeforeunload = function (event) {
   IPC.emit('webtorrent-reload')
   if (typeof _onbeforeunload === 'function') {
