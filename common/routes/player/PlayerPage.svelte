@@ -215,7 +215,9 @@
       const dataTransfer = new DataTransfer()
       dataTransfer.items.add(subtitleFile)
       window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dataTransfer }))
-      toast.success('Subtitles Loaded', { description: file.name })
+      subFeedback = file.name
+      clearTimeout(subFeedbackTimeout)
+      subFeedbackTimeout = setTimeout(() => subFeedback = '', 3000)
       closeJimaku()
     } catch (err) {
       toast.error('Download Error', { description: err.message })
@@ -397,13 +399,24 @@
   setInterval(() => {
     if (!paused) saveAnimeProgress()
   }, 10_000)
-
-  function cycleSubtitles () {
+function cycleSubtitles () {
     if (current && subs?.headers) {
       const tracks = subs.headers.filter(header => header)
       const index = tracks.indexOf(subs.headers[subs.current]) + 1
-      subs.selectCaptions(index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index]))
+      const targetIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
+      
+      subs.selectCaptions(targetIndex)
       updateSubs()
+
+      // Visual feedback [cite: 11, 24, 45]
+      const track = subs.headers[targetIndex]
+      const trackName = track 
+        ? (track.name || track.language || 'Unknown') + (track.type ? ` (${track.type.toUpperCase()})` : '')
+        : 'Off'
+      
+      subFeedback = trackName
+      clearTimeout(subFeedbackTimeout)
+      subFeedbackTimeout = setTimeout(() => subFeedback = '', 3000)
     }
   }
 
@@ -411,6 +424,8 @@
   let subDelayText = ''
   let subDelayVisible = false
   let subDelayTimeout
+  let subFeedback = ''
+  let subFeedbackTimeout
   $: updateDelay(subDelay)
   function updateDelay(delay) {
     if (subs?.renderer) {
@@ -1862,9 +1877,12 @@
         </button>
       {/if}
     {/if}
-    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-50 pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
+    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-50 pointer-events-none icon-shadow opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
     {#if subDelayText}
-      <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
+      <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
+    {/if}
+    {#if subFeedback}
+      <span class='position-absolute z-10 font-scale-40 text-white pointer-events-none icon-shadow' style='left: 1rem; bottom: 1.5rem;'>{subFeedback}</span>
     {/if}
   </div>
   <div class='bottom d-flex z-40 flex-column px-20'>
