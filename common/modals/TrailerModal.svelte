@@ -34,113 +34,53 @@
   <TvMinimalPlay size='1.7rem' />
 </button>
 <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.TRAILER]} shouldRender={true} {close} id={modal.TRAILER}>
-  <div class='pointer-events-auto player-shell wm-calc'>
-    <div class='player-header'>
-      <span class='player-badge'>TRAILER</span>
-      <span class='player-title'>{anilistClient.title(staticMedia)}</span>
-      <button type='button' class='player-close' use:click={close}><X size='1.6rem' strokeWidth='2.5'/></button>
-    </div>
-    <div class='player-body'>
-      {#key staticMedia?.id}
-        {#await (staticMedia.trailer?.id && staticMedia) || episodesList.getMedia(staticMedia.idMal) then trailerUrl}
-          {@const trailerId = trailerUrl?.trailer?.id || trailerUrl?.data?.trailer?.youtube_id}
-          {#if trailerId}
-            {show()}
-            {#if $modal[modal.TRAILER]}
-              {#await ELECTRON.getYouTube() then youtubeServer}
-                <SmartImage class='player-thumb' images={[...(trailerId ? [`https://i.ytimg.com/vi/${trailerId}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${trailerId}/hqdefault.jpg`] : []), staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!loading}/>
+  <div class='pointer-events-auto d-flex align-items-center rounded-top-5 w-full wm-calc bg-dark h-40'>
+    <span class='title ml-20 font-weight-very-bold text-muted select-all mr-20 font-scale-18'>{anilistClient.title(staticMedia)}</span>
+    <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
+  </div>
+  <div class='pointer-events-auto ratio-16-9 position-relative w-full wm-calc overflow-hidden rounded-bottom-5'>
+<!--    < css='h-full' bind:hide={$hide} loop={false} bind:autoPause={$modal[modal.TRAILER]} autoPlay={false} autoMute={false} controls={true} fullScreen={true} ids={[staticMedia.trailer?.id, () => episodesList.getMedia(staticMedia.idMal).then(metadata => [metadata?.data?.trailer?.youtube_id])]} title={staticMedia.title.userPreferred}/>-->
+    {#key staticMedia?.id}
+      {#await (staticMedia.trailer?.id && staticMedia) || episodesList.getMedia(staticMedia.idMal) then trailerUrl}
+        {@const trailerId = trailerUrl?.trailer?.id || trailerUrl?.data?.trailer?.youtube_id}
+        {#if trailerId}
+          {show()}
+          {#if $modal[modal.TRAILER]}
+            {#await ELECTRON.getYouTube() then youtubeServer}
+              <div class='pointer-events-auto ratio-16-9 position-relative w-full wm-calc'>
+                <SmartImage class='ratio-16-9 img-cover w-full h-full rounded-bottom-6' images={[...(trailerId ? [`https://i.ytimg.com/vi/${trailerId}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${trailerId}/hqdefault.jpg`] : []), staticMedia.bannerImage, staticMedia.coverImage?.extraLarge ]} hidden={!loading}/>
                 <iframe
-                  class='player-iframe'
+                  class='position-absolute w-full h-full top-0 left-0 border-0 rounded-bottom-5'
                   class:d-none={loading}
                   title={staticMedia.title.userPreferred}
-                  allow='autoplay'
+                  allow='autoplay; web-share'
                   allowfullscreen
                   on:load={() => { loading = false }}
                   src={`${youtubeServer}/embed/${trailerId}?autoplay=1&vq=medium&cc_lang_pref=ja`}/>
-              {/await}
-            {/if}
+              </div>
+            {/await}
           {/if}
-        {/await}
-      {/key}
-    </div>
+        {/if}
+      {/await}
+    {/key}
   </div>
 </SoftModal>
 
 <style>
+  .rounded-top-5 {
+    border-radius: .5rem .5rem 0 0;
+  }
+  .rounded-bottom-5 {
+    border-radius: 0 0 .5rem .5rem;
+  }
   .wm-calc {
-    width: 100%;
     max-width: min(max(70vw, 100rem), calc(75vh * (16 / 9)));
   }
-  .player-shell {
-    border-radius: 0.6rem;
-    overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08);
-    background: #0d0d10;
-  }
-  .player-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0 0.75rem 0 1.4rem;
-    height: 4.2rem;
-    background: linear-gradient(90deg, rgba(212,245,94,0.06) 0%, transparent 60%);
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    flex-shrink: 0;
-  }
-  .player-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    color: #d4f55e;
-    background: rgba(212,245,94,0.1);
-    border: 1px solid rgba(212,245,94,0.28);
-    border-radius: 3px;
-    padding: 0.18rem 0.5rem;
-    flex-shrink: 0;
-  }
-  .player-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.05rem;
-    font-weight: 500;
-    color: rgba(237,237,234,0.65);
+  .title {
+    display: inline-block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
-  }
-  .player-close {
-    flex-shrink: 0;
-    background: transparent;
-    border: none;
-    color: rgba(237,237,234,0.35);
-    cursor: pointer;
-    padding: 0.55rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: color 0.12s, background 0.12s;
-  }
-  .player-close:hover { color: #ededea; background: rgba(237,237,234,0.08); }
-  .player-body {
-    position: relative;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    overflow: hidden;
-  }
-  .player-body :global(.player-thumb) {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .player-iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
+    max-width: 100%;
   }
 </style>

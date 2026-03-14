@@ -69,7 +69,7 @@
                   tabindex='-1'
                   title={media.title.userPreferred}
                   loading='lazy'
-                  allow='autoplay'
+                  allow='autoplay; web-share'
                   allowfullscreen
                   on:load={() => { setTimeout(() => hide = false, 300).unref?.() }}
                   referrerpolicy='strict-origin-when-cross-origin'
