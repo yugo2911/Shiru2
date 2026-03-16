@@ -1,0 +1,171 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  .root{background:#0d0d10;color:#ededea;font-family:'IBM Plex Mono',monospace;min-height:600px;overflow:hidden}
+  /* Hero */
+  .hero{position:relative;width:100%;height:340px;overflow:hidden}
+  .hero-img{width:100%;height:100%;object-fit:cover;display:block;background:linear-gradient(135deg,#1a1a22 0%,#111116 100%)}
+  .hero-img-placeholder{width:100%;height:100%;background:linear-gradient(135deg,#1e1e28 0%,#141420 60%,#0d0d10 100%);display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(237,237,234,0.15);letter-spacing:.2em;text-transform:uppercase}
+  .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(13,13,16,0.1) 0%,rgba(13,13,16,0.3) 40%,rgba(13,13,16,0.92) 85%,#0d0d10 100%);pointer-events:none}
+  .hero-side-fade{position:absolute;inset:0;background:linear-gradient(to right,rgba(13,13,16,0.7) 0%,transparent 30%,transparent 70%,rgba(13,13,16,0.5) 100%);pointer-events:none}
+  /* Episode badge over hero */
+  .ep-badge{position:absolute;top:16px;left:16px;background:rgba(13,13,16,0.75);border:1px solid rgba(212,245,94,0.4);border-radius:3px;padding:5px 10px;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:#d4f55e;backdrop-filter:blur(8px)}
+  /* Hero bottom content */
+  .hero-bottom{position:absolute;bottom:0;left:0;right:0;padding:0 20px 20px}
+  .ep-number{font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:#d4f55e;margin-bottom:6px}
+  .ep-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em;color:#ededea;line-height:1.1;margin-bottom:10px}
+  .ep-meta{display:flex;align-items:center;gap:12px;font-size:11px;color:rgba(237,237,234,0.4);letter-spacing:.06em}
+  .ep-meta-sep{color:rgba(237,237,234,0.15)}
+  /* Hero actions row */
+  .hero-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .btn-play{display:inline-flex;align-items:center;gap:6px;background:#d4f55e;color:#0d0d10;border:none;border-radius:3px;padding:9px 18px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.08em;cursor:pointer}
+  .btn-icon{display:inline-flex;align-items:center;justify-content:center;background:rgba(13,13,16,0.75);border:1px solid rgba(255,255,255,0.1);border-radius:3px;width:34px;height:34px;cursor:pointer;backdrop-filter:blur(6px);color:rgba(237,237,234,0.55)}
+  /* Progress bar under hero */
+  .progress-strip{height:2px;width:100%;background:rgba(255,255,255,0.07)}
+  .progress-fill{height:100%;width:62%;background:#d4f55e}
+  /* Main body: two-column */
+  .body{display:grid;grid-template-columns:1fr 340px;min-height:260px}
+  /* Left: info shelf */
+  .info{padding:20px;border-right:1px solid rgba(255,255,255,0.06)}
+  .anime-meta-label{font-size:10px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#d4f55e;margin-bottom:6px}
+  .anime-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.02em;color:#ededea;line-height:1.05;margin-bottom:8px}
+  .anime-stats{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(237,237,234,0.4);margin-bottom:16px;flex-wrap:wrap}
+  .score{color:#d4f55e;font-weight:700;font-size:13px}
+  .sep{color:rgba(237,237,234,0.15)}
+  .meta-grid{display:grid;grid-template-columns:80px 1fr;gap:0;border-top:1px solid rgba(255,255,255,0.06);margin-bottom:16px}
+  .mk{font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(237,237,234,0.22);padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .mv{font-size:11px;color:rgba(237,237,234,0.65);padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+  .synopsis{font-size:11px;line-height:1.75;color:rgba(237,237,234,0.4);font-weight:300;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  /* Right: episode list */
+  .ep-list{background:#0d0d10;overflow-y:auto;max-height:360px}
+  .ep-list-header{padding:12px 16px 8px;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(237,237,234,0.25);border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:#0d0d10;z-index:1}
+  .ep-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .1s}
+  .ep-item:hover{background:rgba(237,237,234,0.04)}
+  .ep-item.current{background:rgba(212,245,94,0.05);border-left:2px solid #d4f55e}
+  .ep-item.current .ep-n{color:#d4f55e}
+  .ep-thumb{width:60px;height:36px;border-radius:2px;background:#1a1a22;flex-shrink:0;object-fit:cover;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .ep-thumb-inner{width:100%;height:100%;background:linear-gradient(135deg,#1e1e2a,#131318)}
+  .ep-n{font-size:10px;font-weight:600;letter-spacing:.12em;color:rgba(237,237,234,0.25);flex-shrink:0;width:24px}
+  .ep-info{flex:1;min-width:0}
+  .ep-name{font-size:11px;font-weight:500;color:rgba(237,237,234,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+  .ep-date{font-size:10px;color:rgba(237,237,234,0.28);letter-spacing:.04em}
+  .ep-dur{font-size:10px;color:rgba(237,237,234,0.28);flex-shrink:0}
+  .ep-check{width:14px;height:14px;border-radius:50%;border:1px solid rgba(237,237,234,0.15);flex-shrink:0}
+  .ep-check.done{background:#d4f55e;border-color:#d4f55e}
+</style>
+<div class="root">
+
+  <!-- HERO: current episode fullscreen bg -->
+  <div class="hero">
+    <div class="hero-img-placeholder">EPISODE THUMBNAIL</div>
+    <div class="hero-side-fade"></div>
+    <div class="hero-overlay"></div>
+    <div class="ep-badge">Now Playing · Ep 7</div>
+    <div class="hero-bottom">
+      <div class="ep-number">Episode 7 of 12 · 24m</div>
+      <div class="ep-title">The Night We Decided Everything</div>
+      <div class="ep-meta">
+        <span>2 months ago</span>
+        <span class="ep-meta-sep">·</span>
+        <span>Sub available</span>
+        <span class="ep-meta-sep">·</span>
+        <span>62% watched</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-play">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>
+          Continue
+        </button>
+        <div class="btn-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="btn-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </div>
+        <div class="btn-icon" style="margin-left:auto">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- progress strip -->
+  <div class="progress-strip"><div class="progress-fill"></div></div>
+
+  <!-- BODY -->
+  <div class="body">
+    <!-- Left info shelf -->
+    <div class="info">
+      <div class="anime-meta-label">2024 · Summer · TV</div>
+      <div class="anime-title">You, My Polar Opposite</div>
+      <div class="anime-stats">
+        <span class="score">84%</span>
+        <span class="sep">·</span>
+        <span>12 episodes</span>
+        <span class="sep">·</span>
+        <span>1,240 reviews</span>
+      </div>
+      <div class="meta-grid">
+        <div class="mk">Status</div><div class="mv">Releasing</div>
+        <div class="mk">Studio</div><div class="mv">CloverWorks</div>
+        <div class="mk">Genres</div><div class="mv">Romance, Slice of Life, School</div>
+        <div class="mk">Rating</div><div class="mv">PG-13</div>
+      </div>
+      <div class="synopsis">Suzuki is always cheerful and energetic, but she often worries about what the people around her think of her. That's why she secretly admires Tani, the quiet boy who sits next to her in class, for always clearly speaking his mind. One day after school, the two of them end up talking alone for the first time...</div>
+    </div>
+    <!-- Right episode list -->
+    <div class="ep-list">
+      <div class="ep-list-header">Episodes</div>
+      <!-- ep items -->
+      <div class="ep-item" style="opacity:.5">
+        <span class="ep-n">1</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">You, My Polar Opposite</div><div class="ep-date">4 months ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check done"></div>
+      </div>
+      <div class="ep-item" style="opacity:.5">
+        <span class="ep-n">2</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">First Date!</div><div class="ep-date">4 months ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check done"></div>
+      </div>
+      <div class="ep-item" style="opacity:.5">
+        <span class="ep-n">3</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">A Small Confession</div><div class="ep-date">3 months ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check done"></div>
+      </div>
+      <div class="ep-item current">
+        <span class="ep-n">7</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner" style="background:linear-gradient(135deg,#2a2218,#1a1810)"></div></div>
+        <div class="ep-info"><div class="ep-name">The Night We Decided Everything</div><div class="ep-date">2 months ago</div></div>
+        <span class="ep-dur">24m</span>
+        <div class="ep-check" style="border-color:#d4f55e;background:rgba(212,245,94,.15)"></div>
+      </div>
+      <div class="ep-item">
+        <span class="ep-n">8</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">Episode 8</div><div class="ep-date">1 month ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check"></div>
+      </div>
+      <div class="ep-item">
+        <span class="ep-n">9</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">Episode 9</div><div class="ep-date">1 month ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check"></div>
+      </div>
+      <div class="ep-item">
+        <span class="ep-n">10</span>
+        <div class="ep-thumb"><div class="ep-thumb-inner"></div></div>
+        <div class="ep-info"><div class="ep-name">Episode 10</div><div class="ep-date">3 weeks ago</div></div>
+        <span class="ep-dur">23m</span>
+        <div class="ep-check"></div>
+      </div>
+    </div>
+  </div>
+</div>
