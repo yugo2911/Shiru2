@@ -426,6 +426,37 @@ function cycleSubtitles () {
   let subDelayTimeout
   let subFeedback = ''
   let subFeedbackTimeout
+
+  let subPreviewShow = false
+  let subPreviewData = { prev: '', current: '', next: '' }
+
+  function computeSubtitleData(ct, s) {
+    if (!s?.tracks || s.current < 0 || !s.tracks[s.current]?.length) {
+      return { prev: '', current: '', next: '' }
+    }
+    const track = s.tracks[s.current]
+    for (let i = 0; i < track.length; i++) {
+      const sub = track[i]
+      const endTime = sub.Start + sub.Duration
+      if (ct >= sub.Start && ct <= endTime) {
+        return {
+          current: sub.Text,
+          prev: i > 0 ? track[i - 1].Text : '',
+          next: i < track.length - 1 ? track[i + 1].Text : ''
+        }
+      }
+    }
+    return { prev: '', current: '', next: '' }
+  }
+
+  $: if (subPreviewShow && currentTime !== undefined) {
+    subPreviewData = computeSubtitleData(currentTime, subs)
+  }
+
+  function copySubtitleLine(text) {
+    navigator.clipboard.writeText(text.replace(/\\N/g, '\n').replace(/\{[^}]+\}/g, ''))
+  }
+
   $: updateDelay(subDelay)
   function updateDelay(delay) {
     if (subs?.renderer) {
@@ -931,11 +962,19 @@ function cycleSubtitles () {
     //   desc: 'Toggle Cast [broken]'
     // },
     KeyC: {
-      fn: () => !viewAnime && cycleSubtitles(),
+      fn: (e) => {
+        if (!viewAnime) {
+          if (e?.shiftKey) {
+            subPreviewShow = !subPreviewShow
+          } else {
+            cycleSubtitles()
+          }
+        }
+      },
       id: 'subtitles',
       icon: Captions,
       type: 'icon',
-      desc: 'Cycle Subtitles'
+      desc: 'Cycle Subtitles / Preview'
     },
     KeyV: {
       fn: () => !viewAnime && toggleGain() && showVolumeTemporarily(),
@@ -2121,6 +2160,29 @@ function cycleSubtitles () {
       No subtitles found for this series
     </div>
   {/if}
+</SoftModal>
+
+<SoftModal class='p-0 w-500 mw-full rounded overflow-hidden' bind:showModal={subPreviewShow} close={() => subPreviewShow = false} id='subpreview'
+  style='background: #131317; border: 1px solid rgba(255,255,255,0.07); font-family: "IBM Plex Mono", monospace; color: #ededea;'>
+  <div style='padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: baseline; justify-content: space-between;'>
+    <div style='font-size: 0.72rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: #d4f55e;'>Subtitle Preview</div>
+    <button on:click={() => subPreviewShow = false}
+      style='background: none; border: none; color: rgba(237,237,234,0.38); cursor: pointer; font-size: 1.2rem; line-height: 1; padding: 0.25rem; transition: color 0.15s;'
+      on:mouseenter={e => e.target.style.color='#d4f55e'}
+      on:mouseleave={e => e.target.style.color='rgba(237,237,234,0.38)'}>✕</button>
+  </div>
+  <div style='padding: 1rem 1.5rem;'>
+    {#if subPreviewData.current}
+      <div class='mb-2 opacity-50' style='font-size: 0.85rem; line-height: 1.4;'>{subPreviewData.prev}</div>
+      <div class='font-weight-bold cursor-pointer mb-2' style='font-size: 1rem; line-height: 1.5;' 
+        on:click={() => copySubtitleLine(subPreviewData.current)}>
+        {subPreviewData.current}
+      </div>
+      <div class='opacity-50' style='font-size: 0.85rem; line-height: 1.4;'>{subPreviewData.next}</div>
+    {:else}
+      <div class='text-center opacity-50' style='padding: 1rem;'>No active subtitle</div>
+    {/if}
+  </div>
 </SoftModal>
 </div>
 <style>

@@ -19,8 +19,8 @@
   $: visible = !$modal[modal.TORRENT_MENU] && !$modal[modal.NOTIFICATIONS] && !$modal[modal.PROFILE] && !$modal[modal.MINIMIZE_PROMPT] && !$modal[modal.TRAILER] && !$playPage && !$media?.display
   $: miniplayer = ($media && (Object.keys($media).length > 0)) && (($page !== page.PLAYER && visible) || ($modal[modal.ANIME_DETAILS] && visible))
 </script>
-<div class='w-full h-full position-absolute overflow-hidden' class:invisible={!($media && (Object.keys($media).length > 0)) || ($playPage && $modal[modal.ANIME_DETAILS]) || (!visible && ($page !== page.PLAYER))}>
-  <Miniplayer active={miniplayer} bind:playbackPaused={$playbackPaused} bind:shelved={$miniplayerShelved} class='bg-dark-light rounded-10 {($page === page.PLAYER && !$modal[modal.ANIME_DETAILS]) ? `h-full` : ``}' >
+<div class='w-full h-full position-absolute overflow-hidden pointer-events-none' class:invisible={!($media && (Object.keys($media).length > 0)) || ($playPage && $modal[modal.ANIME_DETAILS]) || (!visible && ($page !== page.PLAYER))}>
+  <Miniplayer active={miniplayer} bind:playbackPaused={$playbackPaused} bind:shelved={$miniplayerShelved} class='bg-dark-light rounded-10 {($page === page.PLAYER && !$modal[modal.ANIME_DETAILS]) ? `h-full pointer-events-auto` : `pointer-events-auto`}' >
     <MediaHandler {miniplayer} bind:playbackPaused={$playbackPaused} bind:miniplayerShelved={$miniplayerShelved} />
   </Miniplayer>
 </div>
