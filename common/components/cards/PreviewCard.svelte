@@ -278,6 +278,4 @@
 
   .text-white { color: #ededea !important; }
   .text-muted { color: rgba(237,237,234,0.38) !important; }
-  .text-success { color: #d4f55e !important; }
-  .text-danger  { color: #ff6b6b !important; }
 </style>
