@@ -273,7 +273,7 @@
   // ── Banner video ──────────────────────────────────────────────────────────
 
   let bannerVideoUrl = null
-  let bannerMuted = true
+  let bannerMuted = false
   let bannerPlaying = false
   let bannerTheme = null
   let bannerVideoEl = null
@@ -281,7 +281,7 @@
   $: if (staticMedia?.id) {
     stopBannerVideo()
     bannerTheme = null
-    bannerMuted = true
+    bannerMuted = false
     loadAndPlayBannerTheme()
   }
 
