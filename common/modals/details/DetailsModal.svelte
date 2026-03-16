@@ -603,7 +603,7 @@
           {/if}
 
           <!-- Relations + Recommendations -->
-          <div class='mt-20'>
+          <div class='relations-block'>
             <ToggleList
               list={staticMedia.relations?.edges?.filter(({ node, relationType }) =>
                 relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC'
@@ -685,7 +685,7 @@
 
 /* ── Close button ──────────────────────────────────────────────────────── */
 .modal-close-btn {
-  top: 1.6rem;
+  top: 4.5rem;
   right: 2rem;
   width: 3.2rem;
   height: 3.2rem;
@@ -714,11 +714,11 @@
   width: 100%;
   /* Height is content-driven: cover art + title block at bottom push it open.
      padding-top creates space above for topbar. bg media is position:absolute. */
-  padding-top: 7rem;
+  padding-top: 4rem;
   padding-bottom: 3rem;
 }
 .hero.has-bg {
-  padding-top: clamp(7rem, 18vw, 20rem);
+  padding-top: clamp(4rem, 18vw, 20rem);
 }
 
 .hero-bg-media {
@@ -764,9 +764,9 @@
 
 /* top bar */
 .hero-topbar {
-  top: 1.8rem;
+  top: 4.5rem;
   left: 2.5rem;
-  right: 7rem;
+  right: 9rem; /* clear the close button */
   z-index: 10;
   gap: 1rem;
 }
@@ -930,7 +930,8 @@
 .body-grid {
   display: grid;
   grid-template-columns: 58% 42%;
-  min-height: 50vh;
+  /* No min-height — content drives the height naturally */
+  align-items: start;
   border-top: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -1044,16 +1045,37 @@
 .synopsis-text :global(a) { color: #d4f55e !important; text-decoration: none; }
 .synopsis-text :global(a:hover) { text-decoration: underline; }
 
+/* ── Relations block ───────────────────────────────────────────────────── */
+.relations-block {
+  margin-top: 2rem;
+  /* Must not clip ToggleList content */
+  overflow: visible;
+}
+
+/* ── Relations / Recommendations ──────────────────────────────────────── */
+/* Ensure ToggleList toggle button works and cards flow correctly */
+.body-left :global(.toggle-list-btn),
+.body-left :global([class*="toggle"]) {
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+.body-left :global(.small-card) {
+  display: inline-block;
+}
+
 /* ── Right column: episode list ────────────────────────────────────────── */
 .body-right {
   border-left: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
+  /* Stick within the modal scroll container, fills viewport height */
   height: 100vh;
   position: sticky;
   top: 0;
   overflow: hidden;
   min-width: 0;
+  /* Align to grid top, not stretched to left column height */
+  align-self: start;
 }
 
 .ep-list-header {
