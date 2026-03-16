@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte'
-  import { formatMap, genreIcons, getEpisodeMetadataForMedia, getKitsuMappings, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
+  import { formatMap, genreIcons, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
   import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
   import { copyToClipboard } from '@/modules/clipboard.js'
   import { settings } from '@/modules/settings.js'
@@ -42,12 +42,6 @@
   }
 
   // ── Core media state ──────────────────────────────────────────────────────
-  //
-  // `media`       — live, always reflects the latest cache value for the open entry.
-  // `staticMedia` — snapshot kept stable while the modal is visible so that the
-  //                 template doesn't flicker when the cache updates mid-render.
-  //                 It is only replaced when a *different* anime is opened, and
-  //                 cleared when the modal closes.
 
   let _modal
   let container = null
@@ -55,7 +49,6 @@
 
   $: media = mediaCache.value[view?.id] || view
 
-  // Keep staticMedia in sync: update on new id, clear on close.
   $: {
     if (media) {
       if (!staticMedia || staticMedia.id !== media.id) staticMedia = media
@@ -64,18 +57,14 @@
     }
   }
 
-  // Reflect live cache updates into `media` without a bare subscription leak.
-  // Using a reactive statement keyed on `view` means Svelte owns the lifecycle.
   $: if (view?.id) {
     const unsubscribe = mediaCache.subscribe(value => {
       const fresh = value?.[view.id]
       if (fresh && JSON.stringify(fresh) !== JSON.stringify(media)) media = fresh
     })
-    // Svelte does not auto-clean $: subscriptions — destroy when view changes.
     onDestroy(unsubscribe)
   }
 
-  // Focus + scroll when a new anime is opened.
   $: if (staticMedia) {
     _modal?.focus()
     container?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -155,7 +144,6 @@
     }
   }
 
-  // IPC + window event listeners — all cleaned up in onDestroy.
   IPC.on('play-anime', handlePlay)
   IPC.on('play-torrent', (detail) => add(detail.magnet, null, null, null, detail.base64))
 
@@ -204,7 +192,6 @@
   let episodeList = []
   let episodeLoad
 
-  // episodeOrder is user-toggled; reset only when the media id changes.
   let episodeOrder = true
   let _lastEpisodeMediaId = null
   $: if (staticMedia?.id !== _lastEpisodeMediaId) {
@@ -234,7 +221,6 @@
   let animeThemesData = null
   let animeThemesLoading = false
 
-  // Reset themes state when the anime changes.
   $: if (staticMedia?.id) {
     animeThemesData = null
     showAnimeThemes = false
@@ -341,7 +327,8 @@
   <div class='h-full modal-content bg-dark p-0 overflow-y-auto position-relative' bind:this={container}>
     {#if staticMedia}
       <button class='close pointer z-30 bg-dark-light top-20 right-0 position-fixed' type='button' use:click={() => close()}> &times; </button>
-           {#if bannerVideoUrl}
+
+      {#if bannerVideoUrl}
         <video
           bind:this={bannerVideoEl}
           class='w-full cover-img anime-details position-absolute banner-video'
@@ -353,17 +340,8 @@
           on:canplay={() => { bannerVideoEl.muted = bannerMuted }}
         />
       {/if}
-      {#if bannerTheme}
-        <button class='banner-audio-btn' use:click={toggleBannerAudio}>
-          {#if !bannerMuted}
-            <span class='banner-bars'><span/><span/><span/><span/></span>
-          {:else}
-            <Music size='1.1rem' />
-          {/if}
-          <span class='banner-label'>{formatThemeLabel(bannerTheme)}{#if bannerTheme.song?.title} · {bannerTheme.song.title}{/if}</span>
-        </button>
-      {/if}
-      <div class='row px-20'>
+
+<div class='row px-20'>
         <div class='col-lg-7 col-12 pb-10'>
           <div bind:this={leftColumn}>
             <div class='d-flex flex-sm-row flex-column align-items-sm-end pb-20 mb-15'>
@@ -374,8 +352,20 @@
                 </div>
               </div>
               <div class='pl-sm-20 ml-sm-20'>
-                <div class='anime-meta-label'>
-                  {#if staticMedia.seasonYear}{staticMedia.seasonYear}{/if}{#if staticMedia.season && staticMedia.seasonYear} · {/if}{#if staticMedia.season}<span class='text-capitalize'>{staticMedia.season.toLowerCase()}</span>{/if}{#if staticMedia.format} · {formatMap[staticMedia.format]}{/if}
+                <div class='anime-meta-row'>
+                  <div class='anime-meta-label'>
+                    {#if staticMedia.seasonYear}{staticMedia.seasonYear}{/if}{#if staticMedia.season && staticMedia.seasonYear} · {/if}{#if staticMedia.season}<span class='text-capitalize'>{staticMedia.season.toLowerCase()}</span>{/if}{#if staticMedia.format} · {formatMap[staticMedia.format]}{/if}
+                  </div>
+                  {#if bannerTheme}
+                    <button class='banner-audio-btn' use:click={toggleBannerAudio}>
+                      {#if !bannerMuted}
+                        <span class='banner-bars'><span/><span/><span/><span/></span>
+                      {:else}
+                        <Music size='1rem' />
+                      {/if}
+                      <span class='banner-label'>{formatThemeLabel(bannerTheme)}{#if bannerTheme.song?.title} · {bannerTheme.song.title}{/if}</span>
+                    </button>
+                  {/if}
                 </div>
                 <h1 class='anime-title select-all'>{anilistClient.title(staticMedia)}</h1>
                 <div class='anime-stats'>
@@ -702,7 +692,14 @@
 
   .play { justify-content: center; }
 
-  /* ── Anime meta label (year · season · format) ── */
+.anime-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
   .anime-meta-label {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 1.1rem;
@@ -710,8 +707,8 @@
     letter-spacing: 0.15em;
     text-transform: uppercase;
     color: #d4f55e;
-    margin-bottom: 0.7rem;
     opacity: 0.9;
+    margin-bottom: 0;
   }
 
   /* ── Anime title ─────────────────────────────── */
@@ -856,7 +853,6 @@
     color: rgba(237,237,234,0.45) !important;
     line-height: 1.75 !important;
   }
-  /* rendered markdown links in synopsis */
   :global(.font-size-16 a) {
     color: #d4f55e !important;
     text-decoration: none;
@@ -958,7 +954,7 @@
     max-width: 100px;
   }
 
-  /* ── Theme / Trailer player shell (shared with TrailerModal pattern) ── */
+  /* ── Theme / Trailer player shell ── */
   :global(.player-shell) {
     border-radius: 0.6rem;
     overflow: hidden;
@@ -1035,45 +1031,43 @@
     border: none;
   }
 
-  /* ── Banner audio toggle ─────────────────────── */
-  .banner-audio-btn {
-    position: absolute;
-    top: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    background: rgba(13,13,16,0.72);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 999px;
-    padding: 0.45rem 1rem 0.45rem 0.75rem;
-    color: rgba(237,237,234,0.75);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.82rem;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap;
-  }
+  /* ── Banner audio toggle — inline with anime-meta-label ── */
+.banner-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(13,13,16,0.55);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem 0.25rem 0.55rem;
+  color: rgba(237,237,234,0.55);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;        /* ← prevents the pill from shrinking/wrapping */
+  min-width: 0;
+}
   .banner-audio-btn:hover {
-    background: rgba(212,245,94,0.12);
+    background: rgba(212,245,94,0.10);
     border-color: rgba(212,245,94,0.35);
     color: #d4f55e;
   }
   .banner-label {
-    max-width: 28rem;
+    max-width: 18rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* animated bars when playing */
+  /* animated bars when unmuted */
   .banner-bars {
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    height: 1.1rem;
+    height: 1rem;
   }
   .banner-bars span {
     display: block;
