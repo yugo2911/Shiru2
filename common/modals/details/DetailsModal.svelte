@@ -87,11 +87,17 @@
 
   // ── Current episode for hero ──────────────────────────────────────────────
 
-  $: currentEp = episodeList?.find(ep => ep.episode === userProgress)
-    || episodeList?.[0]
-    || null
+  // episodeList is populated async — these reactives re-run whenever it updates
+  $: currentEp = (episodeList?.length && userProgress)
+    ? episodeList.find(ep => ep.episode === userProgress) || episodeList[0]
+    : episodeList?.[0] || null
 
-  $: heroBg = currentEp?.image || staticMedia?.bannerImage || null
+  // Walk up: current ep image → next ep image → any ep image → bannerImage
+  $: heroBg = currentEp?.image
+    || episodeList?.find(ep => ep.episode === (userProgress || 0) + 1)?.image
+    || episodeList?.find(ep => ep?.image)?.image
+    || staticMedia?.bannerImage
+    || null
 
   $: heroEpNumber = userProgress || 1
   $: heroEpTitle = currentEp?.title || ('Episode ' + heroEpNumber)
@@ -297,7 +303,7 @@
       <button class='modal-close-btn z-30 position-fixed' type='button' use:click={() => close()}>&times;</button>
 
       <!-- ── HERO ─────────────────────────────────────────────────── -->
-      <div class='hero position-relative overflow-hidden'>
+      <div class='hero position-relative overflow-hidden' class:has-bg={!!heroBg}>
 
         <!-- Background: episode image, banner video, or banner image fallback -->
         {#if bannerVideoUrl}
@@ -338,7 +344,7 @@
         </div>
 
         <!-- Bottom content: cover + title block -->
-        <div class='hero-bottom position-absolute d-flex align-items-end'>
+        <div class='hero-bottom d-flex align-items-end'>
           <!-- Cover art -->
           <div class='hero-cover flex-shrink-0'>
             <SmartImage
@@ -557,9 +563,13 @@
         <!-- ── LEFT: details + synopsis + relations ─────────────────── -->
         <div class='body-left'>
 
-          <!-- Meta table -->
-          <div class='meta-block'>
+          <!-- Details strip (status, studio, source, country) -->
+          <div class='details-strip-wrapper'>
             <Details media={staticMedia} alt={recommendations} />
+          </div>
+
+          <!-- Meta table (genres, tags) -->
+          <div class='meta-block'>
             {#if staticMedia.genres?.length}
               <div class='meta-row'>
                 <span class='meta-key'>Genres</span>
@@ -702,8 +712,13 @@
 /* ── Hero ──────────────────────────────────────────────────────────────── */
 .hero {
   width: 100%;
-  min-height: 72vh;
-  max-height: 88vh;
+  /* Height is content-driven: cover art + title block at bottom push it open.
+     padding-top creates space above for topbar. bg media is position:absolute. */
+  padding-top: 7rem;
+  padding-bottom: 3rem;
+}
+.hero.has-bg {
+  padding-top: clamp(7rem, 18vw, 20rem);
 }
 
 .hero-bg-media {
@@ -769,24 +784,25 @@
   padding: 0.3rem 0.7rem;
 }
 
-/* bottom content */
+/* bottom content - normal flow so it sizes the hero naturally */
 .hero-bottom {
-  bottom: 2.4rem;
-  left: 2.5rem;
-  right: 2.5rem;
+  position: relative;
   z-index: 10;
+  padding: 0 2.5rem;
   align-items: flex-end;
   gap: 0;
 }
 
 .hero-cover {
-  width: 13rem;
+  width: clamp(10rem, 12vw, 15rem);
   aspect-ratio: 7/10;
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.7);
   flex-shrink: 0;
   position: relative;
+  /* Push cover slightly up so it overlaps the gradient for depth */
+  margin-bottom: -0.5rem;
 }
 
 @media (max-width: 600px) {
@@ -913,7 +929,7 @@
 /* ── Body grid ─────────────────────────────────────────────────────────── */
 .body-grid {
   display: grid;
-  grid-template-columns: 1fr 38rem;
+  grid-template-columns: 58% 42%;
   min-height: 50vh;
   border-top: 1px solid rgba(255,255,255,0.05);
 }
@@ -933,6 +949,13 @@
 .body-left {
   padding: 2.4rem 2.5rem 4rem;
   min-width: 0;
+}
+
+/* Details strip wrapper - sits above the meta table */
+.details-strip-wrapper {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 0.5rem;
 }
 
 /* Meta table */
@@ -1026,10 +1049,11 @@
   border-left: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
-  max-height: 100vh;
+  height: 100vh;
   position: sticky;
   top: 0;
   overflow: hidden;
+  min-width: 0;
 }
 
 .ep-list-header {
@@ -1037,6 +1061,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
   background: #0d0d10;
+  z-index: 2;
 }
 
 .ep-list-title {
@@ -1066,12 +1091,13 @@
   color: #d4f55e;
 }
 
-/* Episode list fills remaining height */
+/* Episode list fills remaining height, scrolls internally */
 .body-right :global(.episode-list) {
-  flex: 1;
+  flex: 1 1 0;
   overflow-y: auto;
-  height: 0;
+  overflow-x: hidden;
   min-height: 0;
+  width: 100%;
 }
 
 /* ── Dropdowns ─────────────────────────────────────────────────────────── */
