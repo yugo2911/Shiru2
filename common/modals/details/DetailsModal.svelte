@@ -341,18 +341,7 @@
   <div class='h-full modal-content bg-dark p-0 overflow-y-auto position-relative' bind:this={container}>
     {#if staticMedia}
       <button class='close pointer z-30 bg-dark-light top-20 right-0 position-fixed' type='button' use:click={() => close()}> &times; </button>
-      <SmartImage class='w-full cover-img anime-details position-absolute' images={[
-        staticMedia.bannerImage,
-        ...(staticMedia.trailer?.id ? [
-          `https://i.ytimg.com/vi/${staticMedia.trailer.id}/maxresdefault.jpg`,
-          `https://i.ytimg.com/vi/${staticMedia.trailer.id}/hqdefault.jpg`] : []),
-        () => getKitsuMappings(staticMedia).then(metadata =>
-          [metadata?.included?.[0]?.attributes?.coverImage?.original,
-          metadata?.included?.[0]?.attributes?.coverImage?.large,
-          metadata?.included?.[0]?.attributes?.coverImage?.small,
-          metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
-        () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
-      {#if bannerVideoUrl}
+           {#if bannerVideoUrl}
         <video
           bind:this={bannerVideoEl}
           class='w-full cover-img anime-details position-absolute banner-video'
