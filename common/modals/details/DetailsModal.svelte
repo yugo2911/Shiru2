@@ -687,10 +687,8 @@ hr { border-color: rgba(255,255,255,0.07) !important; opacity: 1; }
 :global(.player-body) { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
 :global(.player-thumb) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 :global(.player-video) { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-.banner-audio-btn { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(13,13,16,0.55); border: 1px solid rgba(255,255,255,0.10); border-radius: 999px; padding: 0.25rem 0.75rem 0.25rem 0.55rem; color: rgba(237,237,234,0.55); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.06em; cursor: pointer; backdrop-filter: blur(8px); transition: background 0.15s, border-color 0.15s, color 0.15s; white-space: nowrap; flex-shrink: 0; min-width: 0; }
-.banner-audio-btn:hover { background: rgba(212,245,94,0.10); border-color: rgba(212,245,94,0.35); color: #d4f55e; }
-.banner-label { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.banner-bars { display: flex; align-items: flex-end; gap: 2px; height: 1rem; }
+.banner-audio-btn { display: inline-flex; align-items: center; gap: 0.55rem; background: rgba(13,13,16,0.65); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid rgba(212,245,94,0.5); border-radius: 3px; padding: 0.3rem 0.75rem 0.3rem 0.65rem; color: rgba(237,237,234,0.55); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.06em; cursor: pointer; backdrop-filter: blur(8px); transition: background 0.12s, border-color 0.12s, color 0.12s; white-space: nowrap; flex-shrink: 0; min-width: 0; }
+.banner-audio-btn:hover { background: rgba(212,245,94,0.07); border-color: rgba(255,255,255,0.14); border-left-color: #d4f55e; color: #d4f55e; }.banner-bars { display: flex; align-items: flex-end; gap: 2px; height: 1rem; }
 .banner-bars span { display: block; width: 3px; background: #d4f55e; border-radius: 2px; animation: banner-bar 0.8s ease-in-out infinite alternate; }
 .banner-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
 .banner-bars span:nth-child(2) { height: 80%; animation-delay: 0.15s; }
