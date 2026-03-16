@@ -49,12 +49,18 @@
 
     for (const m of media) {
       if (seen.has(m?.id)) continue
+      
+      // Look for the node closest to "now" (either just passed or upcoming)
+      // instead of strictly using nextAiring() which ignores today's past shows.
       const nodes = m?.airingSchedule?.nodes ?? []
       const node = nodes.find(n => Math.abs(n.airingAt - nowTs) < 86400 * 3) || nextAiring(nodes)
+      
       if (!node?.airingAt) continue
       seen.add(m.id)
+      
       const airDate = new Date(node.airingAt * 1000)
-      grouped.get(DAYS[airDate.getDay()]).push({ media: m, airingAt: node.airingAt, episode: node.episode })
+      grouped.get(DAYS[airDate.getDay()])
+             .push({ media: m, airingAt: node.airingAt, episode: node.episode })
     }
 
     const order = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
@@ -67,9 +73,9 @@
 
 <script>
   import { onMount } from 'svelte'
+  import { click } from '@/modules/click.js'
   import { modal } from '@/modules/navigation.js'
 
-  const TODAY = DAYS[new Date().getDay()]
   const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false }) : ''
   const fmtCountdown = (ts, now) => {
     const diff = ts - Math.floor(now.getTime() / 1000)
@@ -85,28 +91,22 @@
 
   onMount(() => {
     const t = setInterval(() => { now = new Date() }, 1000)
-    fetchAllScheduleEntries().then(r => {
-      groups = buildGroups(r.data.Page.media)
-      activeDay = groups[0]?.day ?? null
-    }).catch(() => groups = [])
+    fetchAllScheduleEntries()
+      .then(r => {
+        groups = buildGroups(r.data.Page.media)
+        activeDay = groups[0]?.day ?? null
+      })
+      .catch(() => groups = [])
     return () => clearInterval(t)
   })
 
-  const openDetails = (m) => modal.open(modal.ANIME_DETAILS, m)
-  const setHover = (e, m) => { hoveredMedia = m; hoverX = e.clientX; hoverY = e.clientY }
-  
+  function handleMouseMove(e, media) { hoveredMedia = media; hoverX = e.clientX; hoverY = e.clientY }
   function scrollToDay(day) {
     activeDay = day
     weekEl?.querySelector(`[data-day="${day}"]`)?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' })
   }
 
-  function handleKeydown(e, media) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      openDetails(media)
-    }
-  }
-
+  $: TODAY = DAYS[now.getDay()]
   $: todayGroup = groups.find(g => g.day === TODAY) ?? null
   $: navGroups = groups.filter(g => g.items.length > 0)
 </script>
@@ -125,23 +125,24 @@
         <div class='date-label'>{now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
       </div>
       <div class='today-scroll'>
-        {#if todayGroup?.items.length}
+        {#if todayGroup && todayGroup.items.length}
           {#each todayGroup.items as {media, airingAt, episode}}
             {@const up = isUpNext(airingAt, now)}
             {@const past = airingAt < Math.floor(now.getTime()/1000)}
             {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
+            {@const behind = getBehind(media, {episode})}
             <div 
               class='t-row' class:t-up={up} class:t-past={past} 
               style={status ? `--row-hc:${status.color}` : ''} 
               role="button" tabindex="0"
-              on:click={() => openDetails(media)}
+              use:click={()=>modal.open(modal.ANIME_DETAILS,media)} 
               on:keydown={e => handleKeydown(e, media)}
-              on:mouseenter={e => setHover(e, media)}
-              on:mouseleave={() => hoveredMedia = null}
+              on:mousemove={e=>handleMouseMove(e,media)} 
+              on:mouseleave={()=>hoveredMedia=null}
             >
               <span class='t-time'>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
-              {#if getBehind(media, {episode}) > 0}<span class='behind-cue'>−{getBehind(media, {episode})} ep</span>{/if}
+              {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
               {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
             </div>
           {/each}
@@ -174,18 +175,19 @@
             <div class='day-entries'>
               {#each group.items as {media, airingAt, episode}}
                 {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
+                {@const behind = getBehind(media, {episode})}
                 <div 
                   class='w-row' 
                   style={status ? `--row-hc:${status.color}` : ''} 
                   role="button" tabindex="0"
-                  on:click={() => openDetails(media)}
+                  use:click={()=>modal.open(modal.ANIME_DETAILS,media)} 
                   on:keydown={e => handleKeydown(e, media)}
-                  on:mouseenter={e => setHover(e, media)}
-                  on:mouseleave={() => hoveredMedia = null}
+                  on:mousemove={e=>handleMouseMove(e,media)} 
+                  on:mouseleave={()=>hoveredMedia=null}
                 >
                   <span class='w-time'>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
-                  {#if getBehind(media, {episode}) > 0}<span class='behind-cue'>−{getBehind(media, {episode})} ep</span>{/if}
+                  {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
                 </div>
               {/each}
             </div>
