@@ -10,6 +10,7 @@
   const { reactive, init } = createListener(['torrent-button', 'cont-button', 'episode-safe-area'])
   init(true)
 </script>
+
 <script>
   import { statusColorMap } from '@/modules/anime/anime.js'
   import { episodesList } from '@/modules/episodes.js'
@@ -20,6 +21,7 @@
   import { mediaCache } from '@/modules/cache.js'
   import { checkForZero } from '@/components/MediaHandler.svelte'
   import { modal } from '@/modules/navigation.js'
+
   export let data
   export let section = false
 
@@ -28,48 +30,48 @@
   let zeroEpisode = false
   let prompt = writable(false)
   let clicked = writable(false)
-
-  /** @type {import('@/modules/al.d.ts').Media | null} */
-  let media
-  $: if (data.media && !media) {
-    media = mediaCache.value[data.media.id]
-  }
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
-  $: checkForZero(media).then(_zeroEpisode => zeroEpisode = _zeroEpisode)
-  $: episodeRange = episodesList.handleArray(data?.episode, data?.parseObject?.file_name)
-  $: lastEpisode = (data?.episodeRange || data?.parseObject?.episodeRange)?.last || episodeRange?.last || (isValidNumber(data?.episode) && (data?.episode + (zeroEpisode ? 1 : 0))) || (media?.episodes === 1 && media?.episodes)
-  $: episodeThumbnail = ((data.similarity|| (!media?.mediaListEntry?.status || !(['CURRENT', 'REPEATING', 'PAUSED', 'PLANNING'].includes(media.mediaListEntry.status) && media.mediaListEntry.progress < lastEpisode))) && data.episodeData?.image) || media?.bannerImage || media?.coverImage.extraLarge || ' '
-  $: watched = media?.mediaListEntry?.status === 'COMPLETED'
-  $: completed = !watched && media?.mediaListEntry?.progress >= lastEpisode
-  $: progress = liveAnimeEpisodeProgress(media?.id, data?.episode, completed)
-
-  function viewMedia () {
-    modal.open(modal.ANIME_DETAILS, media)
-  }
-  function setClickState() {
-    const episode = isValidNumber(data.episode) ? data.episode : (media?.episodes === 1 && media?.episodes)
-    if (!$prompt && !data.similarity && isValidNumber(episode) && !Array.isArray(episode) && (episode - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (episode - 1)) prompt.set(true)
-    else isValidNumber(episode) ? (media ? playActive(data.hash, { media, episode: episode }, data.link, !data.link) : data.onclick()) : viewMedia()
-    clicked.set(true)
-    setTimeout(() => clicked.set(false)).unref?.()
-  }
-  function setHoverState (state, tapped) {
-    const focused = document.activeElement
-    if (container && focused?.offsetParent != null && (container.contains(focused)) && (!previewCard || !previewCard.contains(focused))) ignoreFocus = true
-    const episode = isValidNumber(data.episode) ? data.episode : (media?.episodes === 1 && media?.episodes)
-    if (!$prompt && !data.similarity && isValidNumber(episode) && !Array.isArray(episode) && (episode - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (episode - 1)) prompt.set(!!tapped)
-    if (!$prompt || !$clicked) {
-      preview = state
-      setTimeout(() => {
-        if (!preview) prompt.set(false)
-      }).unref?.()
-    }
-  }
-
   let container
   let previewCard
   let focusTimeout
   let blurTimeout
+  let sinceInterval
+  let media
+  
+  $: if (data.media && !media) media = mediaCache.value[data.media.id]
+  mediaCache.subscribe(v => { if (v && JSON.stringify(v[media?.id]) !== JSON.stringify(media)) media = v[media?.id] })
+
+  $: checkForZero(media).then(z => zeroEpisode = z)
+  $: episodeRange = episodesList.handleArray(data?.episode, data?.parseObject?.file_name)
+  $: lastEpisode = (data?.episodeRange || data?.parseObject?.episodeRange)?.last || episodeRange?.last || (isValidNumber(data?.episode) && (data?.episode + (zeroEpisode ? 1 : 0))) || (media?.episodes === 1 && media?.episodes)
+  $: episodeThumbnail = ((data.similarity || (!media?.mediaListEntry?.status || !(['CURRENT', 'REPEATING', 'PAUSED', 'PLANNING'].includes(media.mediaListEntry.status) && media.mediaListEntry.progress < lastEpisode))) && data.episodeData?.image) || media?.bannerImage || media?.coverImage.extraLarge || ' '
+  
+  $: watched = media?.mediaListEntry?.status === 'COMPLETED'
+  $: completed = !watched && media?.mediaListEntry?.progress >= lastEpisode
+  $: progress = liveAnimeEpisodeProgress(media?.id, data?.episode, completed)
+  $: timeSince = data?.date && since(data?.date)
+
+  const getEpisodeNumber = () => isValidNumber(data.episode) ? data.episode : (media?.episodes === 1 && media?.episodes)
+  const isBacklogEpisode = (ep) => !$prompt && !data.similarity && isValidNumber(ep) && !Array.isArray(ep) && (ep - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (ep - 1)
+
+  function viewMedia() { modal.open(modal.ANIME_DETAILS, media) }
+
+  function setClickState() {
+    const ep = getEpisodeNumber()
+    if (isBacklogEpisode(ep)) return prompt.set(true)
+    isValidNumber(ep) ? (media ? playActive(data.hash, { media, episode: ep }, data.link, !data.link) : data.onclick()) : viewMedia()
+    clicked.set(true)
+    setTimeout(() => clicked.set(false))
+  }
+
+  function setHoverState(state, tapped) {
+    if (container?.contains(document.activeElement) && !previewCard?.contains(document.activeElement)) ignoreFocus = true
+    if (isBacklogEpisode(getEpisodeNumber())) prompt.set(!!tapped)
+    if (!$prompt || !$clicked) {
+      preview = state
+      setTimeout(() => { if (!preview) prompt.set(false) })
+    }
+  }
+
   function handleFocus() {
     if (ignoreFocus || preview) return
     clearTimeouts()
@@ -80,90 +82,91 @@
         document.addEventListener('pointerup', handleOutsideClick)
       }
     }, 800)
-    focusTimeout.unref?.()
   }
+
   function handleBlur() {
     clearTimeouts()
     blurTimeout = setTimeout(() => {
-      const focused = document.activeElement
-      const lostFocus = container && focused?.offsetParent != null && !container.contains(focused)
-      const lostPreviewFocus = previewCard && !previewCard.contains(focused)
-      if (lostFocus && lostPreviewFocus) {
+      const active = document.activeElement
+      if (container && !container.contains(active) && (!previewCard || !previewCard.contains(active))) {
         preview = false
         ignoreFocus = false
-        setTimeout(() => {
-          if (!preview) prompt.set(false)
-        }).unref?.()
+        setTimeout(() => { if (!preview) prompt.set(false) })
         document.removeEventListener('pointerup', handleOutsideClick)
-      } else if (lostFocus || (previewCard && previewCard.contains(focused))) ignoreFocus = false
+      } else if (container && !container.contains(active)) {
+        ignoreFocus = false
+      }
     })
-    blurTimeout.unref?.()
   }
-  function handleOutsideClick(event) {
-    if (container && previewCard && !container.contains(event.target) && !previewCard.contains(event.target)) {
+
+  function handleOutsideClick(e) {
+    if (container && previewCard && !container.contains(e.target) && !previewCard.contains(e.target)) {
       preview = false
-      setTimeout(() => {
-        if (!preview) prompt.set(false)
-      }).unref?.()
+      setTimeout(() => { if (!preview) prompt.set(false) })
       document.removeEventListener('pointerup', handleOutsideClick)
     }
   }
-  function clearTimeouts() {
-    clearTimeout(focusTimeout)
-    clearTimeout(blurTimeout)
-  }
 
-  let sinceInterval
-  $: timeSince = data?.date && since(data?.date)
+  function clearTimeouts() { clearTimeout(focusTimeout); clearTimeout(blurTimeout) }
+
   onMount(() => {
     container.addEventListener('focusout', handleBlur)
-    sinceInterval = setInterval(() => timeSince = data?.date && since(data?.date), 60_000)
-    sinceInterval.unref?.()
+    sinceInterval = setInterval(() => timeSince = data?.date && since(data?.date), 60000)
   })
+
   onDestroy(() => {
     document.removeEventListener('pointerup', handleOutsideClick)
-    container?.removeEventListener?.('focusout', handleBlur)
+    container?.removeEventListener('focusout', handleBlur)
     clearTimeouts()
     clearInterval(sinceInterval)
   })
+
   $: if (preview) clearTimeout(focusTimeout)
   $: if (!preview) document.removeEventListener('pointerup', handleOutsideClick)
 </script>
 
-<div bind:this={container} class='d-flex p-20 pb-10 position-relative episode-card' class:mb-150={section} class:not-reactive={!$reactive} use:hoverClick={[setClickState, setHoverState, viewMedia]} on:focus={handleFocus}>
+<div 
+  bind:this={container} 
+  class='d-flex p-20 pb-10 position-relative episode-card' 
+  class:mb-150={section} 
+  class:not-reactive={!$reactive} 
+  use:hoverClick={[setClickState, setHoverState, viewMedia]} 
+  on:focus={handleFocus}
+>
   {#if preview}
     <EpisodePreviewCard {data} {zeroEpisode} bind:prompt={$prompt} bind:element={previewCard} />
   {/if}
+
   <div class='item load-in d-flex flex-column h-full pointer content-visibility-auto' class:opacity-half={completed}>
-    <div class='image h-200 w-full position-relative rounded overflow-hidden d-flex justify-content-between align-items-end text-white'>
-      <SmartImage class='cover-img cover-color w-full h-full position-absolute {!(data.episodeData?.image || media?.bannerImage) && media?.genres?.includes(`Hentai`) ? `cover-rotated cr-380` : ``}' color={media?.coverImage?.color || 'var(--tertiary-color)'} images={[episodeThumbnail, './404_episode.png']}/>
+    <div class='image h-200 w-full position-relative overflow-hidden d-flex justify-content-between align-items-end text-white'>
+      <SmartImage 
+        class='cover-img cover-color w-full h-full position-absolute {!(data.episodeData?.image || media?.bannerImage) && media?.genres?.includes(`Hentai`) ? `cover-rotated cr-380` : ``}' 
+        color={media?.coverImage?.color || 'var(--tertiary-color)'} 
+        images={[episodeThumbnail, './404_episode.png']}
+      />
+      
       {#if data.failed}
         <div class='pl-10 pt-10 z-10 position-absolute top-0 left-0 text-danger icon-shadow' title='Failed to resolve media'>
           <RefreshCwOff size='3rem' />
         </div>
       {/if}
+
       <Play class='mb-5 ml-5 pl-10 pb-10 z-10' fill='currentColor' size='3rem' />
+      
       <div class='pr-15 pb-10 font-size-16 font-weight-medium z-10'>
         {#if media?.duration}
-          {#if (data.episodeRange || data.parseObject?.episodeRange)}
-            {media.duration * (((data.episodeRange || data.parseObject?.episodeRange).last - (data.episodeRange || data.parseObject?.episodeRange).first) + 1)}m
-          {:else if episodeRange && isValidNumber(episodeRange.first) && isValidNumber(episodeRange.last)}
-            {media.duration * ((episodeRange.first - episodeRange.last) + 1)}m
-          {:else}
-            {media.duration}m
-          {/if}
+          {@const range = data.episodeRange || data.parseObject?.episodeRange || episodeRange}
+          {media.duration * (range && isValidNumber(range.first) && isValidNumber(range.last) ? (Math.abs(range.last - range.first) + 1) : 1)}m
         {/if}
       </div>
-      {#if completed}
+
+      {#if completed || $progress > 0}
         <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-          <div class='progress-bar w-full' />
-        </div>
-      {:else if $progress > 0}
-        <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-          <div class='progress-bar' style='width: {$progress}%' />
+          <div class='progress-bar' style='width: {completed ? 100 : $progress}%' />
         </div>
       {/if}
     </div>
+
     <div class='row pt-15'>
       <div class='col pr-10'>
         <div class='text-white font-weight-very-bold font-size-16 title overflow-hidden'>
@@ -176,24 +179,22 @@
           {#if data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
             {data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
           {:else if data.episode}
-            {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
+            {@const ep = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
             {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
-              {@const kitsuMappings = episode != null && mappings?.data?.find(ep => ep?.attributes?.number === isValidNumber(episode) ? Number(episode) : episode)?.attributes}
-              {kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || ''}
+              {@const kitsu = ep != null && mappings?.data?.find(e => e?.attributes?.number === (isValidNumber(ep) ? Number(ep) : ep))?.attributes}
+              {kitsu?.titles?.en_us || kitsu?.titles?.en_jp || ''}
             {/await}
           {/if}
         </div>
       </div>
+
       <div class='col-auto d-flex flex-column align-items-end text-right mt-3'>
         <div class='text-white font-weight-bold'>
-          {#if data.episodeRange || data.parseObject?.episodeRange}
-            {`Episodes ${(data.episodeRange || data.parseObject.episodeRange).first} ~ ${(data.episodeRange || data.parseObject.episodeRange).last}`}
-          {:else if data.episode != null}
-            {#if episodeRange}
-              Episodes {episodeRange.first} ~ {episodeRange.last}
-            {:else if (!Array.isArray(data.episode))}
-              Episode {isValidNumber(data.episode) ? Number(data.episode) : data.episode?.replace(/\D/g, '')}
-            {/if}
+          {#if data.episodeRange || data.parseObject?.episodeRange || episodeRange}
+            {@const r = data.episodeRange || data.parseObject?.episodeRange || episodeRange}
+            Episodes {r.first} ~ {r.last}
+          {:else if data.episode != null && !Array.isArray(data.episode)}
+            Episode {isValidNumber(data.episode) ? Number(data.episode) : data.episode?.replace(/\D/g, '')}
           {:else if media?.format === 'MOVIE'}
             Movie
           {:else if data.parseObject?.anime_title?.match(/S(\d{2})/)}
@@ -206,23 +207,10 @@
           <div class='text-nowrap font-size-12 title text-muted d-flex align-items-center'>
             <AudioLabel {media} {data} banner={true} episode={true} />
           </div>
-          {#if data.date}
-            {#if settings.value.cardAudio}
-              <div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>
-                •
-              </div>
-            {/if}
+          {#if data.date || data.similarity}
+            {#if settings.value.cardAudio}<div class='text-muted font-size-12 title mx-5 overflow-hidden'>•</div>{/if}
             <div class='text-muted font-size-12 title overflow-hidden'>
-              {timeSince}
-            </div>
-          {:else if data.similarity}
-            {#if settings.value.cardAudio}
-              <div class='text-muted font-size-12 title ml-5 mr-5 overflow-hidden'>
-                •
-              </div>
-            {/if}
-            <div class='text-muted font-size-12 title overflow-hidden'>
-              Confidence: {Math.round(data.similarity * 100)}%
+              {data.date ? timeSince : `Confidence: ${Math.round(data.similarity * 100)}%`}
             </div>
           {/if}
         </div>
@@ -230,96 +218,3 @@
     </div>
   </div>
 </div>
-
-<style>
-  
-
-  .episode-card {
-    font-family: var(--font-mono);
-    background: var(--card-bg);
-    border-bottom: 1px solid var(--card-line);
-    transition: background 0.1s;
-  }
-  .episode-card:hover {
-    z-index: 30 !important;
-    background: var(--card-faint);
-  }
-  .mt-3 {
-    margin-top: 0.3rem;
-  }
-  .mb-150 {
-    margin-bottom: 15rem !important;
-  }
-  .opacity-half {
-    opacity: 30%;
-  }
-  .title {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    word-break: break-all;
-    font-family: var(--font-mono);
-  }
-  /* title text */
-  .font-weight-very-bold {
-    font-family: var(--font-display) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
-    color: var(--card-fg) !important;
-  }
-  /* episode label */
-  .font-weight-bold {
-    font-family: var(--font-mono) !important;
-    color: var(--card-accent) !important;
-    font-weight: 500 !important;
-    font-size: 1rem !important;
-    letter-spacing: 0.06em;
-  }
-  /* muted subtitle */
-  .text-muted {
-    color: var(--card-dim) !important;
-    font-size: 1.1rem !important;
-  }
-  .image:after {
-    background: var(--episode-card-gradient);
-    content:'';
-    position:absolute;
-    left:0; top:0;
-    width:100%; height:100%;
-  }
-  /* cover image — slight rounded corners */
-  :global(.cover-img) {
-    border-radius: 4px !important;
-  }
-  /* progress bar */
-  .progress {
-    background: rgba(255,255,255,0.08) !important;
-  }
-  .progress-bar {
-    background: var(--card-accent) !important;
-    height: 100%;
-  }
-  .item {
-    width: 36rem;
-    max-width: 100%;
-    margin: 0 auto;
-    contain-intrinsic-height: 25.7rem;
-  }
-  .list-status-circle {
-    background: var(--statusColor);
-    height: 1rem;
-    width: 1rem;
-    border-radius: 50%;
-  }
-  /* badge pill for countdown etc */
-  :global(.t-badge), .badge-pill-acc {
-    font-size: 0.9rem;
-    font-weight: 500;
-    background: var(--card-accent);
-    color: var(--card-bg);
-    padding: 0.2em 0.8em;
-    border-radius: 3px;
-    letter-spacing: 0.04em;
-    font-family: var(--font-mono);
-  }
-</style>

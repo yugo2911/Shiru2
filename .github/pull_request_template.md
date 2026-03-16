@@ -29,7 +29,7 @@
 
 <!-- Describe how you tested your changes and the environments used.
 Example:
-- [x] Verified on Windows 11
+- [x] Verified on Windows 11d
 - [x] Tested Android build via Capacitor
 - [x] Confirmed tray icon now persists after wake
 -->
