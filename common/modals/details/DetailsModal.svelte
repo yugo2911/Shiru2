@@ -80,10 +80,23 @@
 
   function getPlayButtonText(media) {
     if (media?.mediaListEntry?.progress) {
-      return media.mediaListEntry.status === 'COMPLETED' ? 'Rewatch Now' : 'Continue Now'
+      return media.mediaListEntry.status === 'COMPLETED' ? 'Rewatch' : 'Continue'
     }
     return 'Watch Now'
   }
+
+  // ── Current episode for hero ──────────────────────────────────────────────
+
+  $: currentEp = episodeList?.find(ep => ep.episode === userProgress)
+    || episodeList?.[0]
+    || null
+
+  $: heroBg = currentEp?.image || staticMedia?.bannerImage || null
+
+  $: heroEpNumber = userProgress || 1
+  $: heroEpTitle = currentEp?.title || ('Episode ' + heroEpNumber)
+  $: heroEpLength = currentEp?.length || null
+  $: heroEpAirdate = currentEp?.airdate || null
 
   // ── Relation / recommendation IDs ────────────────────────────────────────
 
@@ -98,15 +111,9 @@
       ...((await recommendations)?.data?.Media?.recommendations?.edges
         ?.map(({ node }) => node.mediaRecommendation?.id) || [])
     ]
-
-    if (ids.length === 0) {
-      missingIds = []
-      return []
-    }
-
+    if (ids.length === 0) { missingIds = []; return [] }
     const result = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: ids })
     missingIds = ids.filter(id => !mediaCache.value[id])
-
     return {
       ...result,
       data: {
@@ -169,21 +176,8 @@
       .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '')
     marked.setOptions({ pedantic: false, breaks: true, gfm: true })
     return DOMPurify.sanitize(marked.parse(cleanBody).trim(), {
-      ALLOWED_TAGS: [
-        'p', 'br', 'span', 'div',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
-        'ul', 'ol', 'li',
-        'blockquote', 'code', 'pre', 'a', 'img',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-        'hr', 'details', 'summary', 'input'
-      ],
-      ALLOWED_ATTR: [
-        'href', 'target', 'rel', 'title',
-        'src', 'alt', 'width', 'height',
-        'class', 'id', 'align',
-        'type', 'checked', 'disabled'
-      ]
+      ALLOWED_TAGS: ['p','br','span','div','h1','h2','h3','h4','h5','h6','strong','em','b','i','u','s','del','ins','mark','ul','ol','li','blockquote','code','pre','a','img','table','thead','tbody','tfoot','tr','th','td','hr','details','summary','input'],
+      ALLOWED_ATTR: ['href','target','rel','title','src','alt','width','height','class','id','align','type','checked','disabled']
     })
   }
 
@@ -209,14 +203,12 @@
   let showAnimeThemes = false
 
   function closeOnClickOutside(node, onClose) {
-    function handle(e) {
-      if (!node.contains(e.target)) onClose()
-    }
+    function handle(e) { if (!node.contains(e.target)) onClose() }
     document.addEventListener('mousedown', handle, true)
     return { destroy() { document.removeEventListener('mousedown', handle, true) } }
   }
 
-  // ── Anime themes (dropdown list) ──────────────────────────────────────────
+  // ── Anime themes ──────────────────────────────────────────────────────────
 
   let animeThemesData = null
   let animeThemesLoading = false
@@ -234,7 +226,7 @@
     animeThemesLoading = false
   }
 
-  // ── Theme video player (modal) ────────────────────────────────────────────
+  // ── Theme video player ────────────────────────────────────────────────────
 
   let activeTheme = null
   let activeVideo = null
@@ -251,30 +243,10 @@
 
   function closeThemePlayer() { modal.close(modal.ANIME_THEME) }
 
-  // ── Column height sync ────────────────────────────────────────────────────
-
-  let resizeObserver
-  let leftColumn, rightColumn
-
-  function syncHeights() {
-    if (!leftColumn || !rightColumn) return
-    const h = `${leftColumn.offsetHeight}px`
-    if (rightColumn.style.height !== h) rightColumn.style.height = h
-  }
-
-  $: {
-    resizeObserver?.disconnect()
-    if (staticMedia && leftColumn) {
-      resizeObserver = new ResizeObserver(syncHeights)
-      resizeObserver.observe(leftColumn)
-    }
-  }
-
   // ── Banner video ──────────────────────────────────────────────────────────
 
   let bannerVideoUrl = null
   let bannerMuted = false
-  let bannerPlaying = false
   let bannerTheme = null
   let bannerVideoEl = null
 
@@ -295,16 +267,11 @@
     const pick = allVideos[Math.floor(Math.random() * allVideos.length)]
     bannerTheme = pick.theme
     bannerVideoUrl = pick.video.link
-    bannerPlaying = true
   }
 
   function stopBannerVideo() {
-    bannerPlaying = false
     bannerVideoUrl = null
-    if (bannerVideoEl) {
-      bannerVideoEl.pause()
-      bannerVideoEl.src = ''
-    }
+    if (bannerVideoEl) { bannerVideoEl.pause(); bannerVideoEl.src = '' }
   }
 
   function toggleBannerAudio() {
@@ -316,7 +283,6 @@
   // ── Cleanup ───────────────────────────────────────────────────────────────
 
   onDestroy(() => {
-    resizeObserver?.disconnect()
     stopBannerVideo()
     window.removeEventListener('play-anime', onWindowPlayAnime)
     window.removeEventListener('play-torrent', onWindowPlayTorrent)
@@ -324,377 +290,925 @@
 </script>
 
 <div class='modal modal-full z-50' class:show={staticMedia} on:keydown={checkClose} tabindex='-1' role='button' bind:this={_modal}>
-  <div class='h-full modal-content bg-dark p-0 overflow-y-auto position-relative' bind:this={container}>
+  <div class='h-full modal-content bg-dark p-0 overflow-y-auto' bind:this={container}>
     {#if staticMedia}
-      <button class='close pointer z-30 bg-dark-light top-20 right-0 position-fixed' type='button' use:click={() => close()}> &times; </button>
 
-      {#if bannerVideoUrl}
-        <video
-          bind:this={bannerVideoEl}
-          class='w-full cover-img anime-details position-absolute banner-video'
-          src={bannerVideoUrl}
-          autoplay
-          muted
-          loop
-          playsinline
-          on:canplay={() => { bannerVideoEl.muted = bannerMuted }}
-        />
-      {/if}
+      <!-- Close button -->
+      <button class='modal-close-btn z-30 position-fixed' type='button' use:click={() => close()}>&times;</button>
 
-<div class='row px-20'>
-        <div class='col-lg-7 col-12 pb-10'>
-          <div bind:this={leftColumn}>
-            <div class='d-flex flex-sm-row flex-column align-items-sm-end pb-20 mb-15'>
-              <div class='cover d-flex flex-row align-items-sm-end align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full' style='max-height: 50vh;'>
-                <div class='position-relative h-full'>
-                  <SmartImage class='rounded cover-img overflow-hidden h-full w-full' color={media.coverImage.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './404_cover.png']}/>
-                  <AudioLabel media={staticMedia} viewAnime={true} />
-                </div>
-              </div>
-              <div class='pl-sm-20 ml-sm-20'>
-                <div class='anime-meta-row'>
-                  <div class='anime-meta-label'>
-                    {#if staticMedia.seasonYear}{staticMedia.seasonYear}{/if}{#if staticMedia.season && staticMedia.seasonYear} · {/if}{#if staticMedia.season}<span class='text-capitalize'>{staticMedia.season.toLowerCase()}</span>{/if}{#if staticMedia.format} · {formatMap[staticMedia.format]}{/if}
-                  </div>
-                  {#if bannerTheme}
-                    <button class='banner-audio-btn' use:click={toggleBannerAudio}>
-                      {#if !bannerMuted}
-                        <span class='banner-bars'><span/><span/><span/><span/></span>
-                      {:else}
-                        <Music size='1rem' />
-                      {/if}
-                      <span class='banner-label'>{formatThemeLabel(bannerTheme)}{#if bannerTheme.song?.title} · {bannerTheme.song.title}{/if}</span>
-                    </button>
-                  {/if}
-                </div>
-                <h1 class='anime-title select-all'>{anilistClient.title(staticMedia)}</h1>
-                <div class='anime-stats'>
-                  {#if staticMedia.averageScore}
-                    <span class='anime-stat-score'>{staticMedia.averageScore}%</span>
-                    <span class='anime-stat-sep'>·</span>
-                  {/if}
-                  {#if staticMedia.episodes !== 1}
-                    {@const maxEp = getMediaMaxEp(staticMedia)}
-                    <span>{maxEp && maxEp !== 0 ? maxEp : '?'} episodes</span>
-                    <span class='anime-stat-sep'>·</span>
-                  {:else if staticMedia.duration}
-                    <span>{staticMedia.duration} min</span>
-                    <span class='anime-stat-sep'>·</span>
-                  {/if}
-                  {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
-                    <span title='{anilistClient.reviews(staticMedia)} user reviews'>{anilistClient.reviews(staticMedia)} reviews</span>
-                  {/if}
-                </div>
-                <div class='d-flex flex-row flex-wrap play'>
-                  <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20'
-                          use:click={() => play(media)}
-                          disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
-                    <Play class='mr-10' fill='currentColor' size='1.6rem' />
-                    {playButtonText}
-                  </button>
-                  <div class='mt-20 d-flex'>
-                    {#if Helper.isAuthorized()}
-                      <Scoring class='mr-10 '{media} viewAnime={true} />
-                    {/if}
-                    {#if Helper.isAniAuth()}
-                      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
-                        <div class='favourite d-flex align-items-center justify-content-center' title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
-                          <Heart color={media.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={media.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
-                        </div>
-                      </button>
-                    {/if}
-                    <TrailerModal {staticMedia} />
-                    <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
-                      {#if activeTheme && activeVideo}
-                        <div class='pointer-events-auto player-shell wm-calc'>
-                          <div class='player-header'>
-                            <span class='player-badge'>{formatThemeLabel(activeTheme)}</span>
-                            <span class='player-title'>
-                              {#if activeTheme.song?.title}{activeTheme.song.title}{/if}{#if activeTheme.song?.artists?.[0]?.name} · {activeTheme.song.artists[0].name}{/if}
-                            </span>
-                            <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
-                          </div>
-                          <div class='player-body'>
-                            {#if $modal[modal.ANIME_THEME]}
-                              {#key activeVideo.link}
-                                <SmartImage class='player-thumb' images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!themeLoading}/>
-                                <video
-                                  class='player-video'
-                                  class:d-none={themeLoading}
-                                  src={activeVideo.link}
-                                  autoplay
-                                  controls
-                                  on:canplay={() => { themeLoading = false }}
-                                />
-                              {/key}
-                            {/if}
-                          </div>
-                        </div>
-                      {/if}
-                    </SoftModal>
-                    <div class='position-relative' use:closeOnClickOutside={() => showAnimeThemes = false}>
-                      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Anime Themes' use:click={() => { if(!showAnimeThemes) loadAnimeThemes(); showAnimeThemes = !showAnimeThemes }}>
-                        <Music size='1.7rem' />
-                      </button>
-                      {#if showAnimeThemes}
-                        <div class='ext-dropdown position-absolute'>
-                          {#if animeThemesLoading}
-                            <div class='ext-group-label'>Loading...</div>
-                          {:else if !animeThemesData?.length}
-                            <div class='ext-group-label'>No themes found</div>
-                          {:else}
-                            {#each animeThemesData as theme}
-                              {@const entries = theme.entries || []}
-                              {@const videos = entries.flatMap(e => e.videos || [])}
-                              {@const bestVideo = getBestVideo(videos)}
-                              {#if bestVideo}
-                                <button class='ext-item d-flex align-items-center' use:click={() => playThemeVideo(bestVideo, theme)}>
-                                  <Music size='1.3rem' class='ext-icon-svg' />
-                                  <span class='ext-site'>{formatThemeLabel(theme)}</span>
-                                  {#if theme.song?.title}
-                                    <span class='ext-lang'>{theme.song.title}</span>
-                                  {/if}
-                                  {#if theme.song?.artists?.[0]?.name}
-                                    <span class='ext-tag'>{theme.song.artists[0].name}</span>
-                                  {/if}
-                                </button>
-                              {/if}
-                            {/each}
-                          {/if}
-                        </div>
-                      {/if}
-                    </div>
-                    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='AniList' use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)} on:contextmenu|preventDefault={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')}>
-                      <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
-                    </button>
-                    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='MyAnimeList' use:click={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)} on:contextmenu|preventDefault={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')}>
-                      <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
-                    </button>
-                    {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
-                      {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
-                      {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
-                      {@const streamingLinks = activeLinks.filter(l => l.type === 'STREAMING')}
-                      {@const infoLinks = activeLinks.filter(l => l.type === 'INFO')}
-                      {@const socialLinks = activeLinks.filter(l => l.type === 'SOCIAL')}
-                      {@const otherLinks = activeLinks.filter(l => !['OFFICIAL','STREAMING','INFO','SOCIAL'].includes(l.type))}
-                      <div class='position-relative' use:closeOnClickOutside={() => showExternalLinks = false}>
-                        <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='External Links' use:click={() => showExternalLinks = !showExternalLinks}>
-                          <ExternalLink size='1.7rem' />
-                        </button>
-                        {#if showExternalLinks}
-                          <div class='ext-dropdown position-absolute'>
-                            {#if officialLinks.length}
-                              <div class='ext-group-label'>Official</div>
-                              {#each officialLinks as link}
-                                <button class='ext-item ext-item-official d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.3rem' class='ext-icon-svg ext-icon-svg-official' />{/if}
-                                  <span class='ext-site'>{link.site || 'Official Website'}</span>
-                                </button>
-                              {/each}
-                            {/if}
-                            {#if streamingLinks.length}
-                              <div class='ext-group-label'>Streaming</div>
-                              {#each streamingLinks as link}
-                                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.3rem' class='ext-icon-svg' />{/if}
-                                  <span class='ext-site'>{link.site}</span>
-                                  {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
-                                </button>
-                              {/each}
-                            {/if}
-                            {#if infoLinks.length}
-                              <div class='ext-group-label'>Info</div>
-                              {#each infoLinks as link}
-                                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.3rem' class='ext-icon-svg' />{/if}
-                                  <span class='ext-site'>{link.site}</span>
-                                </button>
-                              {/each}
-                            {/if}
-                            {#if socialLinks.length}
-                              <div class='ext-group-label'>Social</div>
-                              {#each socialLinks as link}
-                                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.3rem' class='ext-icon-svg' />{/if}
-                                  <span class='ext-site'>{link.site}</span>
-                                </button>
-                              {/each}
-                            {/if}
-                            {#each otherLinks as link}
-                              <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                                {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.3rem' class='ext-icon-svg' />{/if}
-                                <span class='ext-site'>{link.site}</span>
-                                {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
-                              </button>
-                            {/each}
-                          </div>
-                        {/if}
-                      </div>
-                    {/if}
-                  </div>
-                </div>
-                <Following media={staticMedia} />
-              </div>
-            </div>
-            <div class='meta-block'>
-              <Details media={staticMedia} alt={recommendations} />
-              {#if staticMedia.genres?.length}
-                <div class='meta-row'>
-                  <span class='meta-key'>Genres</span>
-                  <span class='meta-val'>
-                    {#each staticMedia.genres as genre, i}
-                      <span class='meta-genre'><svelte:component this={genreIcons[genre]} size='1.1rem' />{genre}</span>{#if i < staticMedia.genres.length - 1}<span class='meta-inline-sep'>, </span>{/if}
-                    {/each}
-                  </span>
-                </div>
+      <!-- ── HERO ─────────────────────────────────────────────────── -->
+      <div class='hero position-relative overflow-hidden'>
+
+        <!-- Background: episode image, banner video, or banner image fallback -->
+        {#if bannerVideoUrl}
+          <video
+            bind:this={bannerVideoEl}
+            class='hero-bg-media position-absolute'
+            src={bannerVideoUrl}
+            autoplay muted loop playsinline
+            on:canplay={() => { bannerVideoEl.muted = bannerMuted }}
+          />
+        {:else if heroBg}
+          <img src={heroBg} class='hero-bg-media position-absolute' alt='' />
+        {:else}
+          <div class='hero-bg-fallback position-absolute' style='background-color:{staticMedia.coverImage?.color || "#1a1a22"}' />
+        {/if}
+
+        <!-- Overlays -->
+        <div class='hero-overlay position-absolute' />
+        <div class='hero-vignette position-absolute' />
+
+        <!-- Top bar: audio label + now-playing badge -->
+        <div class='hero-topbar position-absolute d-flex align-items-center'>
+          {#if bannerTheme}
+            <button class='banner-audio-btn' use:click={toggleBannerAudio}>
+              {#if !bannerMuted}
+                <span class='banner-bars'><span/><span/><span/><span/></span>
+              {:else}
+                <Music size='1rem' />
               {/if}
-              {#if staticMedia.tags?.length}
-                <div class='meta-row'>
-                  <span class='meta-key'>Tags</span>
-                  <span class='meta-val meta-tags'>
-                    {#each staticMedia.tags as tag, i}
-                      <span class='meta-tag'>{tag.name}<span class='meta-tag-rank'> {tag.rank}%</span></span>{#if i < staticMedia.tags.length - 1}<span class='meta-inline-sep'>, </span>{/if}
-                    {/each}
-                  </span>
-                </div>
+              <span class='banner-label'>{formatThemeLabel(bannerTheme)}{#if bannerTheme.song?.title} · {bannerTheme.song.title}{/if}</span>
+            </button>
+          {/if}
+          {#if userProgress}
+            <div class='now-playing-badge ml-auto'>
+              EP {heroEpNumber} · WATCHING
+            </div>
+          {/if}
+        </div>
+
+        <!-- Bottom content: cover + title block -->
+        <div class='hero-bottom position-absolute d-flex align-items-end'>
+          <!-- Cover art -->
+          <div class='hero-cover flex-shrink-0'>
+            <SmartImage
+              class='rounded cover-img overflow-hidden w-full h-full'
+              color={media.coverImage.color || 'var(--tertiary-color)'}
+              images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './404_cover.png']}
+            />
+            <AudioLabel media={staticMedia} viewAnime={true} />
+          </div>
+
+          <!-- Title + actions -->
+          <div class='hero-title-block pl-20 flex-1 min-width-0'>
+            <div class='hero-meta-line'>
+              {#if staticMedia.seasonYear}{staticMedia.seasonYear}{/if}
+              {#if staticMedia.season && staticMedia.seasonYear} · {/if}
+              {#if staticMedia.season}<span class='text-capitalize'>{staticMedia.season.toLowerCase()}</span>{/if}
+              {#if staticMedia.format} · {formatMap[staticMedia.format]}{/if}
+            </div>
+
+            <h1 class='hero-anime-title select-all'>{anilistClient.title(staticMedia)}</h1>
+
+            <div class='hero-stats'>
+              {#if staticMedia.averageScore}
+                <span class='hero-score'>{staticMedia.averageScore}%</span>
+                <span class='hero-sep'>·</span>
+              {/if}
+              {#if staticMedia.episodes !== 1}
+                {@const maxEp = getMediaMaxEp(staticMedia)}
+                <span>{maxEp && maxEp !== 0 ? maxEp : '?'} eps</span>
+                <span class='hero-sep'>·</span>
+              {:else if staticMedia.duration}
+                <span>{staticMedia.duration}m</span>
+                <span class='hero-sep'>·</span>
+              {/if}
+              {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
+                <span>{anilistClient.reviews(staticMedia)} reviews</span>
               {/if}
             </div>
-            {#if staticMedia.description}
-              <div class='w-full d-flex flex-row align-items-center pt-20 mt-10'>
-                <hr class='w-full' />
-                <div class='font-size-18 font-weight-semi-bold px-20 text-white'>Synopsis</div>
-                <hr class='w-full' />
-              </div>
-              <div class='font-size-16 pt-20 select-all'>
-                {@html sanitize(staticMedia.description)}
-              </div>
-            {/if}
-            {#if episodeList?.length}
-              <div class='w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer' aria-hidden='true' use:click={() => { episodeOrder = !episodeOrder }}>
-                <hr class='w-full' />
-                <div class='position-absolute font-size-18 font-weight-semi-bold px-20 text-white' style='left: 50%; transform: translateX(-50%);'>Episodes</div>
-                <hr class='w-full' />
-                <div class='ml-auto pl-20 font-size-12 more text-muted text-nowrap pr-20' use:click={() => { episodeOrder = !episodeOrder }}>Reverse</div>
-              </div>
-            {/if}
-            <div class='col-lg-5 col-12 d-lg-none flex-column mt-20'>
-              <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} class='h-600' />
-            </div>
-            <div class='d-lg-block'>
-              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title='Relations'>
-                {#await promise}
-                  <div class='small-card'>
-                    <SmallCardSk />
-                  </div>
-                {:then res}
-                  {#if res}
-                    <div class='small-card'>
-                      <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
-                    </div>
-                  {/if}
-                {/await}
-              </ToggleList>
-              {#await recommendations then res}
-                {@const media = res?.data?.Media}
-                {#if media}
-                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title='Recommendations'>
-                    {#await promise}
-                      <div class='small-card'>
-                        <SmallCardSk />
-                      </div>
-                    {:then res}
-                      {#if res}
-                        <div class='small-card'>
-                          <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
-                        </div>
-                      {/if}
-                    {/await}
-                  </ToggleList>
+
+            <!-- Current episode callout -->
+            {#if currentEp && (heroEpTitle || heroEpNumber)}
+              <div class='current-ep-callout'>
+                <span class='current-ep-label'>
+                  {#if userProgress}Next Up · Ep {heroEpNumber + 1}{:else}Start · Ep 1{/if}
+                </span>
+                {#if episodeList?.[(userProgress || 0)]?.title}
+                  <span class='current-ep-name'>{episodeList[(userProgress || 0)]?.title}</span>
                 {/if}
-              {/await}
+              </div>
+            {/if}
+
+            <!-- Action buttons -->
+            <div class='hero-actions d-flex align-items-center flex-wrap'>
+              <button
+                class='btn-primary-action d-flex align-items-center mr-10 mt-10'
+                use:click={() => play(media)}
+                disabled={staticMedia.status === 'NOT_YET_RELEASED'}
+              >
+                <Play class='mr-8' fill='currentColor' size='1.4rem' />
+                {playButtonText}
+              </button>
+
+              <div class='d-flex mt-10'>
+                {#if Helper.isAuthorized()}
+                  <Scoring class='mr-8' {media} viewAnime={true} />
+                {/if}
+                {#if Helper.isAniAuth()}
+                  <button class='action-btn mr-8' use:click={toggleFavourite} disabled={!Helper.isAniAuth()} title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
+                    <Heart color={media.isFavourite ? '#d4f55e' : 'currentColor'} fill={media.isFavourite ? '#d4f55e' : 'transparent'} size='1.5rem' />
+                  </button>
+                {/if}
+
+                <TrailerModal {staticMedia} />
+
+                <!-- Anime themes dropdown -->
+                <div class='position-relative' use:closeOnClickOutside={() => showAnimeThemes = false}>
+                  <button class='action-btn mr-8' title='Anime Themes' use:click={() => { if (!showAnimeThemes) loadAnimeThemes(); showAnimeThemes = !showAnimeThemes }}>
+                    <Music size='1.5rem' />
+                  </button>
+                  {#if showAnimeThemes}
+                    <div class='ext-dropdown position-absolute'>
+                      {#if animeThemesLoading}
+                        <div class='ext-group-label'>Loading...</div>
+                      {:else if !animeThemesData?.length}
+                        <div class='ext-group-label'>No themes found</div>
+                      {:else}
+                        {#each animeThemesData as theme}
+                          {@const entries = theme.entries || []}
+                          {@const videos = entries.flatMap(e => e.videos || [])}
+                          {@const bestVideo = getBestVideo(videos)}
+                          {#if bestVideo}
+                            <button class='ext-item d-flex align-items-center' use:click={() => playThemeVideo(bestVideo, theme)}>
+                              <Music size='1.2rem' class='ext-icon-svg' />
+                              <span class='ext-site'>{formatThemeLabel(theme)}</span>
+                              {#if theme.song?.title}<span class='ext-lang'>{theme.song.title}</span>{/if}
+                              {#if theme.song?.artists?.[0]?.name}<span class='ext-tag'>{theme.song.artists[0].name}</span>{/if}
+                            </button>
+                          {/if}
+                        {/each}
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+
+                <!-- AniList -->
+                <button class='action-btn mr-8' class:d-none={!staticMedia.id} title='AniList'
+                  use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}
+                  on:contextmenu|preventDefault={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')}>
+                  <img class='rounded w-18' src='./anilist_icon.png' alt='Anilist'>
+                </button>
+
+                <!-- MAL -->
+                <button class='action-btn mr-8' class:d-none={!staticMedia.idMal} title='MyAnimeList'
+                  use:click={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}
+                  on:contextmenu|preventDefault={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')}>
+                  <img class='rounded w-18' src='./myanimelist_icon.png' alt='MyAnimeList'>
+                </button>
+
+                <!-- External links -->
+                {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
+                  {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
+                  {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
+                  {@const streamingLinks = activeLinks.filter(l => l.type === 'STREAMING')}
+                  {@const infoLinks = activeLinks.filter(l => l.type === 'INFO')}
+                  {@const socialLinks = activeLinks.filter(l => l.type === 'SOCIAL')}
+                  {@const otherLinks = activeLinks.filter(l => !['OFFICIAL','STREAMING','INFO','SOCIAL'].includes(l.type))}
+                  <div class='position-relative' use:closeOnClickOutside={() => showExternalLinks = false}>
+                    <button class='action-btn' title='External Links' use:click={() => showExternalLinks = !showExternalLinks}>
+                      <ExternalLink size='1.5rem' />
+                    </button>
+                    {#if showExternalLinks}
+                      <div class='ext-dropdown position-absolute'>
+                        {#if officialLinks.length}
+                          <div class='ext-group-label'>Official</div>
+                          {#each officialLinks as link}
+                            <button class='ext-item ext-item-official d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                              {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg ext-icon-svg-official' />{/if}
+                              <span class='ext-site'>{link.site || 'Official Website'}</span>
+                            </button>
+                          {/each}
+                        {/if}
+                        {#if streamingLinks.length}
+                          <div class='ext-group-label'>Streaming</div>
+                          {#each streamingLinks as link}
+                            <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                              {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                              <span class='ext-site'>{link.site}</span>
+                              {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
+                            </button>
+                          {/each}
+                        {/if}
+                        {#if infoLinks.length}
+                          <div class='ext-group-label'>Info</div>
+                          {#each infoLinks as link}
+                            <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                              {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                              <span class='ext-site'>{link.site}</span>
+                            </button>
+                          {/each}
+                        {/if}
+                        {#if socialLinks.length}
+                          <div class='ext-group-label'>Social</div>
+                          {#each socialLinks as link}
+                            <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                              {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                              <span class='ext-site'>{link.site}</span>
+                            </button>
+                          {/each}
+                        {/if}
+                        {#each otherLinks as link}
+                          <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                            {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                            <span class='ext-site'>{link.site}</span>
+                            {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
             </div>
+
+            <Following media={staticMedia} />
           </div>
         </div>
-        <div class='col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20' bind:this={rightColumn}>
-          <button class='close order pointer z-30 bg-dark-light position-absolute' class:d-none={!episodeList?.length} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Reverse Episodes' use:click={()=> {episodeOrder = !episodeOrder}}>
-            <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='2rem' />
-          </button>
-          <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
-        </div>
       </div>
+      <!-- end hero -->
+
+      <!-- Theme player modal -->
+      <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css='top-0 left-0 position-fixed' bind:showModal={$modal[modal.ANIME_THEME]} shouldRender={true} close={closeThemePlayer} id={modal.ANIME_THEME}>
+        {#if activeTheme && activeVideo}
+          <div class='pointer-events-auto player-shell wm-calc'>
+            <div class='player-header'>
+              <span class='player-badge'>{formatThemeLabel(activeTheme)}</span>
+              <span class='player-title'>
+                {#if activeTheme.song?.title}{activeTheme.song.title}{/if}{#if activeTheme.song?.artists?.[0]?.name} · {activeTheme.song.artists[0].name}{/if}
+              </span>
+              <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={closeThemePlayer}><X size='1.7rem' strokeWidth='3'/></button>
+            </div>
+            <div class='player-body'>
+              {#if $modal[modal.ANIME_THEME]}
+                {#key activeVideo.link}
+                  <SmartImage class='player-thumb' images={[staticMedia.bannerImage, staticMedia.coverImage?.extraLarge]} hidden={!themeLoading}/>
+                  <video class='player-video' class:d-none={themeLoading} src={activeVideo.link} autoplay controls on:canplay={() => { themeLoading = false }} />
+                {/key}
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </SoftModal>
+
+      <!-- ── BODY GRID ──────────────────────────────────────────────── -->
+      <div class='body-grid'>
+
+        <!-- ── LEFT: details + synopsis + relations ─────────────────── -->
+        <div class='body-left'>
+
+          <!-- Meta table -->
+          <div class='meta-block'>
+            <Details media={staticMedia} alt={recommendations} />
+            {#if staticMedia.genres?.length}
+              <div class='meta-row'>
+                <span class='meta-key'>Genres</span>
+                <span class='meta-val'>
+                  {#each staticMedia.genres as genre, i}
+                    <span class='meta-genre'><svelte:component this={genreIcons[genre]} size='1rem' />{genre}</span>{#if i < staticMedia.genres.length - 1}<span class='meta-inline-sep'>, </span>{/if}
+                  {/each}
+                </span>
+              </div>
+            {/if}
+            {#if staticMedia.tags?.length}
+              <div class='meta-row'>
+                <span class='meta-key'>Tags</span>
+                <span class='meta-val meta-tags'>
+                  {#each staticMedia.tags as tag, i}
+                    <span class='meta-tag'>{tag.name}<span class='meta-tag-rank'> {tag.rank}%</span></span>{#if i < staticMedia.tags.length - 1}<span class='meta-inline-sep'>, </span>{/if}
+                  {/each}
+                </span>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Synopsis -->
+          {#if staticMedia.description}
+            <div class='section-divider'>
+              <hr /><span>Synopsis</span><hr />
+            </div>
+            <div class='synopsis-text select-all'>
+              {@html sanitize(staticMedia.description)}
+            </div>
+          {/if}
+
+          <!-- Relations + Recommendations -->
+          <div class='mt-20'>
+            <ToggleList
+              list={staticMedia.relations?.edges?.filter(({ node, relationType }) =>
+                relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC'
+                && !(settings.value.adult === 'none' && node.isAdult)
+                && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai'))
+                && !missingIds.includes(node.id)
+              ).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity))}
+              promise={searchIDS} let:item let:promise title='Relations'
+            >
+              {#await promise}
+                <div class='small-card'><SmallCardSk /></div>
+              {:then res}
+                {#if res}
+                  <div class='small-card'><SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} /></div>
+                {/if}
+              {/await}
+            </ToggleList>
+
+            {#await recommendations then res}
+              {@const recMedia = res?.data?.Media}
+              {#if recMedia}
+                <ToggleList
+                  list={recMedia.recommendations?.edges?.filter(({ node }) =>
+                    node.mediaRecommendation
+                    && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult)
+                    && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai'))
+                    && !missingIds.includes(node.mediaRecommendation.id)
+                  ).sort((a, b) => b.node.rating - a.node.rating)}
+                  promise={searchIDS} let:item let:promise title='Recommendations'
+                >
+                  {#await promise}
+                    <div class='small-card'><SmallCardSk /></div>
+                  {:then res}
+                    {#if res}
+                      <div class='small-card'><SmallCard data={item.node.mediaRecommendation} type={item.node.rating} /></div>
+                    {/if}
+                  {/await}
+                </ToggleList>
+              {/if}
+            {/await}
+          </div>
+        </div>
+
+        <!-- ── RIGHT: episode list ───────────────────────────────────── -->
+        <div class='body-right'>
+          <div class='ep-list-header d-flex align-items-center'>
+            <span class='ep-list-title'>Episodes</span>
+            {#if episodeList?.length}
+              <button class='ep-order-btn ml-auto' use:click={() => episodeOrder = !episodeOrder} title='Reverse order'>
+                <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='1.4rem' />
+              </button>
+            {/if}
+          </div>
+          <EpisodeList
+            bind:episodeLoad={episodeLoad}
+            media={staticMedia}
+            {episodeOrder}
+            bind:userProgress
+            bind:watched
+            episodeCount={getMediaMaxEp(media)}
+            {play}
+          />
+        </div>
+
+      </div>
+      <!-- end body grid -->
+
     {/if}
   </div>
 </div>
 
 <style>
-:global(.modal-full .modal-content) { background: #0d0d10 !important; font-family: 'IBM Plex Mono', monospace; color: #ededea; }
-.close { top: 5rem !important; left: unset !important; right: 3rem !important; background: rgba(13,13,16,0.75) !important; border: 1px solid rgba(255,255,255,0.10) !important; color: rgba(237,237,234,0.55) !important; border-radius: 3px !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 2rem !important; line-height: 1 !important; backdrop-filter: blur(8px); transition: background 0.12s, color 0.12s, border-color 0.12s; }
-.close:hover { background: rgba(237,237,234,0.10) !important; border-color: rgba(255,255,255,0.22) !important; color: #ededea !important; }
-.order { top: 7rem !important; left: -5rem !important; background: rgba(13,13,16,0.75) !important; border: 1px solid rgba(255,255,255,0.10) !important; color: rgba(237,237,234,0.38) !important; border-radius: 3px !important; backdrop-filter: blur(8px); transition: background 0.12s, color 0.12s, border-color 0.12s; }
-.order:hover { background: rgba(212,245,94,0.08) !important; border-color: #d4f55e !important; color: #d4f55e !important; }
-.row { padding-top: 12rem !important; }
-@media (min-width: 769px) { .row { padding: 0 10rem; } }
-.cover { aspect-ratio: 7/10; }
-@media (min-width: 577px) { .cover { max-width: 35% !important; } .play { justify-content: left; } }
-.play { justify-content: center; }
-.anime-meta-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 1rem; margin-bottom: 0.7rem; }
-.anime-meta-label { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: #d4f55e; opacity: 0.9; margin-bottom: 0; }
-.anime-title { font-family: 'Syne', sans-serif; font-size: clamp(3rem, 5vw, 5.5rem); font-weight: 800; letter-spacing: -0.03em; color: #ededea; line-height: 1.0; margin: 0 0 1rem 0; }
-.anime-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem; color: rgba(237,237,234,0.45); margin-bottom: 1.8rem; }
-.anime-stat-score { color: #d4f55e; font-weight: 700; font-size: 1.5rem; }
-.anime-stat-sep { margin: 0 0.6rem; color: rgba(237,237,234,0.15); }
-.meta-block { padding: 1.6rem 0 0.5rem; display: flex; flex-direction: column; gap: 0; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 1rem; }
-.meta-row { display: flex; align-items: baseline; gap: 1.5rem; padding: 0.65rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.meta-key { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(237,237,234,0.25); width: 5.5rem; flex-shrink: 0; padding-top: 0.15rem; }
-.meta-val { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; color: rgba(237,237,234,0.7); line-height: 1.7; flex: 1; }
-.meta-genre { display: inline-flex; align-items: center; gap: 0.25rem; text-transform: capitalize; }
-.meta-genre :global(svg) { color: rgba(212,245,94,0.55); flex-shrink: 0; width: 1rem !important; height: 1rem !important; }
+/* ── Global resets for this modal ──────────────────────────────────────── */
+:global(.modal-full .modal-content) {
+  background: #0d0d10 !important;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #ededea;
+}
+
+/* ── Close button ──────────────────────────────────────────────────────── */
+.modal-close-btn {
+  top: 1.6rem;
+  right: 2rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13,13,16,0.80) !important;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 3px;
+  color: rgba(237,237,234,0.5);
+  font-size: 2.2rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background .12s, color .12s, border-color .12s;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.modal-close-btn:hover {
+  background: rgba(237,237,234,0.10) !important;
+  border-color: rgba(255,255,255,0.22);
+  color: #ededea;
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────── */
+.hero {
+  width: 100%;
+  min-height: 72vh;
+  max-height: 88vh;
+}
+
+.hero-bg-media {
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-bg-fallback {
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+}
+
+.hero-overlay {
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(13,13,16,0.15) 0%,
+    rgba(13,13,16,0.20) 30%,
+    rgba(13,13,16,0.75) 65%,
+    rgba(13,13,16,0.97) 88%,
+    #0d0d10 100%
+  );
+  pointer-events: none;
+}
+
+.hero-vignette {
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to right,
+    rgba(13,13,16,0.55) 0%,
+    transparent 25%,
+    transparent 75%,
+    rgba(13,13,16,0.35) 100%
+  );
+  pointer-events: none;
+}
+
+/* top bar */
+.hero-topbar {
+  top: 1.8rem;
+  left: 2.5rem;
+  right: 7rem;
+  z-index: 10;
+  gap: 1rem;
+}
+
+.now-playing-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: #d4f55e;
+  background: rgba(212,245,94,0.10);
+  border: 1px solid rgba(212,245,94,0.30);
+  border-radius: 3px;
+  padding: 0.3rem 0.7rem;
+}
+
+/* bottom content */
+.hero-bottom {
+  bottom: 2.4rem;
+  left: 2.5rem;
+  right: 2.5rem;
+  z-index: 10;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.hero-cover {
+  width: 13rem;
+  aspect-ratio: 7/10;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  flex-shrink: 0;
+  position: relative;
+}
+
+@media (max-width: 600px) {
+  .hero-cover { width: 8rem; }
+  .hero { min-height: 80vw; }
+}
+
+.hero-title-block {
+  padding-bottom: 0.2rem;
+}
+
+.hero-meta-line {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.0rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #d4f55e;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+}
+
+.hero-anime-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.4rem, 4.5vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ededea;
+  line-height: 1.0;
+  margin: 0 0 0.7rem 0;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.2rem;
+  color: rgba(237,237,234,0.40);
+  margin-bottom: 1rem;
+}
+.hero-score { color: #d4f55e; font-weight: 700; font-size: 1.35rem; }
+.hero-sep   { margin: 0 0.4rem; color: rgba(237,237,234,0.15); }
+
+/* Current ep callout */
+.current-ep-callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(13,13,16,0.6);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-left: 2px solid rgba(212,245,94,0.5);
+  border-radius: 3px;
+  padding: 0.4rem 0.9rem;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(8px);
+  max-width: 100%;
+  overflow: hidden;
+}
+.current-ep-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #d4f55e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.current-ep-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
+  color: rgba(237,237,234,0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hero action buttons */
+.hero-actions {
+  gap: 0.5rem;
+}
+
+.btn-primary-action {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  background: #d4f55e;
+  color: #0d0d10;
+  border: none;
+  border-radius: 3px;
+  padding: 0.75rem 1.6rem;
+  cursor: pointer;
+  transition: opacity .12s;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-primary-action:hover:not(:disabled) { opacity: 0.85; }
+.btn-primary-action:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.8rem;
+  height: 3.8rem;
+  background: rgba(13,13,16,0.65);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 3px;
+  color: rgba(237,237,234,0.55);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background .12s, border-color .12s, color .12s;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.action-btn:hover {
+  background: rgba(237,237,234,0.10);
+  border-color: rgba(255,255,255,0.22);
+  color: #ededea;
+}
+
+/* ── Body grid ─────────────────────────────────────────────────────────── */
+.body-grid {
+  display: grid;
+  grid-template-columns: 1fr 38rem;
+  min-height: 50vh;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+@media (max-width: 992px) {
+  .body-grid {
+    grid-template-columns: 1fr;
+  }
+  .body-right {
+    border-left: none !important;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    max-height: 70vh !important;
+  }
+}
+
+/* ── Left column ───────────────────────────────────────────────────────── */
+.body-left {
+  padding: 2.4rem 2.5rem 4rem;
+  min-width: 0;
+}
+
+/* Meta table */
+.meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.meta-key {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(237,237,234,0.22);
+  width: 5.5rem;
+  flex-shrink: 0;
+  padding-top: 0.1rem;
+}
+
+.meta-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.98rem;
+  color: rgba(237,237,234,0.65);
+  line-height: 1.7;
+  flex: 1;
+}
+
+.meta-genre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  text-transform: capitalize;
+}
+.meta-genre :global(svg) {
+  color: rgba(212,245,94,0.55);
+  flex-shrink: 0;
+  width: 0.95rem !important;
+  height: 0.95rem !important;
+}
+
 .meta-inline-sep { color: rgba(237,237,234,0.18); }
-.meta-tags { color: rgba(237,237,234,0.6); }
-.meta-tag-rank { color: rgba(237,237,234,0.2); font-size: 0.8rem; margin-left: 0.2rem; }
-:global(.font-size-18) { font-family: 'IBM Plex Mono', monospace !important; font-size: 1.15rem !important; color: rgba(237,237,234,0.45) !important; letter-spacing: 0.04em; }
-:global(.font-size-18 svg) { color: #d4f55e !important; }
-:global(.btn-secondary) { font-family: 'IBM Plex Mono', monospace !important; font-size: 1.15rem !important; font-weight: 500 !important; letter-spacing: 0.08em !important; background: #d4f55e !important; color: #0d0d10 !important; border: none !important; border-radius: 3px !important; box-shadow: none !important; transition: opacity 0.12s; }
-:global(.btn-secondary:hover:not(:disabled)) { opacity: 0.85; }
-:global(.btn-secondary:disabled) { opacity: 0.3; cursor: not-allowed; }
-:global(.btn.bg-dark-light) { font-family: 'IBM Plex Mono', monospace !important; background: rgba(13,13,16,0.65) !important; border: 1px solid rgba(255,255,255,0.10) !important; color: rgba(237,237,234,0.55) !important; border-radius: 3px !important; box-shadow: none !important; backdrop-filter: blur(6px); transition: background 0.12s, border-color 0.12s, color 0.12s; }
-:global(.btn.bg-dark-light:hover) { background: rgba(237,237,234,0.10) !important; border-color: rgba(255,255,255,0.22) !important; color: #ededea !important; }
-hr { border-color: rgba(255,255,255,0.07) !important; opacity: 1; }
-:global(.font-size-16) { font-family: 'IBM Plex Mono', monospace !important; font-size: 1.15rem !important; font-weight: 300 !important; color: rgba(237,237,234,0.45) !important; line-height: 1.75 !important; }
-:global(.font-size-16 a) { color: #d4f55e !important; text-decoration: none; }
-:global(.font-size-16 a:hover) { text-decoration: underline; }
-:global(.more.text-muted) { font-family: 'IBM Plex Mono', monospace !important; font-size: 0.9rem !important; font-weight: 500 !important; letter-spacing: 0.14em !important; text-transform: uppercase !important; color: rgba(212,245,94,0.55) !important; transition: color 0.1s; }
-:global(.more.text-muted:hover) { color: #d4f55e !important; }
-.ext-dropdown { bottom: calc(100% + 0.8rem); right: 0; min-width: 20rem; max-width: 28rem; background: #111116; border: 1px solid rgba(255,255,255,0.10); border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); backdrop-filter: blur(14px); z-index: 200; padding: 0.5rem 0; }
-.ext-group-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(237,237,234,0.25); padding: 0.65rem 1.1rem 0.25rem; }
-.ext-item { display: flex; width: 100%; background: transparent; border: none; color: rgba(237,237,234,0.65); font-family: 'IBM Plex Mono', monospace; font-size: 1rem; padding: 0.6rem 1.1rem; text-align: left; cursor: pointer; gap: 0.8rem; align-items: center; transition: background 0.1s, color 0.1s; }
+.meta-tags       { color: rgba(237,237,234,0.6); }
+.meta-tag-rank   { color: rgba(237,237,234,0.2); font-size: 0.78rem; margin-left: 0.2rem; }
+
+/* Synopsis */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.8rem 0 1.2rem;
+}
+.section-divider hr {
+  flex: 1;
+  border-color: rgba(255,255,255,0.07) !important;
+  opacity: 1;
+}
+.section-divider span {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.05rem;
+  color: rgba(237,237,234,0.35);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.synopsis-text {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 1.1rem !important;
+  font-weight: 300 !important;
+  color: rgba(237,237,234,0.42) !important;
+  line-height: 1.78 !important;
+}
+.synopsis-text :global(a) { color: #d4f55e !important; text-decoration: none; }
+.synopsis-text :global(a:hover) { text-decoration: underline; }
+
+/* ── Right column: episode list ────────────────────────────────────────── */
+.body-right {
+  border-left: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.ep-list-header {
+  padding: 1.4rem 1.6rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  background: #0d0d10;
+}
+
+.ep-list-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(237,237,234,0.25);
+}
+
+.ep-order-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 3px;
+  color: rgba(237,237,234,0.35);
+  padding: 0.3rem;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.ep-order-btn:hover {
+  background: rgba(212,245,94,0.08);
+  border-color: #d4f55e;
+  color: #d4f55e;
+}
+
+/* Episode list fills remaining height */
+.body-right :global(.episode-list) {
+  flex: 1;
+  overflow-y: auto;
+  height: 0;
+  min-height: 0;
+}
+
+/* ── Dropdowns ─────────────────────────────────────────────────────────── */
+.ext-dropdown {
+  bottom: calc(100% + 0.8rem);
+  right: 0;
+  min-width: 20rem;
+  max-width: 28rem;
+  background: #111116;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 5px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(14px);
+  z-index: 200;
+  padding: 0.5rem 0;
+}
+.ext-group-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(237,237,234,0.25);
+  padding: 0.65rem 1.1rem 0.25rem;
+}
+.ext-item {
+  display: flex;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: rgba(237,237,234,0.65);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.98rem;
+  padding: 0.6rem 1.1rem;
+  text-align: left;
+  cursor: pointer;
+  gap: 0.8rem;
+  align-items: center;
+  transition: background .1s, color .1s;
+}
 .ext-item:hover { background: rgba(237,237,234,0.07); color: #ededea; }
 .ext-item-official { color: #d4f55e; }
 .ext-item-official:hover { background: rgba(212,245,94,0.09) !important; }
-.ext-icon { width: 1.5rem; height: 1.5rem; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
+.ext-icon { width: 1.4rem; height: 1.4rem; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
 :global(.ext-icon-svg) { flex-shrink: 0; color: rgba(237,237,234,0.3); }
 :global(.ext-icon-svg-official) { color: #d4f55e !important; }
 .ext-site { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ext-lang { font-size: 0.75rem; color: rgba(237,237,234,0.25); text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
-.ext-tag { font-size: 0.7rem; color: rgba(212,245,94,0.6); background: rgba(212,245,94,0.08); padding: 0.1rem 0.4rem; border-radius: 2px; margin-left: 0.4rem; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
-:global(.player-shell) { border-radius: 0.6rem; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08); background: #0d0d10; }
-:global(.wm-calc) { width: 100%; max-width: min(max(70vw, 100rem), calc(75vh * (16 / 9))); }
-:global(.player-header) { display: flex; align-items: center; gap: 1rem; padding: 0 0.75rem 0 1.4rem; height: 4.2rem; background: linear-gradient(90deg, rgba(212,245,94,0.06) 0%, transparent 60%); border-bottom: 1px solid rgba(255,255,255,0.07); }
-:global(.player-badge) { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.22em; color: #d4f55e; background: rgba(212,245,94,0.1); border: 1px solid rgba(212,245,94,0.28); border-radius: 3px; padding: 0.18rem 0.5rem; flex-shrink: 0; }
-:global(.player-title) { font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; font-weight: 500; color: rgba(237,237,234,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-:global(.player-close) { flex-shrink: 0; background: transparent; border: none; color: rgba(237,237,234,0.35); cursor: pointer; padding: 0.55rem; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: color 0.12s, background 0.12s; }
-:global(.player-close:hover) { color: #ededea; background: rgba(237,237,234,0.08); }
-:global(.player-body) { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+.ext-lang { font-size: 0.73rem; color: rgba(237,237,234,0.25); text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
+.ext-tag  { font-size: 0.68rem; color: rgba(212,245,94,0.6); background: rgba(212,245,94,0.08); padding: 0.1rem 0.4rem; border-radius: 2px; margin-left: 0.4rem; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+
+/* ── Theme player modal ────────────────────────────────────────────────── */
+:global(.player-shell) {
+  border-radius: 0.6rem;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08);
+  background: #0d0d10;
+}
+:global(.wm-calc) {
+  width: 100%;
+  max-width: min(max(70vw, 100rem), calc(75vh * (16 / 9)));
+}
+:global(.player-header) {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 0.75rem 0 1.4rem;
+  height: 4.2rem;
+  background: linear-gradient(90deg, rgba(212,245,94,0.06) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+:global(.player-badge) {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #d4f55e;
+  background: rgba(212,245,94,0.1);
+  border: 1px solid rgba(212,245,94,0.28);
+  border-radius: 3px;
+  padding: 0.18rem 0.5rem;
+  flex-shrink: 0;
+}
+:global(.player-title) {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: rgba(237,237,234,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+:global(.player-body) {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #000;
+  overflow: hidden;
+}
 :global(.player-thumb) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 :global(.player-video) { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-.banner-audio-btn { display: inline-flex; align-items: center; gap: 0.55rem; background: rgba(13,13,16,0.65); border: 1px solid rgba(255,255,255,0.1); border-left: 2px solid rgba(212,245,94,0.5); border-radius: 3px; padding: 0.3rem 0.75rem 0.3rem 0.65rem; color: rgba(237,237,234,0.55); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.06em; cursor: pointer; backdrop-filter: blur(8px); transition: background 0.12s, border-color 0.12s, color 0.12s; white-space: nowrap; flex-shrink: 0; min-width: 0; }
-.banner-audio-btn:hover { background: rgba(212,245,94,0.07); border-color: rgba(255,255,255,0.14); border-left-color: #d4f55e; color: #d4f55e; }.banner-bars { display: flex; align-items: flex-end; gap: 2px; height: 1rem; }
+
+/* ── Banner audio button ───────────────────────────────────────────────── */
+.banner-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(13,13,16,0.65);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-left: 2px solid rgba(212,245,94,0.5);
+  border-radius: 3px;
+  padding: 0.3rem 0.75rem 0.3rem 0.65rem;
+  color: rgba(237,237,234,0.55);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.73rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background .12s, border-color .12s, color .12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.banner-audio-btn:hover {
+  background: rgba(212,245,94,0.07);
+  border-left-color: #d4f55e;
+  color: #d4f55e;
+}
+.banner-bars { display: flex; align-items: flex-end; gap: 2px; height: 1rem; }
 .banner-bars span { display: block; width: 3px; background: #d4f55e; border-radius: 2px; animation: banner-bar 0.8s ease-in-out infinite alternate; }
 .banner-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
-.banner-bars span:nth-child(2) { height: 80%; animation-delay: 0.15s; }
-.banner-bars span:nth-child(3) { height: 60%; animation-delay: 0.3s; }
-.banner-bars span:nth-child(4) { height: 100%; animation-delay: 0.45s; }
+.banner-bars span:nth-child(2) { height: 80%; animation-delay: .15s; }
+.banner-bars span:nth-child(3) { height: 60%; animation-delay: .3s; }
+.banner-bars span:nth-child(4) { height: 100%; animation-delay: .45s; }
 @keyframes banner-bar { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
-:global(.anime-details) { -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%); mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%); }
-.banner-video { object-fit: cover; pointer-events: none; }
+
+/* ── Utility ───────────────────────────────────────────────────────────── */
+.min-width-0 { min-width: 0; }
+.w-18 { width: 1.8rem; height: 1.8rem; }
+.mr-8 { margin-right: 0.5rem; }
+hr { border-color: rgba(255,255,255,0.07) !important; opacity: 1; }
 </style>
