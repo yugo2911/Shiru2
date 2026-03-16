@@ -236,7 +236,7 @@
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .t-name { font-size:1.4rem; font-weight:300; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg); }
   .t-badge { font-size:0.9rem; font-weight:500; background:var(--acc); color:var(--bg); padding:0.2em 0.8em; border-radius:3px; flex-shrink:0; letter-spacing:0.04em; }
-  .behind-pill { flex-shrink:0; font-size:0.78rem; font-weight:600; letter-spacing:0.06em; color:#f59e5e; border:1px solid rgba(245,158,94,0.3); border-radius:3px; padding:0.15em 0.55em; font-family:'IBM Plex Mono',monospace; opacity:0.85; }
+  .behind-pill { flex-shrink:0; font-size:0.78rem; font-weight:600; letter-spacing:0.06em; color: var(--acc); padding:0.15em 0.55em; font-family:'IBM Plex Mono',monospace; opacity:0.65; }
   .pane-week { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
   .week-header { flex-shrink:0; padding:3rem 3rem 0; border-bottom:1px solid var(--line); background:var(--bg); }
   .week-title-row { margin-bottom:1.7rem; }
