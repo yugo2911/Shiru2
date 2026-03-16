@@ -111,8 +111,7 @@
             {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
             {@const behind = getBehind(media, node)}
             <div class='t-row' class:t-up={up} class:t-past={past} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
-              <span class='t-time'>{fmtTime(airingAt)}</span>
-              {#if status}<span class='status-dot' style='--sc:{status.color}' title={status.label}></span>{/if}
+              <span class='t-time' style={status ? `color:${status.color}` : ''} title={status?.label ?? ''}>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
               {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
               {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
@@ -150,8 +149,7 @@
                 {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
                 {@const behind = getBehind(media, node)}
                 <div class='w-row' use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
-                  <span class='w-time'>{fmtTime(airingAt)}</span>
-                  {#if status}<span class='status-dot' style='--sc:{status.color}' title={status.label}></span>{/if}
+                  <span class='w-time' style={status ? `color:${status.color}` : ''} title={status?.label ?? ''}>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
                   {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
                 </div>
@@ -188,7 +186,6 @@
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .t-name { font-size:1.4rem; font-weight:300; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg); }
   .t-badge { font-size:0.9rem; font-weight:500; background:var(--acc); color:var(--bg); padding:0.2em 0.8em; border-radius:3px; flex-shrink:0; letter-spacing:0.04em; }
-  .status-dot { width:7px; height:7px; border-radius:50%; background:var(--sc); flex-shrink:0; opacity:0.85; box-shadow:0 0 6px var(--sc); }
   .behind-pill { flex-shrink:0; font-size:0.78rem; font-weight:600; letter-spacing:0.06em; color:#f59e5e; border:1px solid rgba(245,158,94,0.3); border-radius:3px; padding:0.15em 0.55em; font-family:'IBM Plex Mono',monospace; opacity:0.85; }
   .pane-week { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
   .week-header { flex-shrink:0; padding:3rem 3rem 0; border-bottom:1px solid var(--line); background:var(--bg); }
@@ -206,9 +203,9 @@
   .day-abbr { font-family:'Syne',sans-serif; font-size:2.4rem; font-weight:800; color:var(--fg); letter-spacing:-0.02em; }
   .day-full { font-size:1rem; color:var(--dim); letter-spacing:0.08em; text-transform:uppercase; }
   .day-entries { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
-  .w-row { display:flex; align-items:center; gap:1.1rem; padding:0.8rem 2.25rem; border-bottom:1px solid var(--line); cursor:pointer; transition:background 0.1s,padding-left 0.1s; }
+  .w-row { display:flex; align-items:center; gap:1.1rem; padding:0.8rem 2.25rem; border-bottom:1px solid var(--line); border-left:3px solid transparent; cursor:pointer; transition:background 0.1s,border-color 0.1s; }
   .w-row:last-child { border-bottom:none; }
-  .w-row:hover { background:var(--faint); padding-left:2.8rem; }
+  .w-row:hover { background:var(--faint); border-left-color:var(--acc); }
   .w-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .w-name { font-size:1.4rem; font-weight:300; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
   .preview { position:fixed; top:var(--py); left:var(--px); transform:translate(28px,-55%); pointer-events:none; z-index:9999; animation:pop 0.13s ease forwards; }
