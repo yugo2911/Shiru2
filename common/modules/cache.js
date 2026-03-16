@@ -366,6 +366,14 @@ function createBatchWriter(userID, firstFlushDelay = 10_000, subsequentFlushDela
   }
 }
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    for (const writer of batchWriters.values()) {
+      writer.flushNow()
+    }
+  })
+}
+
 /** @type {import('simple-store-svelte').Writable<Record<number, import('./al.d.ts').Media>>} */
 export let mediaCache
 
