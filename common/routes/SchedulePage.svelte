@@ -5,7 +5,7 @@
 
   const STATUS_MAP = {
     CURRENT: { label: 'Watching', color: '#d4f55e' },
-    PLANNING: { label: 'Planning', color: '#5eaff5' },
+    PLANNING: { label: 'Planning', color: '#90bfed' },
     COMPLETED: { label: 'Done', color: '#a78bfa' },
     PAUSED: { label: 'Paused', color: '#f59e5e' },
     DROPPED: { label: 'Dropped', color: '#f55e5e' },
@@ -110,8 +110,8 @@
             {@const past = airingAt < Math.floor(now.getTime()/1000)}
             {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
             {@const behind = getBehind(media, node)}
-            <div class='t-row' class:t-up={up} class:t-past={past} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
-              <span class='t-time' style={status ? `color:${status.color}` : ''} title={status?.label ?? ''}>{fmtTime(airingAt)}</span>
+            <div class='t-row' class:t-up={up} class:t-past={past} style={status ? `--row-hc:${status.color}` : ''} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
+              <span class='t-time'>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
               {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
               {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
@@ -148,8 +148,8 @@
                 {@const node = nextAiring(media?.airingSchedule?.nodes)}
                 {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
                 {@const behind = getBehind(media, node)}
-                <div class='w-row' use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
-                  <span class='w-time' style={status ? `color:${status.color}` : ''} title={status?.label ?? ''}>{fmtTime(airingAt)}</span>
+                <div class='w-row' style={status ? `--row-hc:${status.color}` : ''} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
+                  <span class='w-time'>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
                   {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
                 </div>
@@ -180,7 +180,7 @@
   .date-label { font-size:1rem; color:rgba(237,237,234,0.22); margin-top:0.3rem; }
   .today-scroll { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
   .t-row { display:flex; align-items:center; gap:1rem; padding:0.8rem 2.25rem; border-left:3px solid transparent; cursor:pointer; transition:background 0.1s,border-color 0.1s; }
-  .t-row:hover { background:var(--faint); border-left-color:var(--acc); }
+  .t-row:hover { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); }
   .t-up { background:var(--acc-dim); border-left-color:var(--acc) !important; }
   .t-past { opacity:0.3; }
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
@@ -205,7 +205,7 @@
   .day-entries { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
   .w-row { display:flex; align-items:center; gap:1.1rem; padding:0.8rem 2.25rem; border-bottom:1px solid var(--line); border-left:3px solid transparent; cursor:pointer; transition:background 0.1s,border-color 0.1s; }
   .w-row:last-child { border-bottom:none; }
-  .w-row:hover { background:var(--faint); border-left-color:var(--acc); }
+  .w-row:hover { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); }
   .w-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .w-name { font-size:1.4rem; font-weight:300; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
   .preview { position:fixed; top:var(--py); left:var(--px); transform:translate(28px,-55%); pointer-events:none; z-index:9999; animation:pop 0.13s ease forwards; }
