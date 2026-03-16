@@ -1,15 +1,19 @@
 <script context='module'>
   import { anilistClient } from '@/modules/anilist.js'
-  import { nextAiring, statusColorMap } from '@/modules/anime/anime.js'
+  import { nextAiring } from '@/modules/anime/anime.js'
   import { animeSchedule } from '@/modules/anime/animeschedule.js'
+  import { cache, cacheReady, caches } from '@/modules/cache.js'
+
+  const SCHEDULE_CACHE_KEY = 'schedule_page_ids'
+  const SCHEDULE_TTL = 60 * 60 * 1000 // 1 hour
 
   const STATUS_MAP = {
-    CURRENT: { label: 'Watching', color: '#d4f55e' },
-    PLANNING: { label: 'Planning', color: '#90bfed' },
-    COMPLETED: { label: 'Done', color: '#a78bfa' },
-    PAUSED: { label: 'Paused', color: '#f59e5e' },
-    DROPPED: { label: 'Dropped', color: '#f55e5e' },
-    REPEATING: { label: 'Rewatch', color: '#5ef5d4' }
+    CURRENT:   { label: 'Watching', color: '#d4f55e' },
+    PLANNING:  { label: 'Planning', color: '#90bfed' },
+    COMPLETED: { label: 'Done',     color: '#a78bfa' },
+    PAUSED:    { label: 'Paused',   color: '#f59e5e' },
+    DROPPED:   { label: 'Dropped',  color: '#f55e5e' },
+    REPEATING: { label: 'Rewatch',  color: '#5ef5d4' }
   }
 
   const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
@@ -21,30 +25,54 @@
   }
 
   async function fetchAllScheduleEntries() {
+    await cacheReady()
+
+    // Check for a cached, non-expired entry first.
+    // cachedEntry returns a Promise (resolved with data) or null.
+    const cached = cache.cachedEntry(caches.QUERIES, SCHEDULE_CACHE_KEY)
+    if (cached) return cached
+
+    // No valid cache — fetch fresh data.
     const airingLists = await animeSchedule.subAiringLists.value
     const ids = airingLists.map(e => e?.id).filter(Boolean)
-    const res = await anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 })
-    if (!res?.data && res?.errors) throw res.errors[0]
-    
-    const media = res.data.Page.media
-      .filter((m,i,s) => nextAiring(m?.airingSchedule?.nodes)?.airingAt && s.findIndex(x => x?.id === m?.id) === i)
-      .sort((a,b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
-    
-    return { data: { Page: { media } } }
+
+    // cacheEntry handles the fetch, media normalisation into mediaCache,
+    // and persistence via the batch writer — all in one call.
+    // The `fillLists` key is intentionally omitted: schedule data has no
+    // alternate-auth user-list to attach.
+    return cache.cacheEntry(
+      caches.QUERIES,
+      SCHEDULE_CACHE_KEY,
+      {},   // vars — nothing extra needed
+      anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 }),
+      Date.now() + SCHEDULE_TTL
+    )
   }
 
   function buildGroups(media) {
     const todayIdx = new Date().getDay()
-    const grouped = {}
+
+    // Single pass: bucket each item into its airing day.
+    const grouped = new Map(DAYS.map(d => [d, []]))
+    const seen = new Set()
+
     for (const m of media) {
+      if (seen.has(m?.id)) continue
       const node = nextAiring(m?.airingSchedule?.nodes)
       if (!node?.airingAt) continue
-      const day = DAYS[new Date(node.airingAt * 1000).getDay()]
-      ;(grouped[day] ??= []).push({ media: m, airingAt: node.airingAt, episode: node.episode })
+      seen.add(m.id)
+      grouped.get(DAYS[new Date(node.airingAt * 1000).getDay()])
+             .push({ media: m, airingAt: node.airingAt, episode: node.episode })
     }
-    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
-      .filter(d => grouped[d])
-      .map(day => ({ day, items: grouped[day] }))
+
+    // Sort each day's entries by air time, then rotate so today comes first.
+    const order = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
+    return order
+      .filter(d => grouped.get(d).length > 0)
+      .map(day => ({
+        day,
+        items: grouped.get(day).sort((a, b) => a.airingAt - b.airingAt)
+      }))
   }
 </script>
 
@@ -62,7 +90,6 @@
     return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
   }
   const isUpNext = (ts, now) => { const d = ts - Math.floor(now.getTime()/1000); return d > 0 && d < 3600 }
-  const statusColor = status => statusColorMap?.[status] ?? null
 
   let groups = [], now = new Date()
   let hoveredMedia = null, hoverX = 0, hoverY = 0
@@ -83,6 +110,13 @@
   function scrollToDay(day) {
     activeDay = day
     weekEl?.querySelector(`[data-day="${day}"]`)?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' })
+  }
+
+  function handleKeydown(e, media) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      modal.open(modal.ANIME_DETAILS, media)
+    }
   }
 
   $: todayGroup = groups.find(g => g.day === TODAY) ?? null
@@ -110,7 +144,15 @@
             {@const past = airingAt < Math.floor(now.getTime()/1000)}
             {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
             {@const behind = getBehind(media, node)}
-            <div class='t-row' class:t-up={up} class:t-past={past} style={status ? `--row-hc:${status.color}` : ''} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
+            <div 
+              class='t-row' class:t-up={up} class:t-past={past} 
+              style={status ? `--row-hc:${status.color}` : ''} 
+              role="button" tabindex="0"
+              use:click={()=>modal.open(modal.ANIME_DETAILS,media)} 
+              on:keydown={e => handleKeydown(e, media)}
+              on:mousemove={e=>handleMouseMove(e,media)} 
+              on:mouseleave={()=>hoveredMedia=null}
+            >
               <span class='t-time'>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
               {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
@@ -148,7 +190,15 @@
                 {@const node = nextAiring(media?.airingSchedule?.nodes)}
                 {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
                 {@const behind = getBehind(media, node)}
-                <div class='w-row' style={status ? `--row-hc:${status.color}` : ''} use:click={()=>modal.open(modal.ANIME_DETAILS,media)} on:mousemove={e=>handleMouseMove(e,media)} on:mouseleave={()=>hoveredMedia=null}>
+                <div 
+                  class='w-row' 
+                  style={status ? `--row-hc:${status.color}` : ''} 
+                  role="button" tabindex="0"
+                  use:click={()=>modal.open(modal.ANIME_DETAILS,media)} 
+                  on:keydown={e => handleKeydown(e, media)}
+                  on:mousemove={e=>handleMouseMove(e,media)} 
+                  on:mouseleave={()=>hoveredMedia=null}
+                >
                   <span class='w-time'>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
                   {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
@@ -180,7 +230,7 @@
   .date-label { font-size:1rem; color:rgba(237,237,234,0.22); margin-top:0.3rem; }
   .today-scroll { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
   .t-row { display:flex; align-items:center; gap:1rem; padding:0.8rem 2.25rem; border-left:3px solid transparent; cursor:pointer; transition:background 0.1s,border-color 0.1s; }
-  .t-row:hover { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); }
+  .t-row:hover, .t-row:focus { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); outline:none; }
   .t-up { background:var(--acc-dim); border-left-color:var(--acc) !important; }
   .t-past { opacity:0.3; }
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
@@ -205,7 +255,7 @@
   .day-entries { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
   .w-row { display:flex; align-items:center; gap:1.1rem; padding:0.8rem 2.25rem; border-bottom:1px solid var(--line); border-left:3px solid transparent; cursor:pointer; transition:background 0.1s,border-color 0.1s; }
   .w-row:last-child { border-bottom:none; }
-  .w-row:hover { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); }
+  .w-row:hover, .w-row:focus { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); outline:none; }
   .w-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .w-name { font-size:1.4rem; font-weight:300; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
   .preview { position:fixed; top:var(--py); left:var(--px); transform:translate(28px,-55%); pointer-events:none; z-index:9999; animation:pop 0.13s ease forwards; }
