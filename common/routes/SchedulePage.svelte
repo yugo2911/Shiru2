@@ -26,53 +26,48 @@
 
   async function fetchAllScheduleEntries() {
     await cacheReady()
-
-    // Check for a cached, non-expired entry first.
-    // cachedEntry returns a Promise (resolved with data) or null.
     const cached = cache.cachedEntry(caches.QUERIES, SCHEDULE_CACHE_KEY)
     if (cached) return cached
 
-    // No valid cache — fetch fresh data.
     const airingLists = await animeSchedule.subAiringLists.value
     const ids = airingLists.map(e => e?.id).filter(Boolean)
 
-    // cacheEntry handles the fetch, media normalisation into mediaCache,
-    // and persistence via the batch writer — all in one call.
-    // The `fillLists` key is intentionally omitted: schedule data has no
-    // alternate-auth user-list to attach.
     return cache.cacheEntry(
       caches.QUERIES,
       SCHEDULE_CACHE_KEY,
-      {},   // vars — nothing extra needed
+      {},
       anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 }),
       Date.now() + SCHEDULE_TTL
     )
   }
 
   function buildGroups(media) {
+    const nowTs = Math.floor(Date.now() / 1000)
     const todayIdx = new Date().getDay()
-
-    // Single pass: bucket each item into its airing day.
     const grouped = new Map(DAYS.map(d => [d, []]))
     const seen = new Set()
 
     for (const m of media) {
       if (seen.has(m?.id)) continue
-      const node = nextAiring(m?.airingSchedule?.nodes)
+      
+      // Look for the node closest to "now" (either just passed or upcoming)
+      // instead of strictly using nextAiring() which ignores today's past shows.
+      const nodes = m?.airingSchedule?.nodes ?? []
+      const node = nodes.find(n => Math.abs(n.airingAt - nowTs) < 86400 * 3) || nextAiring(nodes)
+      
       if (!node?.airingAt) continue
       seen.add(m.id)
-      grouped.get(DAYS[new Date(node.airingAt * 1000).getDay()])
+      
+      const airDate = new Date(node.airingAt * 1000)
+      grouped.get(DAYS[airDate.getDay()])
              .push({ media: m, airingAt: node.airingAt, episode: node.episode })
     }
 
-    // Sort each day's entries by air time, then rotate so today comes first.
     const order = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
-    return order
-      .filter(d => grouped.get(d).length > 0)
-      .map(day => ({
-        day,
-        items: grouped.get(day).sort((a, b) => a.airingAt - b.airingAt)
-      }))
+    return order.map(day => ({
+      day,
+      items: (grouped.get(day) || []).sort((a, b) => a.airingAt - b.airingAt)
+    }))
   }
 </script>
 
@@ -120,7 +115,8 @@
   }
 
   $: todayGroup = groups.find(g => g.day === TODAY) ?? null
-  $: otherGroups = groups.filter(g => g.day !== TODAY)
+  // Keep Today in the tab list if you want to be able to scroll back to it
+  $: navGroups = groups.filter(g => g.items.length > 0)
 </script>
 
 <svelte:body on:mousemove={e => { if (hoveredMedia) { hoverX = e.clientX; hoverY = e.clientY } }} />
@@ -137,13 +133,12 @@
         <div class='date-label'>{now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
       </div>
       <div class='today-scroll'>
-        {#if todayGroup}
-          {#each todayGroup.items as {media, airingAt}}
-            {@const node = nextAiring(media?.airingSchedule?.nodes)}
+        {#if todayGroup && todayGroup.items.length}
+          {#each todayGroup.items as {media, airingAt, episode}}
             {@const up = isUpNext(airingAt, now)}
             {@const past = airingAt < Math.floor(now.getTime()/1000)}
             {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
-            {@const behind = getBehind(media, node)}
+            {@const behind = getBehind(media, {episode})}
             <div 
               class='t-row' class:t-up={up} class:t-past={past} 
               style={status ? `--row-hc:${status.color}` : ''} 
@@ -155,7 +150,7 @@
             >
               <span class='t-time'>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
-              {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
+              {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
               {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
             </div>
           {/each}
@@ -170,7 +165,7 @@
           <div class='pane-title'>This Week</div>
         </div>
         <nav class='day-tabs'>
-          {#each otherGroups as g}
+          {#each navGroups as g}
             <button class='tab' class:tab-active={activeDay===g.day} on:click={()=>scrollToDay(g.day)}>
               {g.day.slice(0,3).toUpperCase()}
               <span class='tab-count'>{g.items.length}</span>
@@ -179,17 +174,16 @@
         </nav>
       </div>
       <div class='week-cols' bind:this={weekEl}>
-        {#each otherGroups as group}
+        {#each navGroups as group}
           <div class='day-col' data-day={group.day}>
             <div class='day-heading'>
               <span class='day-abbr'>{group.day.slice(0,3).toUpperCase()}</span>
               <span class='day-full'>{group.day}</span>
             </div>
             <div class='day-entries'>
-              {#each group.items as {media, airingAt}}
-                {@const node = nextAiring(media?.airingSchedule?.nodes)}
+              {#each group.items as {media, airingAt, episode}}
                 {@const status = STATUS_MAP[media?.mediaListEntry?.status]}
-                {@const behind = getBehind(media, node)}
+                {@const behind = getBehind(media, {episode})}
                 <div 
                   class='w-row' 
                   style={status ? `--row-hc:${status.color}` : ''} 
@@ -201,7 +195,7 @@
                 >
                   <span class='w-time'>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
-                  {#if behind > 0}<span class='behind-pill'>−{behind} ep</span>{/if}
+                  {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
                 </div>
               {/each}
             </div>
@@ -236,7 +230,7 @@
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .t-name { font-size:1.4rem; font-weight:300; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg); }
   .t-badge { font-size:0.9rem; font-weight:500; background:var(--acc); color:var(--bg); padding:0.2em 0.8em; border-radius:3px; flex-shrink:0; letter-spacing:0.04em; }
-  .behind-pill { flex-shrink:0; font-size:0.78rem; font-weight:600; letter-spacing:0.06em; color: var(--acc); padding:0.15em 0.55em; font-family:'IBM Plex Mono',monospace; opacity:0.65; }
+  .behind-cue { flex-shrink:0; font-size:0.78rem; font-weight:600; letter-spacing:0.06em; color: var(--acc); padding:0.15em 0.55em; font-family:'IBM Plex Mono',monospace; opacity:0.65; }
   .pane-week { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
   .week-header { flex-shrink:0; padding:3rem 3rem 0; border-bottom:1px solid var(--line); background:var(--bg); }
   .week-title-row { margin-bottom:1.7rem; }
