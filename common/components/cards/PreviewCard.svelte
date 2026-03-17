@@ -48,7 +48,7 @@
   }
 </script>
 
-<div class='position-absolute w-350 h-full card-popup top-0 bottom-0 m-auto z-30 pointer fade-change overflow-hidden clip-0-rounded' in:fadeIn out:fadeOut bind:this={element} on:scroll={(e) => e.target.scrollTop = 0}>
+<div class='position-absolute w-350 h-full absolute-container top-0 bottom-0 m-auto bg-dark-light z-30 rounded pointer fade-change overflow-hidden clip-0-rounded' in:fadeIn out:fadeOut bind:this={element} on:scroll={(e) => e.target.scrollTop = 0}>
   <div class='banner position-relative bg-black'>
     <div class='ratio-16-9 w-full h-full clip-0'>
       <SmartImage class='img-cover w-full h-full' images={[media.bannerImage, ...(media.trailer?.id ? [`https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`] : []), media.coverImage?.extraLarge ]}/>
@@ -168,53 +168,6 @@
 </div>
 
 <style>
-  
-
-  /* Position within parent */
-  :global(.card-popup.w-350) {
-    left: -100%;
-    right: -100%;
-  }
-
-  /* Anime title */
-  .font-scale-20 {
-    font-family: var(--font-display) !important;
-    font-size: 1.7rem !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em !important;
-    color: var(--card-fg) !important;
-  }
-
-  /* Watch / Continue button */
-  .btn-secondary {
-    font-family: var(--font-mono) !important;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border: none !important;
-    border-radius: 3px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em !important;
-    font-size: 1.15rem !important;
-    transition: opacity 0.12s;
-  }
-  .btn-secondary:hover:not(:disabled) { opacity: 0.85; }
-  .btn-secondary:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  /* Square buttons (favourite, score) */
-  .btn-square {
-    border: 1px solid var(--card-line) !important;
-    border-radius: 3px !important;
-    background: rgba(237,237,234,0.04) !important;
-    color: var(--card-dim) !important;
-    transition: background 0.1s, color 0.1s;
-  }
-  .btn-square:hover { background: rgba(237,237,234,0.08) !important; color: var(--card-fg) !important; }
-
-  /* Metadata badges */
-  .details {
-    font-family: var(--font-mono);
-    gap: 0.3rem;
-  }
   .details > span:not(:last-child) {
     margin-right: .2rem;
     margin-bottom: .1rem;
@@ -229,27 +182,6 @@
     height: 100%;
     background: var(--preview-card-end-gradient);
   }
-  .badge {
-    background: var(--card-faint) !important;
-    color: var(--card-dim) !important;
-    border-radius: 3px !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.04em;
-    font-family: var(--font-mono) !important;
-  }
-  .font-scale-14 {
-    font-size: 1rem !important;
-    font-family: var(--font-mono) !important;
-  }
-
-  /* Description text */
-  .description {
-    color: var(--card-dim);
-    font-size: 1.1rem;
-    line-height: 1.65;
-  }
-
-  /* Banner gradient overlay */
   .banner::after {
     content: '';
     position: absolute;
@@ -260,16 +192,14 @@
     height: 100.5%;
     background: var(--preview-card-trailer-gradient);
   }
-
-  /* Mute button */
-  .mute { color: --fg; }
-
+  .absolute-container {
+    will-change: transform, opacity, bottom;
+    left: -100%;
+    right: -100%;
+  }
   .preview-safe-area {
     margin-top: -1rem !important;
     margin-left: -1rem !important;
     width: calc(100% + 2rem) !important;
   }
-
-  .text-success { color: var(--card-accent) !important; }
-  .text-danger  { color: #ff6b6b !important; }
 </style>

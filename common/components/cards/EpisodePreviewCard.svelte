@@ -34,7 +34,7 @@
   $: resolvedHash = media?.id && !data.failed && getHash(media.id, { episode: data?.episode, client: true, batchGuess: true }, false, true)
 </script>
 
-<div class='position-absolute w-400 mw-full mh-400 card-popup top-0 m-auto z-30 overflow-hidden pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
+<div class='position-absolute w-400 mw-full mh-400 absolute-container top-0 m-auto bg-dark-light z-30 rounded overflow-hidden pointer d-flex flex-column fade-change' in:fadeIn out:fadeOut on:introend={() => animating = false} on:outrostart={() => animating = true} bind:this={element}>
   <div class='image h-200 w-full position-relative d-flex justify-content-between align-items-end text-white'>
     <SmartImage class='img-cover w-full h-full position-absolute rounded p-0 m-0 {!(data.episodeData?.image || media?.bannerImage) && media?.genres?.includes(`Hentai`) ? `cover-rotated cr-400` : ``}' color={media?.coverImage.color || 'var(--tertiary-color)'} images={[episodeThumbnail, './404_episode.png']}/>
     {#if data.episodeData?.video && !animating}
@@ -72,12 +72,12 @@
       {/if}
     </div>
     {#if completed}
-      <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='card-progress-bar w-full' />
+      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+        <div class='progress-bar w-full' />
       </div>
     {:else if $progress > 0}
-      <div class='card-progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
-        <div class='card-progress-bar' style='width: {$progress}%' />
+      <div class='progress container-fluid position-absolute z-10' style='height: 2px; min-height: 2px;'>
+        <div class='progress-bar' style='width: {$progress}%' />
       </div>
     {/if}
   </div>
@@ -191,76 +191,38 @@
 </div>
 
 <style>
-  
-
-  /* Position within parent — overrides card-popup defaults */
-  :global(.card-popup.mh-400) {
-    left: -100%;
-    right: -100%;
-  }
-
   .overlay {
-    background-color: rgba(13,13,16,0.92);
-    backdrop-filter: blur(4px);
+    background-color: hsla(var(--black-color-hsl), 0.9);
   }
   .description {
     display: -webkit-box !important;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    color: var(--card-dim);
-    font-size: 1.1rem;
-    line-height: 1.6;
+  }
+  .absolute-container {
+    will-change: transform, opacity, bottom;
+    left: -100%;
+    right: -100%;
   }
   .title {
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     word-break: break-all;
-    font-family: var(--font-mono);
   }
-  .font-weight-very-bold {
-    font-family: var(--font-display) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
-    color: var(--card-fg) !important;
-    font-size: 1.5rem !important;
-  }
-  .font-weight-bold {
-    color: var(--card-accent) !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.06em;
-  }
-  .text-muted {
-    color: var(--card-dim) !important;
-  }
-  .text-white {
-    color: var(--card-fg) !important;
-  }
-  /* "Continue Anyway" button */
-  .cont-button {
-    font-family: var(--font-mono) !important;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border: none !important;
-    border-radius: 3px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em;
-    transition: opacity 0.12s;
-  }
-  .cont-button:hover { opacity: 0.85; }
-
   .image:after {
     content: '';
     position: absolute;
     left: 0;
     width: 100%;
-    bottom: -1px;
-    height: calc(100% + 1px);
+    bottom: -1px; /* Extend 1px below to cover gap */
+    height: calc(100% + 1px); /* Slightly taller */
     background: var(--episode-preview-card-gradient);
   }
-  /* metadata row icons */
-  :global(.lucide) {
-    color: var(--card-dim);
+  .list-status-circle {
+    background: var(--statusColor);
+    height: 1.1rem;
+    width: 1.1rem;
+    border-radius: 50%;
   }
 </style>
