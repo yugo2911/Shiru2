@@ -65,6 +65,7 @@
   import { modal } from '@/modules/navigation.js'
 
   let groups = [], now = new Date(), hoveredMedia = null, hoverX = 0, hoverY = 0, is12h = false
+  let filterStatus = 'ALL'
 
   const fmtTime = (ts, force12) => new Date(ts * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12: force12 ?? is12h })
   const isUpNext = (ts, current) => { const d = ts - Math.floor(current.getTime()/1000); return d > 0 && d < 3600 }
@@ -84,8 +85,12 @@
   function handleMouseMove(e, media) { hoveredMedia = media; hoverX = e.clientX; hoverY = e.clientY }
   const toggleClock = () => { is12h = !is12h }
 
-  $: todayGroup = groups[0] || null
-  $: navGroups = groups.slice(1).filter(g => g.items.length > 0)
+  $: filteredGroups = groups.map(g => ({
+    ...g,
+    items: filterStatus === 'ALL' ? g.items : g.items.filter(i => i.media?.mediaListEntry?.status === filterStatus)
+  }))
+  $: todayGroup = filteredGroups[0] || null
+  $: navGroups = filteredGroups.slice(1).filter(g => g.items.length > 0)
 </script>
 
 <style>
@@ -97,7 +102,7 @@
   
   .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
   .hero-header { padding: 4rem 3rem 2.5rem; position: relative; }
-  .live-clock { font-family: 'Bebas Neue'; font-size: 2.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
+  .live-clock { font-family: 'Bebas Neue'; font-size: 7.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
   .live-clock:hover { color: var(--danger); }
   .hero-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: var(--danger); text-shadow: 4px 4px 0px #000; letter-spacing: -2px; }
   .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
@@ -147,6 +152,16 @@
   .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
 
   .hud-preview { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 2px solid var(--danger); background: #000; padding: 5px; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
+  
+  .filter-bar { display: flex; gap: 15px; margin-top: 1rem; }
+  .filter-btn { 
+    background: transparent; border: 1px solid #333; color: #666; 
+    padding: 4px 12px; font-family: 'Bebas Neue'; font-size: 1.1rem; 
+    cursor: pointer; transition: 0.2s; 
+  }
+  .filter-btn:hover { border-color: #fff; color: #fff; }
+  .filter-btn.active { background: #fff; color: #000; border-color: #fff; }
+  
   @keyframes blink { 50% { opacity: 0.2; } }
 </style>
 
@@ -199,6 +214,12 @@
   <main class="tactical-grid">
     <div class="grid-header" style="margin-bottom: 3rem;">
       <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0; letter-spacing: 2px;">MISSION SCHEDULE</h2>
+      <div class="filter-bar">
+        <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL SECTORS</button>
+        {#each Object.entries(STATUS_MAP) as [key, val]}
+          <button class="filter-btn" class:active={filterStatus === key} on:click={() => filterStatus = key}>{val.label}</button>
+        {/each}
+      </div>
     </div>
 
     {#each navGroups as group}
