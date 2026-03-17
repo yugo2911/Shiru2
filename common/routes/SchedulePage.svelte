@@ -4,7 +4,8 @@
   import { animeSchedule } from '@/modules/anime/animeschedule.js'
 
   const STATUS_MAP = {
-    CURRENT:   { label: 'Watching', color: '#d4f55e' },
+    // Watching is now Cyan to distinguish from Lime UI accents
+    CURRENT:   { label: 'Watching', color: '#00f2ff' }, 
     PLANNING:  { label: 'Planning', color: '#90bfed' },
     COMPLETED: { label: 'Done',     color: '#a78bfa' },
     PAUSED:    { label: 'Paused',   color: '#f59e5e' },
@@ -24,7 +25,6 @@
     const airingLists = await animeSchedule.subAiringLists.value
     const ids = airingLists.map(e => e?.id).filter(Boolean)
     if (!ids.length) return { data: { Page: { media: [] } } }
-
     return anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 })
   }
 
@@ -36,16 +36,12 @@
 
     for (const m of media) {
       if (!m || seen.has(m.id)) continue
-      
       const nodes = m?.airingSchedule?.nodes ?? []
       const node = nodes.find(n => Math.abs(n.airingAt - nowTs) < 86400 * 3) || nextAiring(nodes)
-      
       if (!node?.airingAt) continue
       seen.add(m.id)
-      
       const airDate = new Date(node.airingAt * 1000)
-      grouped.get(DAYS[airDate.getDay()])
-             .push({ media: m, airingAt: node.airingAt, episode: node.episode })
+      grouped.get(DAYS[airDate.getDay()]).push({ media: m, airingAt: node.airingAt, episode: node.episode })
     }
 
     const order = [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
@@ -134,8 +130,8 @@
             >
               <span class='t-time'>{fmtTime(airingAt)}</span>
               <span class='t-name'>{anilistClient.title(media)}</span>
-              {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
-              {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
+              {#if behind > 0}<span class='behind-cue' style='color: var(--row-hc, var(--acc))'>−{behind} ep</span>{/if}
+              {#if up}<span class='t-badge' style='background: var(--row-hc, var(--acc))'>{fmtCountdown(airingAt,now)}</span>{/if}
             </div>
           {/each}
         {:else}<div class='empty'>No airings today</div>{/if}
@@ -179,7 +175,7 @@
                 >
                   <span class='w-time'>{fmtTime(airingAt)}</span>
                   <span class='w-name'>{anilistClient.title(media)}</span>
-                  {#if behind > 0}<span class='behind-cue'>−{behind} ep</span>{/if}
+                  {#if behind > 0}<span class='behind-cue' style='color: var(--row-hc, var(--acc))'>−{behind} ep</span>{/if}
                 </div>
               {/each}
             </div>
@@ -193,7 +189,7 @@
 {#if hoveredMedia?.coverImage?.extraLarge}
   <div class='preview' style='--px:{hoverX}px;--py:{hoverY}px'>
     <img src={hoveredMedia.coverImage.extraLarge} alt=''/>
-    <div class='preview-name'>{anilistClient.title(hoveredMedia)}</div>
+    <div class='preview-name' style='color: var(--row-hc, var(--acc))'>{anilistClient.title(hoveredMedia)}</div>
   </div>
 {/if}
 
@@ -211,6 +207,8 @@
   .t-row:hover, .t-row:focus { background:var(--faint); border-left-color:var(--row-hc, var(--acc)); outline:none; }
   .t-up { background:var(--acc-dim); border-left-color:var(--acc) !important; }
   .t-past { opacity:0.3; }
+  /* Ensure that hovering on past items restores the colored border */
+  .t-past:hover { opacity: 0.8; border-left-color: var(--row-hc, var(--acc)) !important; }
   .t-time { font-size:1.1rem; color:var(--acc); flex-shrink:0; width:4rem; font-variant-numeric:tabular-nums; }
   .t-name { font-size:1.4rem; font-weight:300; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--fg); }
   .t-badge { font-size:0.9rem; font-weight:500; background:var(--acc); color:var(--bg); padding:0.2em 0.8em; border-radius:3px; flex-shrink:0; letter-spacing:0.04em; }
