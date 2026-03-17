@@ -8,23 +8,23 @@
   const SCHEDULE_TTL = 60 * 60 * 1000 
 
   const STATUS_MAP = {
-    CURRENT:   { label: 'ACTIVE TARGET', color: '#ff003c' }, 
-    PLANNING:  { label: 'INTEL GATHERING', color: '#00f2ff' },
-    COMPLETED: { label: 'MISSION COMPLETE', color: '#ffffff' },
-    PAUSED:    { label: 'OPERATIONS STALLED', color: '#f59e5e' },
-    DROPPED:   { label: 'TARGET ABANDONED', color: '#444444' },
-    REPEATING: { label: 'RE-ENGAGING', color: '#5ef5d4' }
+    CURRENT:   { label: 'WATCHING', color: '#ff003c' }, 
+    PLANNING:  { label: 'PLANNING', color: '#00f2ff' },
+    COMPLETED: { label: 'COMPLETED', color: '#ffffff' },
+    PAUSED:    { label: 'PAUSED', color: '#f59e5e' },
+    DROPPED:   { label: 'DROPPED', color: '#444444' },
+    REPEATING: { label: 'REWATCHING', color: '#5ef5d4' }
   }
 
   const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
-  function getBehind(media, airingNode) {
+  function getBehindCount(media, airingNode) {
     const progress = media?.mediaListEntry?.progress ?? null
     const ep = airingNode?.episode ?? null
     return progress !== null && ep !== null ? Math.max(0, ep - 1 - progress) : 0
   }
 
-  async function fetchAllScheduleEntries() {
+  async function fetchScheduleData() {
     await cacheReady()
     const cached = cache.cachedEntry(caches.QUERIES, SCHEDULE_CACHE_KEY)
     if (cached) return cached
@@ -39,7 +39,7 @@
     )
   }
 
-  function buildGroups(media) {
+  function groupMediaByDay(media) {
     const nowTs = Math.floor(Date.now() / 1000)
     const todayIdx = new Date().getDay()
     const grouped = new Map(DAYS.map(d => [d, []]))
@@ -64,144 +64,141 @@
   import { click } from '@/modules/click.js'
   import { modal } from '@/modules/navigation.js'
 
-  let groups = [], now = new Date(), hoveredMedia = null, hoverX = 0, hoverY = 0, is12h = false
-  let filterStatus = 'ALL'
+  let scheduleGroups = [], currentTime = new Date(), hoveredMedia = null, hoverX = 0, hoverY = 0, use12Hour = false
+  let statusFilter = 'ALL'
 
-  const fmtTime = (ts, force12) => new Date(ts * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12: force12 ?? is12h })
-  const isUpNext = (ts, current) => { const d = ts - Math.floor(current.getTime()/1000); return d > 0 && d < 3600 }
-  const fmtCountdown = (ts, current) => {
+  const formatTime = (ts, force12) => new Date(ts * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12: force12 ?? use12Hour })
+  const isAiringSoon = (ts, current) => { const d = ts - Math.floor(current.getTime()/1000); return d > 0 && d < 3600 }
+  const getCountdown = (ts, current) => {
     const diff = ts - Math.floor(current.getTime() / 1000)
-    if (diff <= 0) return 'NOW'
+    if (diff <= 0) return 'AIRING NOW'
     const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60)
-    return h > 0 ? `${h}H ${m}M` : `${m}M`
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
   }
 
   onMount(() => {
-    const t = setInterval(() => { now = new Date() }, 1000)
-    fetchAllScheduleEntries().then(r => { groups = buildGroups(r?.data?.Page?.media || []) })
-    return () => clearInterval(t)
+    const interval = setInterval(() => { currentTime = new Date() }, 1000)
+    fetchScheduleData().then(r => { scheduleGroups = groupMediaByDay(r?.data?.Page?.media || []) })
+    return () => clearInterval(interval)
   })
 
-  function handleMouseMove(e, media) { hoveredMedia = media; hoverX = e.clientX; hoverY = e.clientY }
-  const toggleClock = () => { is12h = !is12h }
+  function updateHoverPosition(e, media) { hoveredMedia = media; hoverX = e.clientX; hoverY = e.clientY }
+  const toggleClockFormat = () => { use12Hour = !use12Hour }
 
-  $: filteredGroups = groups.map(g => ({
+  $: filteredGroups = scheduleGroups.map(g => ({
     ...g,
-    items: filterStatus === 'ALL' ? g.items : g.items.filter(i => i.media?.mediaListEntry?.status === filterStatus)
+    items: statusFilter === 'ALL' ? g.items : g.items.filter(i => i.media?.mediaListEntry?.status === statusFilter)
   }))
-  $: todayGroup = filteredGroups[0] || null
-  $: navGroups = filteredGroups.slice(1).filter(g => g.items.length > 0)
+  $: todayItems = filteredGroups[0] || null
+  $: upcomingDays = filteredGroups.slice(1).filter(g => g.items.length > 0)
 </script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700;900&display=swap');
-  :root { --danger: #ff003c; --bg: #030303; --panel: #0a0a0a; }
+  :root { --accent: #ff003c; --bg: #030303; --panel: #0a0a0a; }
   :global(body) { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
 
-  .shell { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
+  .layout { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
   
-  .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
-  .hero-header { padding: 4rem 3rem 2.5rem; position: relative; }
-  .live-clock { font-family: 'Bebas Neue'; font-size: 7.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
-  .live-clock:hover { color: var(--danger); }
-  .hero-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: var(--danger); text-shadow: 4px 4px 0px #000; letter-spacing: -2px; }
-  .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
-  .bounty-scroll { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
+  .sidebar { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; height: 100vh; }
+  .sidebar-header { padding: 4rem 3rem 2.5rem; position: relative; }
+  .clock { font-family: 'Bebas Neue'; font-size: 7.2rem; color: #333; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
+  .clock:hover { color: var(--accent); }
+  .sidebar-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: #fff; letter-spacing: -2px; }
+  .date-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #555; margin-top: 10px; letter-spacing: 2px; }
+  .list-container { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
 
-  .target-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; background: #000; }
-  .target-card:hover { border-color: var(--danger); transform: scale(1.02) translateX(10px); }
-  .target-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: 0.3s; }
-  .target-card:hover img { filter: grayscale(0) brightness(0.8); }
+  .media-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; background: #000; }
+  .media-card:hover { border-color: var(--accent); transform: scale(1.02); }
+  .media-card img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); transition: 0.3s; }
+  .media-card:hover img { filter: brightness(0.8); }
 
-  .status-cue { position: absolute; top: 0; left: 0; background: var(--status-color); color: #000; padding: 8px 16px; font-weight: 900; font-size: 1rem; letter-spacing: 1.5px; z-index: 5; text-transform: uppercase; }
-  .behind-tag { position: absolute; top: 1.5rem; right: -5px; background: var(--danger); color: #fff; padding: 0.6rem 1.2rem; font-family: 'Bebas Neue'; font-size: 1.6rem; z-index: 6; box-shadow: 6px 6px 0 #000; }
+  .status-label { position: absolute; top: 0; left: 0; background: var(--status-color); color: #000; padding: 8px 16px; font-weight: 900; font-size: 1rem; z-index: 5; text-transform: uppercase; }
+  .unwatched-tag { position: absolute; top: 1.5rem; right: -5px; background: var(--accent); color: #fff; padding: 0.6rem 1.2rem; font-family: 'Bebas Neue'; font-size: 1.6rem; z-index: 6; box-shadow: 4px 4px 0 #000; }
 
-  .card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.98) 0%, transparent 70%); padding: 2.5rem; display: flex; flex-direction: column; justify-content: flex-end; border-left: 8px solid var(--status-color); }
-  .card-name { font-family: 'Bebas Neue'; font-size: 3.5rem; line-height: 0.9; margin: 0; text-transform: uppercase; }
-  .card-intel { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
-  .card-intel b { color: #fff; }
+  .card-details { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 60%); padding: 2.5rem; display: flex; flex-direction: column; justify-content: flex-end; border-left: 8px solid var(--status-color); }
+  .media-title { font-family: 'Bebas Neue'; font-size: 3.5rem; line-height: 0.9; margin: 0; text-transform: uppercase; }
+  .media-info { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; display: flex; align-items: center; gap: 15px; }
+  .media-info b { color: #fff; }
 
-  .tactical-grid { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
-  .day-section { margin-bottom: 4rem; }
-  .day-title { font-family: 'Bebas Neue'; font-size: 3rem; color: #222; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
-  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+  .main-schedule { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
+  .day-group { margin-bottom: 4rem; }
+  .day-header { font-family: 'Bebas Neue'; font-size: 3rem; color: #444; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
 
-  .entry-item { 
+  .list-item { 
     background: #000; border: 1px solid #111; border-left: 4px solid var(--status-color); 
-    height: 90px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    height: 90px; cursor: pointer; transition: 0.3s; 
     position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
   }
-  .entry-item:hover { background: var(--status-color); border-color: var(--status-color); transform: translateX(5px); }
+  .list-item:hover { background: #111; border-color: var(--status-color); transform: translateX(5px); }
 
-  .entry-cover { 
+  .item-thumb { 
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; 
-    opacity: 0.3; filter: grayscale(1) brightness(0.4); transition: opacity 0.4s, filter 0.4s; z-index: 1; 
+    opacity: 0.2; filter: grayscale(1); transition: 0.4s; z-index: 1; 
   }
-  .entry-item:hover .entry-cover { opacity: 0.6; filter: grayscale(0.2) brightness(0.6); transform: scale(1.05); }
+  .list-item:hover .item-thumb { opacity: 0.4; filter: grayscale(0); }
 
-  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: color 0.2s; }
-  .entry-item:hover .entry-content { color: #000; text-shadow: none; }
+  .item-info { position: relative; z-index: 2; }
+  .item-title { font-weight: 900; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
+  .item-meta { display: flex; align-items: baseline; gap: 10px; font-family: 'Bebas Neue'; }
+  .item-time { font-size: 1.6rem; }
+  .item-ep { font-size: 1.1rem; opacity: 0.6; }
+  .unwatched-alert { color: var(--accent); font-size: 1.1rem; }
 
-  .entry-title { font-weight: 900; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
-  .entry-meta { display: flex; align-items: baseline; gap: 10px; font-family: 'Bebas Neue'; }
-  .entry-time { font-size: 1.6rem; }
-  .entry-ep { font-size: 1.1rem; opacity: 0.6; }
-  .strike-zone { color: var(--danger); font-size: 1.1rem; }
-  .entry-item:hover .strike-zone { color: #000; font-weight: bold; }
+  .indicator-dot { position: absolute; top: 0; right: 0; background: var(--accent); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
 
-  .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
-
-  .hud-preview { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 2px solid var(--danger); background: #000; padding: 5px; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
+  .preview-popover { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 1px solid #333; background: #000; padding: 5px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
   
-  .filter-bar { display: flex; gap: 15px; margin-top: 1rem; }
-  .filter-btn { 
-    background: transparent; border: 1px solid #333; color: #666; 
-    padding: 4px 12px; font-family: 'Bebas Neue'; font-size: 1.1rem; 
+  .filter-controls { display: flex; gap: 12px; margin-top: 1rem; }
+  .filter-tab { 
+    background: transparent; border: 1px solid #222; color: #444; 
+    padding: 6px 16px; font-family: 'Bebas Neue'; font-size: 1.1rem; 
     cursor: pointer; transition: 0.2s; 
   }
-  .filter-btn:hover { border-color: #fff; color: #fff; }
-  .filter-btn.active { background: #fff; color: #000; border-color: #fff; }
+  .filter-tab:hover { color: #fff; border-color: #444; }
+  .filter-tab.active { background: #fff; color: #000; border-color: #fff; }
   
-  @keyframes blink { 50% { opacity: 0.2; } }
+  @keyframes pulse { 50% { opacity: 0.4; } }
 </style>
 
-<div class="shell">
-  <aside class="wanted-hero">
-    <div class="hero-header">
-      <div class="live-clock" on:click={toggleClock} role="button" tabindex="0">
-        {now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: is12h })}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="clock" on:click={toggleClockFormat} role="button" tabindex="0">
+        {currentTime.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: use12Hour })}
       </div>
-      <h1>WANTED</h1>
-      <div class="today-meta">
-        {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()} // 
-        {todayGroup?.items.length || 0} SECTOR TARGETS
+      <h1>SCHEDULE</h1>
+      <div class="date-meta">
+        {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()} // 
+        {todayItems?.items.length || 0} ENTRIES TODAY
       </div>
     </div>
     
-    <div class="bounty-scroll">
-      {#if todayGroup}
-        {#each todayGroup.items as {media, airingAt, episode}}
-          {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
-          {@const behind = getBehind(media, {episode})}
-          {@const up = isUpNext(airingAt, now)}
-          <div class="target-card" style="--status-color: {status.color}" 
+    <div class="list-container">
+      {#if todayItems}
+        {#each todayItems.items as {media, airingAt, episode}}
+          {@const config = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'OTHER', color: '#444' }}
+          {@const unwatched = getBehindCount(media, {episode})}
+          {@const soon = isAiringSoon(airingAt, currentTime)}
+          <div class="media-card" style="--status-color: {config.color}" 
                use:click={() => modal.open(modal.ANIME_DETAILS, media)}
-               on:mousemove={(e) => handleMouseMove(e, media)}
+               on:mousemove={(e) => updateHoverPosition(e, media)}
                on:mouseleave={() => hoveredMedia = null}
                role="button" tabindex="0">
-            <div class="status-cue">{status.label}</div>
-            {#if behind > 0}<div class="behind-tag">MISSING: {behind} EP</div>{/if}
-            <img src={media.bannerImage || media.coverImage?.extraLarge || media.coverImage?.large} alt=""/>
-            <div class="card-overlay">
-              <h2 class="card-name">{anilistClient.title(media)}</h2>
-              <div class="card-intel">
-                <span>INTEL: <b>EP {episode}</b></span>
-                <span>STATUS: <b>{media.status}</b></span>
-                <span>TIME: <b>{fmtTime(airingAt)}</b></span>
+            <div class="status-label">{config.label}</div>
+            {#if unwatched > 0}<div class="unwatched-tag">{unwatched} EP BEHIND</div>{/if}
+            <img src={media.bannerImage || media.coverImage?.extraLarge} alt=""/>
+            <div class="card-details">
+              <h2 class="media-title">{anilistClient.title(media)}</h2>
+              <div class="media-info">
+                <span>EPISODE <b>{episode}</b></span>
+                <span>STATUS <b>{media.status}</b></span>
+                <span>TIME <b>{formatTime(airingAt)}</b></span>
               </div>
-              {#if up}
-                <div style="color:var(--danger); font-weight:900; font-size:1.1rem; margin-top:12px; animation:blink 0.8s infinite; letter-spacing: 2px;">
-                  ▶ INTERCEPT IN: {fmtCountdown(airingAt, now)}
+              {#if soon}
+                <div style="color:var(--accent); font-weight:900; font-size:1.1rem; margin-top:12px; animation:pulse 1s infinite;">
+                  AIRING IN {getCountdown(airingAt, currentTime)}
                 </div>
               {/if}
             </div>
@@ -211,51 +208,48 @@
     </div>
   </aside>
 
-  <main class="tactical-grid">
-    <div class="grid-header" style="margin-bottom: 3rem;">
-      <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0; letter-spacing: 2px;">MISSION SCHEDULE</h2>
-      <div class="filter-bar">
-        <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL SECTORS</button>
+  <main class="main-schedule">
+    <div class="header-section" style="margin-bottom: 3rem;">
+      <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0;">WEEKLY VIEW</h2>
+      <div class="filter-controls">
+        <button class="filter-tab" class:active={statusFilter === 'ALL'} on:click={() => statusFilter = 'ALL'}>SHOW ALL</button>
         {#each Object.entries(STATUS_MAP) as [key, val]}
-          <button class="filter-btn" class:active={filterStatus === key} on:click={() => filterStatus = key}>{val.label}</button>
+          <button class="filter-tab" class:active={statusFilter === key} on:click={() => statusFilter = key}>{val.label}</button>
         {/each}
       </div>
     </div>
 
-    {#each navGroups as group}
-      <section class="day-section">
-        <div class="day-title">
+    {#each upcomingDays as group}
+      <section class="day-group">
+        <div class="day-header">
           <span>{group.day}</span>
-          <span style="font-size: 1.2rem; opacity: 0.3;">{group.items.length} TARGETS</span>
+          <span style="font-size: 1.2rem; opacity: 0.5;">{group.items.length} ENTRIES</span>
         </div>
 
-        <div class="grid-container">
+        <div class="grid">
           {#each group.items as {media, airingAt, episode}}
-            {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
-            {@const behind = getBehind(media, {episode})}
-            <div class="entry-item" 
-                 style="--status-color: {status.color}" 
+            {@const config = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'OTHER', color: '#444' }}
+            {@const unwatched = getBehindCount(media, {episode})}
+            <div class="list-item" 
+                 style="--status-color: {config.color}" 
                  use:click={() => modal.open(modal.ANIME_DETAILS, media)} 
-                 on:mousemove={(e) => handleMouseMove(e, media)} 
+                 on:mousemove={(e) => updateHoverPosition(e, media)} 
                  on:mouseleave={() => hoveredMedia = null}
                  role="button" tabindex="0">
               
-              <img class="entry-cover" 
-                   src={media.bannerImage || media.coverImage?.large || media.coverImage?.extraLarge} 
-                   alt="" 
-                   loading="lazy" />
+              <img class="item-thumb" src={media.bannerImage || media.coverImage?.large} alt="" loading="lazy" />
 
-              {#if behind > 0}
-                <div class="missed-indicator">MISSED</div>
+              {#if unwatched > 0}
+                <div class="indicator-dot">BEHIND</div>
               {/if}
 
-              <div class="entry-content">
-                <div class="entry-title">{anilistClient.title(media)}</div>
-                <div class="entry-meta">
-                  <span class="entry-time">{fmtTime(airingAt)}</span>
-                  <span class="entry-ep">EP {episode}</span>
-                  {#if behind > 0}
-                    <span class="strike-zone">MISSING: {behind}</span>
+              <div class="item-info">
+                <div class="item-title">{anilistClient.title(media)}</div>
+                <div class="item-meta">
+                  <span class="item-time">{formatTime(airingAt)}</span>
+                  <span class="item-ep">EP {episode}</span>
+                  {#if unwatched > 0}
+                    <span class="unwatched-alert">-{unwatched}</span>
                   {/if}
                 </div>
               </div>
@@ -268,7 +262,7 @@
 </div>
 
 {#if hoveredMedia}
-  <div class="hud-preview" style="left: {hoverX + 20}px; top: {hoverY}px; transform: translateY(-50%);">
+  <div class="preview-popover" style="left: {hoverX + 20}px; top: {hoverY}px; transform: translateY(-50%);">
     <img src={hoveredMedia.coverImage.extraLarge} style="width: 100%; display: block;" alt=""/>
   </div>
 {/if}
