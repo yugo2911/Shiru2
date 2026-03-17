@@ -49,7 +49,7 @@
   let hoverX = 0, hoverY = 0
 
   $: TODAY_NAME = DAYS[now.getDay()]
-  $: todayGroup = groups[0] || null // The first group is always "today" based on buildGroups logic
+  $: todayGroup = groups[0] || null
   $: navGroups = groups.slice(1).filter(g => g.items.length > 0)
 
   onMount(() => {
@@ -76,29 +76,36 @@
     --panel: #0a0a0a;
   }
 
+  /* RESET & SCROLLBARS */
+  :global(body) { margin: 0; padding: 0; overflow: hidden; background: var(--bg); }
+  
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--danger); }
+
   .shell {
     display: grid;
     grid-template-columns: 550px 1fr;
     height: 100vh;
+    width: 100vw;
     background: var(--bg);
     color: #fff;
     font-family: 'Inter', sans-serif;
-    overflow: hidden;
+    overflow: hidden; /* Main container must not scroll */
   }
 
-  /* --- LEFT: MEGA WANTED SECTION --- */
   .wanted-hero {
     background: linear-gradient(to right, #000, var(--panel));
     border-right: 1px solid rgba(255,0,60,0.3);
     display: flex;
     flex-direction: column;
-    padding: 0;
-    position: relative;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .hero-header {
     padding: 4rem 3rem 2rem;
-    z-index: 10;
+    flex-shrink: 0;
   }
 
   .hero-header h1 {
@@ -123,8 +130,10 @@
   .bounty-scroll {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 3rem 4rem;
-    scrollbar-width: none;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 
   .target-card {
@@ -178,13 +187,13 @@
     text-transform: uppercase;
   }
 
-  /* --- RIGHT: TACTICAL GRID --- */
   .tactical-grid {
     padding: 4rem;
-    background-image: 
-      radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0);
+    background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0);
     background-size: 40px 40px;
     overflow-y: auto;
+    height: 100vh;
+    scroll-behavior: smooth;
   }
 
   .grid-header { margin-bottom: 4rem; }
@@ -233,7 +242,6 @@
   .e-title { font-weight: 700; font-size: 0.9rem; text-transform: uppercase; }
   .e-time { font-family: 'Bebas Neue'; font-size: 1.5rem; }
 
-  /* PREVIEW HOVER */
   .hud-preview {
     position: fixed;
     z-index: 1000;
