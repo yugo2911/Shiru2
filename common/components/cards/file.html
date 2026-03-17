@@ -1,6 +1,10 @@
 <div class="small-card-ct">
   <div class="item small-card airing">
     
+    <div class="genre-header">
+      {media.genres?.[0]?.toUpperCase() || 'ROMANCE'}
+    </div>
+
     <div class="airing-header">
       Ep 12 out for&nbsp;
       <span class="text-success">2h 15m</span>
@@ -15,7 +19,7 @@
     </div>
 
     <div class="context-type">
-      <svg class="icon text-success" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+      <svg class="icon text-success" viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
       1,240 likes
     </div>
 
@@ -41,72 +45,58 @@
   :root {
     --font-mono: 'Courier New', monospace;
     --font-display: 'Inter', sans-serif;
-    --tertiary-color: #1a1a1a;
     --card-fg: #ffffff;
     --card-dim: #999;
     --card-accent: #00ff88;
     --bg-success: #2db039;
+    --genre-bg: #0a0a0a; /* Dark background from image */
   }
 
   .small-card-ct {
     width: 190px;
     padding: 15px;
-    background: transparent;
     font-family: var(--font-mono);
     border-radius: 6px;
     transition: background 0.1s;
-    position: relative;
     color: white;
   }
 
-  .small-card-ct:hover {
-    z-index: 30;
-    background: rgba(237,237,234,0.04);
-  }
-
-  .item {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
+  /* Updated Genre Header to match image */
+  .genre-header {
+    background: var(--genre-bg);
+    color: var(--card-dim);
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.25em; /* High spacing for that aesthetic */
+    padding: 6px 0;
+    margin-bottom: 12px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    font-family: var(--font-display);
   }
 
   .airing-header {
     width: 100%;
     text-align: center;
-    padding-bottom: 10px;
-    font-size: 0.9rem;
+    padding-bottom: 8px;
+    font-size: 0.85rem;
     color: var(--card-dim);
   }
 
   .text-success { color: var(--card-accent) !important; }
 
-  /* Airing Glow */
-  .airing { position: relative; }
-  .airing::before {
-    content: '';
-    position: absolute;
-    inset: -10px;
-    border-radius: 4px;
-    pointer-events: none;
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
-    border: 1px solid rgba(0, 255, 136, 0.3);
-  }
-
-  .image-container {
-    position: relative;
-    display: inline-block;
-  }
+  .image-container { position: relative; }
 
   .airing-badge {
     position: absolute;
-    top: -1rem;
-    right: -1rem;
+    top: -8px;
+    right: -8px;
     background: var(--bg-success);
     color: white;
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-radius: 10px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
     z-index: 2;
   }
@@ -133,8 +123,8 @@
   .context-type {
     display: flex;
     align-items: center;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
+    gap: 4px;
+    font-size: 0.8rem;
     color: var(--card-dim);
     padding-top: 8px;
   }
@@ -144,35 +134,29 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-height: 1.25;
-    font-family: var(--font-display) !important;
-    font-size: 1.1rem !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
+    line-height: 1.2;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 800;
     color: var(--card-fg);
-    margin-top: 0.7rem;
-    margin-bottom: 10px;
+    margin: 8px 0;
   }
 
   .list-status-circle {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background-color: var(--statusColor);
     display: inline-block;
-    margin-right: 5px;
+    margin-right: 4px;
   }
 
   .meta-row {
     display: flex;
     justify-content: space-between;
-    margin-top: auto;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--card-dim);
   }
 
-  .meta-item { display: flex; align-items: center; gap: 5px; }
-  .icon { opacity: 0.7; }
+  .meta-item { display: flex; align-items: center; gap: 4px; }
 </style>
