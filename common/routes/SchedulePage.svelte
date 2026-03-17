@@ -95,7 +95,6 @@
 
   .shell { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
   
-  /* --- LEFT PANEL --- */
   .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
   .hero-header { padding: 4rem 3rem 2.5rem; position: relative; }
   .live-clock { font-family: 'Bebas Neue'; font-size: 2.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
@@ -104,9 +103,9 @@
   .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
   .bounty-scroll { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
 
-  .target-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; }
+  .target-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; background: #000; }
   .target-card:hover { border-color: var(--danger); transform: scale(1.02) translateX(10px); }
-  .target-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); }
+  .target-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: 0.3s; }
   .target-card:hover img { filter: grayscale(0) brightness(0.8); }
 
   .status-cue { position: absolute; top: 0; left: 0; background: var(--status-color); color: #000; padding: 8px 16px; font-weight: 900; font-size: 1rem; letter-spacing: 1.5px; z-index: 5; text-transform: uppercase; }
@@ -117,30 +116,32 @@
   .card-intel { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
   .card-intel b { color: #fff; }
 
-  /* --- WEEKDAY GRID PANEL --- */
   .tactical-grid { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
   .day-section { margin-bottom: 4rem; }
   .day-title { font-family: 'Bebas Neue'; font-size: 3rem; color: #222; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
-  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
 
   .entry-item { 
     background: #000; border: 1px solid #111; border-left: 4px solid var(--status-color); 
-    height: 80px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    height: 90px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
     position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
   }
   .entry-item:hover { background: var(--status-color); border-color: var(--status-color); transform: translateX(5px); }
 
-  .entry-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: grayscale(1) brightness(0.4); transition: 0.4s; z-index: 1; }
-  .entry-item:hover .entry-cover { opacity: 0.5; filter: grayscale(0.4) brightness(0.6) blur(1px); transform: scale(1.05); }
+  .entry-cover { 
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; 
+    opacity: 0.3; filter: grayscale(1) brightness(0.4); transition: opacity 0.4s, filter 0.4s; z-index: 1; 
+  }
+  .entry-item:hover .entry-cover { opacity: 0.6; filter: grayscale(0.2) brightness(0.6); transform: scale(1.05); }
 
-  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.8); transition: color 0.2s; }
+  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: color 0.2s; }
   .entry-item:hover .entry-content { color: #000; text-shadow: none; }
 
-  .entry-title { font-weight: 900; font-size: 0.9rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
+  .entry-title { font-weight: 900; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
   .entry-meta { display: flex; align-items: baseline; gap: 10px; font-family: 'Bebas Neue'; }
-  .entry-time { font-size: 1.5rem; }
-  .entry-ep { font-size: 1rem; opacity: 0.6; }
-  .strike-zone { color: var(--danger); font-size: 1rem; }
+  .entry-time { font-size: 1.6rem; }
+  .entry-ep { font-size: 1.1rem; opacity: 0.6; }
+  .strike-zone { color: var(--danger); font-size: 1.1rem; }
   .entry-item:hover .strike-zone { color: #000; font-weight: bold; }
 
   .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
@@ -175,7 +176,7 @@
                role="button" tabindex="0">
             <div class="status-cue">{status.label}</div>
             {#if behind > 0}<div class="behind-tag">MISSING: {behind} EP</div>{/if}
-            <img src={media.bannerImage || media.coverImage.extraLarge} alt=""/>
+            <img src={media.bannerImage || media.coverImage?.extraLarge || media.coverImage?.large} alt=""/>
             <div class="card-overlay">
               <h2 class="card-name">{anilistClient.title(media)}</h2>
               <div class="card-intel">
@@ -218,7 +219,10 @@
                  on:mouseleave={() => hoveredMedia = null}
                  role="button" tabindex="0">
               
-              <img class="entry-cover" src={media.bannerImage || media.coverImage.large} alt="" />
+              <img class="entry-cover" 
+                   src={media.bannerImage || media.coverImage?.large || media.coverImage?.extraLarge} 
+                   alt="" 
+                   loading="lazy" />
 
               {#if behind > 0}
                 <div class="missed-indicator">MISSED</div>
