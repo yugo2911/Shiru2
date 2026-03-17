@@ -2,10 +2,6 @@
   import { anilistClient } from '@/modules/anilist.js'
   import { nextAiring } from '@/modules/anime/anime.js'
   import { animeSchedule } from '@/modules/anime/animeschedule.js'
-  import { cache, cacheReady, caches } from '@/modules/cache.js'
-
-  const SCHEDULE_CACHE_KEY = 'schedule_page_ids'
-  const SCHEDULE_TTL = 60 * 60 * 1000 // 1 hour
 
   const STATUS_MAP = {
     CURRENT:   { label: 'Watching', color: '#d4f55e' },
@@ -25,20 +21,11 @@
   }
 
   async function fetchAllScheduleEntries() {
-    await cacheReady()
-    const cached = cache.cachedEntry(caches.QUERIES, SCHEDULE_CACHE_KEY)
-    if (cached) return cached
-
     const airingLists = await animeSchedule.subAiringLists.value
     const ids = airingLists.map(e => e?.id).filter(Boolean)
+    if (!ids.length) return { data: { Page: { media: [] } } }
 
-    return cache.cacheEntry(
-      caches.QUERIES,
-      SCHEDULE_CACHE_KEY,
-      {},
-      anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 }),
-      Date.now() + SCHEDULE_TTL
-    )
+    return anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 })
   }
 
   function buildGroups(media) {
@@ -48,10 +35,8 @@
     const seen = new Set()
 
     for (const m of media) {
-      if (seen.has(m?.id)) continue
+      if (!m || seen.has(m.id)) continue
       
-      // Look for the node closest to "now" (either just passed or upcoming)
-      // instead of strictly using nextAiring() which ignores today's past shows.
       const nodes = m?.airingSchedule?.nodes ?? []
       const node = nodes.find(n => Math.abs(n.airingAt - nowTs) < 86400 * 3) || nextAiring(nodes)
       
@@ -93,7 +78,7 @@
     const t = setInterval(() => { now = new Date() }, 1000)
     fetchAllScheduleEntries()
       .then(r => {
-        groups = buildGroups(r.data.Page.media)
+        groups = buildGroups(r?.data?.Page?.media || [])
         activeDay = groups[0]?.day ?? null
       })
       .catch(() => groups = [])
@@ -104,6 +89,13 @@
   function scrollToDay(day) {
     activeDay = day
     weekEl?.querySelector(`[data-day="${day}"]`)?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' })
+  }
+  
+  function handleKeydown(e, media) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      modal.open(modal.ANIME_DETAILS, media)
+    }
   }
 
   $: TODAY = DAYS[now.getDay()]
