@@ -94,16 +94,16 @@
   :global(body) { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
 
   .shell { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
-  .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
   
+  /* --- HERO PANEL --- */
+  .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
   .hero-header { padding: 4rem 3rem 2.5rem; position: relative; }
   .live-clock { font-family: 'Bebas Neue'; font-size: 2.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
   .live-clock:hover { color: var(--danger); }
-  
   .hero-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: var(--danger); text-shadow: 4px 4px 0px #000; letter-spacing: -2px; }
   .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
-
   .bounty-scroll { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
+
   .target-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; }
   .target-card:hover { border-color: var(--danger); transform: scale(1.02) translateX(10px); }
   .target-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); }
@@ -117,9 +117,35 @@
   .card-intel { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
   .card-intel b { color: #fff; }
 
+  /* --- GRID PANEL --- */
   .tactical-grid { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
-  .entry-item { background: rgba(255,255,255,0.02); border: 1px solid #111; border-left: 4px solid var(--status-color); padding: 1.8rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; font-size: 1.2rem; }
-  .entry-item:hover { background: var(--status-color); color: #000; }
+  .day-section { margin-bottom: 4rem; }
+  .day-title { font-family: 'Bebas Neue'; font-size: 3rem; color: #222; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
+  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+
+  .entry-item { 
+    background: rgba(255,255,255,0.02); 
+    border: 1px solid #111; 
+    border-left: 4px solid var(--status-color); 
+    padding: 0.8rem 1.2rem; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center;
+    height: 70px;
+    cursor: pointer; 
+    transition: 0.2s; 
+    position: relative; 
+    overflow: hidden; 
+  }
+  .entry-item:hover { background: var(--status-color); color: #000; transform: translateX(5px); }
+
+  .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; letter-spacing: 1px; }
+  .entry-title { font-weight: 700; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 4px; }
+  .entry-meta { display: flex; align-items: baseline; gap: 12px; font-family: 'Bebas Neue'; }
+  .entry-time { font-size: 1.4rem; opacity: 0.8; }
+  .entry-ep { font-size: 0.9rem; opacity: 0.5; letter-spacing: 0.5px; }
+  .strike-zone { color: var(--danger); font-size: 0.9rem; letter-spacing: 0.5px; }
+  .entry-item:hover .strike-zone { color: #000; }
 
   .hud-preview { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 2px solid var(--danger); background: #000; padding: 5px; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
   @keyframes blink { 50% { opacity: 0.2; } }
@@ -172,20 +198,45 @@
   </aside>
 
   <main class="tactical-grid">
-    <div class="grid-header" style="margin-bottom: 4rem;">
+    <div class="grid-header" style="margin-bottom: 3rem;">
       <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0; letter-spacing: 2px;">MISSION SCHEDULE</h2>
     </div>
+
     {#each navGroups as group}
-      <div style="margin-bottom: 5rem;">
-        <div style="font-family: 'Bebas Neue'; font-size: 3.5rem; color: #222; margin-bottom: 1.5rem; border-bottom: 2px solid #111;">{group.day}</div>
-        {#each group.items as {media, airingAt, episode}}
-          {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
-          <div class="entry-item" style="--status-color: {status.color}" use:click={() => modal.open(modal.ANIME_DETAILS, media)} on:mousemove={(e) => handleMouseMove(e, media)} on:mouseleave={() => hoveredMedia = null}>
-            <span style="font-weight: 700; letter-spacing: 0.5px;">{anilistClient.title(media)}</span>
-            <span style="font-family: 'Bebas Neue'; font-size: 2.2rem; opacity: 0.7;">{fmtTime(airingAt)}</span>
-          </div>
-        {/each}
-      </div>
+      <section class="day-section">
+        <div class="day-title">
+          <span>{group.day}</span>
+          <span style="font-size: 1.2rem; opacity: 0.3;">{group.items.length} TARGETS</span>
+        </div>
+
+        <div class="grid-container">
+          {#each group.items as {media, airingAt, episode}}
+            {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
+            {@const behind = getBehind(media, {episode})}
+            <div class="entry-item" 
+                 style="--status-color: {status.color}" 
+                 use:click={() => modal.open(modal.ANIME_DETAILS, media)} 
+                 on:mousemove={(e) => handleMouseMove(e, media)} 
+                 on:mouseleave={() => hoveredMedia = null}
+                 role="button" tabindex="0">
+              
+              {#if behind > 0}
+                <div class="missed-indicator">MISSED</div>
+              {/if}
+
+              <div class="entry-title">{anilistClient.title(media)}</div>
+              
+              <div class="entry-meta">
+                <span class="entry-time">{fmtTime(airingAt)}</span>
+                <span class="entry-ep">EP {episode}</span>
+                {#if behind > 0}
+                  <span class="strike-zone">GAP: {behind}</span>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </section>
     {/each}
   </main>
 </div>
