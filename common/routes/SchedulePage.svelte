@@ -2,33 +2,60 @@
   import { anilistClient } from '@/modules/anilist.js'
   import { nextAiring } from '@/modules/anime/anime.js'
   import { animeSchedule } from '@/modules/anime/animeschedule.js'
+  import { cache, cacheReady, caches } from '@/modules/cache.js'
+
+  const SCHEDULE_CACHE_KEY = 'schedule_page_ids'
+  const SCHEDULE_TTL = 60 * 60 * 1000 
+
+  const STATUS_MAP = {
+    CURRENT:   { label: 'ACTIVE TARGET', color: '#ff003c' }, 
+    PLANNING:  { label: 'INTEL GATHERING', color: '#00f2ff' },
+    COMPLETED: { label: 'MISSION COMPLETE', color: '#ffffff' },
+    PAUSED:    { label: 'OPERATIONS STALLED', color: '#f59e5e' },
+    DROPPED:   { label: 'TARGET ABANDONED', color: '#444444' },
+    REPEATING: { label: 'RE-ENGAGING', color: '#5ef5d4' }
+  }
 
   const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
-  async function fetchAllScheduleEntries () {
-    const results = { data: { Page: { media: [] } } }
-    const airingLists = await animeSchedule.subAiringLists.value
-    const ids = airingLists.map(e => e?.id).filter(Boolean)
-    const res = await anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 })
-    if (!res?.data && res?.errors) throw res.errors[0]
-    results.data.Page.media = res.data.Page.media
-      .filter((m, i, self) => nextAiring(m?.airingSchedule?.nodes)?.airingAt && self.findIndex(x => x?.id === m?.id) === i)
-      .sort((a, b) => nextAiring(a.airingSchedule?.nodes)?.airingAt - nextAiring(b.airingSchedule?.nodes)?.airingAt)
-    return results
+  function getBehind(media, airingNode) {
+    const progress = media?.mediaListEntry?.progress ?? null
+    const ep = airingNode?.episode ?? null
+    return progress !== null && ep !== null ? Math.max(0, ep - 1 - progress) : 0
   }
 
-  function buildGroups (media) {
+  async function fetchAllScheduleEntries() {
+    await cacheReady()
+    const cached = cache.cachedEntry(caches.QUERIES, SCHEDULE_CACHE_KEY)
+    if (cached) return cached
+    const airingLists = await animeSchedule.subAiringLists.value
+    const ids = airingLists.map(e => e?.id).filter(Boolean)
+    return cache.cacheEntry(
+      caches.QUERIES,
+      SCHEDULE_CACHE_KEY,
+      {},
+      anilistClient.searchAllIDS({ id: ids, page: 1, perPage: 50 }),
+      Date.now() + SCHEDULE_TTL
+    )
+  }
+
+  function buildGroups(media) {
+    const nowTs = Math.floor(Date.now() / 1000)
     const todayIdx = new Date().getDay()
-    const grouped = {}
+    const grouped = new Map(DAYS.map(d => [d, []]))
+    const seen = new Set()
     for (const m of media) {
-      const node = nextAiring(m?.airingSchedule?.nodes)
+      if (!m || seen.has(m.id)) continue
+      const nodes = m?.airingSchedule?.nodes ?? []
+      const node = nodes.find(n => Math.abs(n.airingAt - nowTs) < 86400 * 3) || nextAiring(nodes)
       if (!node?.airingAt) continue
-      const day = DAYS[new Date(node.airingAt * 1000).getDay()]
-      ;(grouped[day] ??= []).push({ media: m, airingAt: node.airingAt })
+      seen.add(m.id)
+      grouped.get(DAYS[new Date(node.airingAt * 1000).getDay()]).push({ media: m, airingAt: node.airingAt, episode: node.episode })
     }
-    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)]
-      .filter(d => grouped[d])
-      .map(day => ({ day, items: grouped[day] }))
+    return [...DAYS.slice(todayIdx), ...DAYS.slice(0, todayIdx)].map(day => ({
+      day,
+      items: (grouped.get(day) || []).sort((a, b) => a.airingAt - b.airingAt)
+    }))
   }
 </script>
 
@@ -37,427 +64,211 @@
   import { click } from '@/modules/click.js'
   import { modal } from '@/modules/navigation.js'
 
-  const TODAY = DAYS[new Date().getDay()]
-  const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : ''
-  const fmtCountdown = (ts, now) => {
-    const diff = ts - Math.floor(now.getTime() / 1000)
-    if (diff <= 0) return 'Now'
-    const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60
-    return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
-  }
-  const isUpNext = (ts, now) => { const d = ts - Math.floor(now.getTime()/1000); return d > 0 && d < 3600 }
+  let groups = [], now = new Date(), hoveredMedia = null, hoverX = 0, hoverY = 0, is12h = false
+  let filterStatus = 'ALL'
 
-  let groups = [], now = new Date()
-  let hoveredMedia = null, hoverX = 0, hoverY = 0
-  let weekEl
-  let activeDay = null
+  const fmtTime = (ts, force12) => new Date(ts * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12: force12 ?? is12h })
+  const isUpNext = (ts, current) => { const d = ts - Math.floor(current.getTime()/1000); return d > 0 && d < 3600 }
+  const fmtCountdown = (ts, current) => {
+    const diff = ts - Math.floor(current.getTime() / 1000)
+    if (diff <= 0) return 'NOW'
+    const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60)
+    return h > 0 ? `${h}H ${m}M` : `${m}M`
+  }
 
   onMount(() => {
     const t = setInterval(() => { now = new Date() }, 1000)
-    fetchAllScheduleEntries()
-      .then(r => {
-        groups = buildGroups(r.data.Page.media)
-        activeDay = groups[0]?.day ?? null
-      })
-      .catch(() => { groups = [] })
+    fetchAllScheduleEntries().then(r => { groups = buildGroups(r?.data?.Page?.media || []) })
     return () => clearInterval(t)
   })
 
-  function handleMouseMove(e, media) {
-    hoveredMedia = media
-    hoverX = e.clientX
-    hoverY = e.clientY
-  }
+  function handleMouseMove(e, media) { hoveredMedia = media; hoverX = e.clientX; hoverY = e.clientY }
+  const toggleClock = () => { is12h = !is12h }
 
-  function scrollToDay(day) {
-    activeDay = day
-    const el = weekEl?.querySelector(`[data-day="${day}"]`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
-  }
-
-  $: todayGroup  = groups.find(g => g.day === TODAY) ?? null
-  $: otherGroups = groups.filter(g => g.day !== TODAY)
+  $: filteredGroups = groups.map(g => ({
+    ...g,
+    items: filterStatus === 'ALL' ? g.items : g.items.filter(i => i.media?.mediaListEntry?.status === filterStatus)
+  }))
+  $: todayGroup = filteredGroups[0] || null
+  $: navGroups = filteredGroups.slice(1).filter(g => g.items.length > 0)
 </script>
 
-<svelte:body on:mousemove={e => { if (hoveredMedia) { hoverX = e.clientX; hoverY = e.clientY } }} />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700;900&display=swap');
+  :root { --danger: #ff003c; --bg: #030303; --panel: #0a0a0a; }
+  :global(body) { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
 
-<div class='root'>
-  {#if !groups.length}
-    <div class='splash'><span class='dot'></span>Loading schedule…</div>
-  {:else}
+  .shell { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
+  
+  .wanted-hero { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
+  .hero-header { padding: 4rem 3rem 2.5rem; position: relative; }
+  .live-clock { font-family: 'Bebas Neue'; font-size: 7.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
+  .live-clock:hover { color: var(--danger); }
+  .hero-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: var(--danger); text-shadow: 4px 4px 0px #000; letter-spacing: -2px; }
+  .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
+  .bounty-scroll { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
 
-    <!-- LEFT: TODAY -->
-    <aside class='pane-today'>
-      <div class='pane-header'>
-        <div class='eyebrow'>On Air</div>
-        <div class='pane-title'>Today</div>
-        <div class='clock'>{now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}</div>
-        <div class='date-label'>{now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+  .target-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; background: #000; }
+  .target-card:hover { border-color: var(--danger); transform: scale(1.02) translateX(10px); }
+  .target-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: 0.3s; }
+  .target-card:hover img { filter: grayscale(0) brightness(0.8); }
+
+  .status-cue { position: absolute; top: 0; left: 0; background: var(--status-color); color: #000; padding: 8px 16px; font-weight: 900; font-size: 1rem; letter-spacing: 1.5px; z-index: 5; text-transform: uppercase; }
+  .behind-tag { position: absolute; top: 1.5rem; right: -5px; background: var(--danger); color: #fff; padding: 0.6rem 1.2rem; font-family: 'Bebas Neue'; font-size: 1.6rem; z-index: 6; box-shadow: 6px 6px 0 #000; }
+
+  .card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.98) 0%, transparent 70%); padding: 2.5rem; display: flex; flex-direction: column; justify-content: flex-end; border-left: 8px solid var(--status-color); }
+  .card-name { font-family: 'Bebas Neue'; font-size: 3.5rem; line-height: 0.9; margin: 0; text-transform: uppercase; }
+  .card-intel { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
+  .card-intel b { color: #fff; }
+
+  .tactical-grid { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
+  .day-section { margin-bottom: 4rem; }
+  .day-title { font-family: 'Bebas Neue'; font-size: 3rem; color: #222; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
+  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+
+  .entry-item { 
+    background: #000; border: 1px solid #111; border-left: 4px solid var(--status-color); 
+    height: 90px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
+  }
+  .entry-item:hover { background: var(--status-color); border-color: var(--status-color); transform: translateX(5px); }
+
+  .entry-cover { 
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; 
+    opacity: 0.3; filter: grayscale(1) brightness(0.4); transition: opacity 0.4s, filter 0.4s; z-index: 1; 
+  }
+  .entry-item:hover .entry-cover { opacity: 0.6; filter: grayscale(0.2) brightness(0.6); transform: scale(1.05); }
+
+  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: color 0.2s; }
+  .entry-item:hover .entry-content { color: #000; text-shadow: none; }
+
+  .entry-title { font-weight: 900; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
+  .entry-meta { display: flex; align-items: baseline; gap: 10px; font-family: 'Bebas Neue'; }
+  .entry-time { font-size: 1.6rem; }
+  .entry-ep { font-size: 1.1rem; opacity: 0.6; }
+  .strike-zone { color: var(--danger); font-size: 1.1rem; }
+  .entry-item:hover .strike-zone { color: #000; font-weight: bold; }
+
+  .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
+
+  .hud-preview { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 2px solid var(--danger); background: #000; padding: 5px; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
+  
+  .filter-bar { display: flex; gap: 15px; margin-top: 1rem; }
+  .filter-btn { 
+    background: transparent; border: 1px solid #333; color: #666; 
+    padding: 4px 12px; font-family: 'Bebas Neue'; font-size: 1.1rem; 
+    cursor: pointer; transition: 0.2s; 
+  }
+  .filter-btn:hover { border-color: #fff; color: #fff; }
+  .filter-btn.active { background: #fff; color: #000; border-color: #fff; }
+  
+  @keyframes blink { 50% { opacity: 0.2; } }
+</style>
+
+<div class="shell">
+  <aside class="wanted-hero">
+    <div class="hero-header">
+      <div class="live-clock" on:click={toggleClock} role="button" tabindex="0">
+        {now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: is12h })}
       </div>
-
-      <div class='today-scroll'>
-        {#if todayGroup}
-          {#each todayGroup.items as {media, airingAt}}
-            {@const up = isUpNext(airingAt, now)}
-            {@const past = airingAt < Math.floor(now.getTime()/1000)}
-            <div class='t-row' class:t-up={up} class:t-past={past}
-              use:click={()=>modal.open(modal.ANIME_DETAILS,media)}
-              on:mousemove={e=>handleMouseMove(e,media)}
-              on:mouseleave={()=>hoveredMedia=null}>
-              <span class='t-time'>{fmtTime(airingAt)}</span>
-              <span class='t-name'>{anilistClient.title(media)}</span>
-              {#if up}<span class='t-badge'>{fmtCountdown(airingAt,now)}</span>{/if}
-            </div>
-          {/each}
-        {:else}
-          <div class='empty'>No airings today</div>
-        {/if}
+      <h1>WANTED</h1>
+      <div class="today-meta">
+        {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()} // 
+        {todayGroup?.items.length || 0} SECTOR TARGETS
       </div>
-    </aside>
-
-    <!-- RIGHT: THIS WEEK -->
-    <div class='pane-week'>
-
-      <!-- sticky header + day tabs -->
-      <div class='week-header'>
-        <div class='week-title-row'>
-          <div class='eyebrow'>Schedule</div>
-          <div class='pane-title'>This Week</div>
-        </div>
-        <nav class='day-tabs'>
-          {#each otherGroups as g}
-            <button class='tab' class:tab-active={activeDay===g.day} on:click={()=>scrollToDay(g.day)}>
-              {g.day.slice(0,3).toUpperCase()}
-              <span class='tab-count'>{g.items.length}</span>
-            </button>
-          {/each}
-        </nav>
-      </div>
-
-      <!-- Horizontal snap scroll — one row of fixed-width day columns -->
-      <div class='week-cols' bind:this={weekEl}>
-        {#each otherGroups as group}
-          <div class='day-col' data-day={group.day}>
-            <div class='day-heading'>
-              <span class='day-abbr'>{group.day.slice(0,3).toUpperCase()}</span>
-              <span class='day-full'>{group.day}</span>
-            </div>
-            <div class='day-entries'>
-              {#each group.items as {media, airingAt}}
-                <div class='w-row'
-                  use:click={()=>modal.open(modal.ANIME_DETAILS,media)}
-                  on:mousemove={e=>handleMouseMove(e,media)}
-                  on:mouseleave={()=>hoveredMedia=null}>
-                  <span class='w-time'>{fmtTime(airingAt)}</span>
-                  <span class='w-name'>{anilistClient.title(media)}</span>
+    </div>
+    
+    <div class="bounty-scroll">
+      {#if todayGroup}
+        {#each todayGroup.items as {media, airingAt, episode}}
+          {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
+          {@const behind = getBehind(media, {episode})}
+          {@const up = isUpNext(airingAt, now)}
+          <div class="target-card" style="--status-color: {status.color}" 
+               use:click={() => modal.open(modal.ANIME_DETAILS, media)}
+               on:mousemove={(e) => handleMouseMove(e, media)}
+               on:mouseleave={() => hoveredMedia = null}
+               role="button" tabindex="0">
+            <div class="status-cue">{status.label}</div>
+            {#if behind > 0}<div class="behind-tag">MISSING: {behind} EP</div>{/if}
+            <img src={media.bannerImage || media.coverImage?.extraLarge || media.coverImage?.large} alt=""/>
+            <div class="card-overlay">
+              <h2 class="card-name">{anilistClient.title(media)}</h2>
+              <div class="card-intel">
+                <span>INTEL: <b>EP {episode}</b></span>
+                <span>STATUS: <b>{media.status}</b></span>
+                <span>TIME: <b>{fmtTime(airingAt)}</b></span>
+              </div>
+              {#if up}
+                <div style="color:var(--danger); font-weight:900; font-size:1.1rem; margin-top:12px; animation:blink 0.8s infinite; letter-spacing: 2px;">
+                  ▶ INTERCEPT IN: {fmtCountdown(airingAt, now)}
                 </div>
-              {/each}
+              {/if}
             </div>
           </div>
         {/each}
-      </div>
-
+      {/if}
     </div>
-  {/if}
+  </aside>
+
+  <main class="tactical-grid">
+    <div class="grid-header" style="margin-bottom: 3rem;">
+      <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0; letter-spacing: 2px;">MISSION SCHEDULE</h2>
+      <div class="filter-bar">
+        <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL SECTORS</button>
+        {#each Object.entries(STATUS_MAP) as [key, val]}
+          <button class="filter-btn" class:active={filterStatus === key} on:click={() => filterStatus = key}>{val.label}</button>
+        {/each}
+      </div>
+    </div>
+
+    {#each navGroups as group}
+      <section class="day-section">
+        <div class="day-title">
+          <span>{group.day}</span>
+          <span style="font-size: 1.2rem; opacity: 0.3;">{group.items.length} TARGETS</span>
+        </div>
+
+        <div class="grid-container">
+          {#each group.items as {media, airingAt, episode}}
+            {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
+            {@const behind = getBehind(media, {episode})}
+            <div class="entry-item" 
+                 style="--status-color: {status.color}" 
+                 use:click={() => modal.open(modal.ANIME_DETAILS, media)} 
+                 on:mousemove={(e) => handleMouseMove(e, media)} 
+                 on:mouseleave={() => hoveredMedia = null}
+                 role="button" tabindex="0">
+              
+              <img class="entry-cover" 
+                   src={media.bannerImage || media.coverImage?.large || media.coverImage?.extraLarge} 
+                   alt="" 
+                   loading="lazy" />
+
+              {#if behind > 0}
+                <div class="missed-indicator">MISSED</div>
+              {/if}
+
+              <div class="entry-content">
+                <div class="entry-title">{anilistClient.title(media)}</div>
+                <div class="entry-meta">
+                  <span class="entry-time">{fmtTime(airingAt)}</span>
+                  <span class="entry-ep">EP {episode}</span>
+                  {#if behind > 0}
+                    <span class="strike-zone">MISSING: {behind}</span>
+                  {/if}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/each}
+  </main>
 </div>
 
-<!-- Preview portal outside root to avoid clipping -->
-{#if hoveredMedia?.coverImage?.extraLarge}
-  <div class='preview' style='--px:{hoverX}px;--py:{hoverY}px'>
-    <img src={hoveredMedia.coverImage.extraLarge} alt=''/>
-    <div class='preview-name'>{anilistClient.title(hoveredMedia)}</div>
+{#if hoveredMedia}
+  <div class="hud-preview" style="left: {hoverX + 20}px; top: {hoverY}px; transform: translateY(-50%);">
+    <img src={hoveredMedia.coverImage.extraLarge} style="width: 100%; display: block;" alt=""/>
   </div>
 {/if}
-
-<style>
-  
-
-  :global(body) { margin: 0; background: #0d0d10; }
-
-  /* ── LEFT pane ─────────────────────────── */
-  .pane-today {
-    width: 450px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .pane-header {
-    padding: 3rem 2.25rem 2rem;
-    border-bottom: 1px solid var(--line);
-    flex-shrink: 0;
-  }
-
-  .eyebrow {
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--acc);
-    margin-bottom: 0.6rem;
-  }
-
-  .pane-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 3.6rem;
-    font-weight: 800;
-    line-height: 1;
-    color: var(--fg);
-    letter-spacing: -0.03em;
-  }
-
-  .clock {
-    font-size: 1.2rem;
-    color: var(--dim);
-    margin-top: 1.2rem;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.06em;
-  }
-
-  .date-label {
-    font-size: 1rem;
-    color: rgba(237,237,234,0.22);
-    margin-top: 0.3rem;
-  }
-
-  /* Today list */
-  .today-scroll {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
-  }
-
-  .t-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.8rem 2.25rem;
-    border-left: 3px solid transparent;
-    cursor: pointer;
-    transition: background 0.1s, border-color 0.1s;
-  }
-  .t-row:hover { background: var(--faint); border-left-color: var(--acc); }
-  .t-up        { background: var(--acc-dim); border-left-color: var(--acc) !important; }
-  .t-past      { opacity: 0.3; }
-
-  .t-time {
-    font-size: 1.1rem;
-    color: var(--acc);
-    flex-shrink: 0;
-    width: 4rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .t-name {
-    font-size: 1.4rem;
-    font-weight: 300;
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--fg);
-  }
-
-  .t-badge {
-    font-size: 0.9rem;
-    font-weight: 500;
-    background: var(--acc);
-    color: var(--bg);
-    padding: 0.2em 0.8em;
-    border-radius: 3px;
-    flex-shrink: 0;
-    letter-spacing: 0.04em;
-  }
-
-  /* ── RIGHT pane ─────────────────────────── */
-  .pane-week {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .week-header {
-    flex-shrink: 0;
-    padding: 3rem 3rem 0;
-    border-bottom: 1px solid var(--line);
-    background: var(--bg);
-  }
-
-  .week-title-row { margin-bottom: 1.7rem; }
-
-  /* Tab strip */
-  .day-tabs {
-    display: flex;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .day-tabs::-webkit-scrollbar { display: none; }
-
-  .tab {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.8rem 1.5rem;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: var(--dim);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.1rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: color 0.12s, border-color 0.12s;
-    margin-bottom: -1px;
-    white-space: nowrap;
-  }
-  .tab:hover  { color: var(--fg); }
-  .tab-active { color: var(--acc); border-bottom-color: var(--acc); }
-
-  .tab-count {
-    font-size: 0.9rem;
-    background: var(--faint);
-    border-radius: 99px;
-    padding: 0.2em 0.7em;
-    color: var(--dim);
-  }
-  .tab-active .tab-count { background: var(--acc-dim); color: var(--acc); }
-
-  /* ── Week columns — always one row, horizontal scroll ── */
-  .week-cols {
-    flex: 1;
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
-  }
-
-  .day-col {
-    width: var(--col-w);
-    min-width: var(--col-w);
-    flex-shrink: 0;
-    border-right: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    scroll-snap-align: start;
-  }
-
-  .day-heading {
-    display: flex;
-    align-items: baseline;
-    gap: 0.8rem;
-    padding: 1.9rem 2.25rem 1.4rem;
-    border-bottom: 1px solid var(--line);
-    flex-shrink: 0;
-  }
-
-  .day-abbr {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.4rem;
-    font-weight: 800;
-    color: var(--fg);
-    letter-spacing: -0.02em;
-  }
-
-  .day-full {
-    font-size: 1rem;
-    color: var(--dim);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .day-entries {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
-  }
-
-  .w-row {
-    display: flex;
-    align-items: baseline;
-    gap: 1.1rem;
-    padding: 0.8rem 2.25rem;
-    border-bottom: 1px solid var(--line);
-    cursor: pointer;
-    transition: background 0.1s, padding-left 0.1s;
-  }
-  .w-row:last-child { border-bottom: none; }
-  .w-row:hover { background: var(--faint); padding-left: 2.8rem; }
-
-  .w-time {
-    font-size: 1.1rem;
-    color: var(--acc);
-    flex-shrink: 0;
-    width: 4rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .w-name {
-    font-size: 1.4rem;
-    font-weight: 300;
-    color: var(--fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* ── Hover preview ─────────────────────── */
-  .preview {
-    position: fixed;
-    top: var(--py);
-    left: var(--px);
-    transform: translate(28px, -55%);
-    pointer-events: none;
-    z-index: 9999;
-    animation: pop 0.13s ease forwards;
-  }
-  .preview img {
-    display: block;
-    width: 300px;
-    height: 400px;
-    object-fit: cover;
-    border-radius: 8px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px var(--line);
-  }
-  .preview-name {
-    font-size: 1rem;
-    color: var(--dim);
-    padding: 0.6rem 0.2rem 0;
-    max-width: 300px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.03em;
-  }
-  @keyframes pop {
-    from { opacity: 0; transform: translate(28px,-52%) scale(0.94); }
-    to   { opacity: 1; transform: translate(28px,-55%) scale(1); }
-  }
-
-  /* ── Misc ──────────────────────────────── */
-  .splash {
-    display: flex; align-items: center; justify-content: center;
-    gap: 1.1rem; height: 100vh;
-    font-size: 1.1rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim);
-  }
-  .dot {
-    width: 10px; height: 10px; border-radius: 50%; background: var(--acc);
-    animation: pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50%      { opacity:0.2; transform:scale(0.6); }
-  }
-  .empty { font-size: 1.1rem; color: var(--card-faint); padding: 1.9rem 2.25rem; }
-</style>
