@@ -1,108 +1,432 @@
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Space+Grotesk:wght@300;400;700&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  .root{background:#050508;color:#c4c4cc;font-family:'Space Grotesk',sans-serif;min-height:600px;overflow:hidden;border:1px solid #1a1a2e}
-  /* Eminence Hero */
-  .hero{position:relative;width:100%;height:400px;overflow:hidden;background:#000}
-  .hero-img-placeholder{width:100%;height:100%;background:radial-gradient(circle at 50% 30%, #1a1233 0%, #050508 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#4a3b80;text-shadow:0 0 20px rgba(74,59,128,0.5)}
-  .hero-img-placeholder svg{margin-bottom:15px;opacity:0.4}
-  .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(5,5,8,0.4) 50%,#050508 100%)}
-  .magic-circuit{position:absolute;inset:0;background-image:radial-gradient(#4a3b80 0.5px,transparent 0.5px);background-size:30px 30px;opacity:0.05;pointer-events:none}
-  /* Shadow Identity Badge */
-  .ep-badge{position:absolute;top:20px;left:20px;background:rgba(10,10,15,0.8);border-left:3px solid #7c5dfa;padding:8px 15px;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#7c5dfa;box-shadow:10px 0 30px rgba(0,0,0,0.5)}
-  .hero-bottom{position:absolute;bottom:0;left:0;right:0;padding:40px}
-  .ep-number{font-size:12px;font-weight:700;letter-spacing:.4em;text-transform:uppercase;color:#4a3b80;margin-bottom:8px}
-  .ep-title{font-family:'Cinzel Decorative',cursive;font-size:32px;font-weight:900;color:#fff;line-height:1;margin-bottom:15px;text-shadow:0 0 15px rgba(124,93,250,0.3)}
-  /* Actions */
-  .hero-actions{display:flex;align-items:center;gap:15px}
-  .btn-play{background:#7c5dfa;color:#fff;border:none;padding:12px 30px;font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:.1em;cursor:pointer;clip-path:polygon(10% 0, 100% 0, 90% 100%, 0% 100%)}
-  .btn-icon{background:rgba(255,255,255,0.03);border:1px solid rgba(124,93,250,0.2);width:45px;height:45px;display:flex;align-items:center;justify-content:center;color:#7c5dfa;cursor:pointer;transition:0.3s}
-  .btn-icon:hover{background:rgba(124,93,250,0.1);color:#fff}
-  /* Progress */
-  .progress-strip{height:1px;width:100%;background:#1a1a2e}
-  .progress-fill{height:100%;width:88%;background:linear-gradient(90deg, #4a3b80, #7c5dfa);box-shadow:0 0 10px #7c5dfa}
-  /* Layout */
-  .body{display:grid;grid-template-columns:1fr 380px}
-  /* Info Side */
-  .info{padding:40px;background:linear-gradient(135deg, #08080c 0%, #050508 100%)}
-  .anime-title{font-family:'Cinzel Decorative',cursive;font-size:24px;color:#7c5dfa;margin-bottom:20px;letter-spacing:1px}
-  .meta-grid{display:grid;grid-template-columns:100px 1fr;gap:15px;margin-bottom:30px}
-  .mk{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#4a3b80}
-  .mv{font-size:12px;color:#888899}
-  .synopsis{font-size:13px;line-height:1.8;color:#666677;border-left:1px solid #1a1a2e;padding-left:20px;font-style:italic}
-  /* Episode List Side */
-  .ep-list{background:#08080c;border-left:1px solid #1a1a2e}
-  .ep-list-header{padding:20px;font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:#4a3b80;border-bottom:1px solid #1a1a2e}
-  .ep-item{display:flex;align-items:center;padding:15px 20px;gap:15px;border-bottom:1px solid #11111a;transition:0.2s}
-  .ep-item:hover{background:#0c0c14}
-  .ep-item.current{background:rgba(124,93,250,0.03);border-right:4px solid #7c5dfa}
-  .ep-n{font-family:'Cinzel Decorative';font-size:16px;color:#1a1a2e;width:30px}
-  .current .ep-n{color:#7c5dfa}
-  .ep-info{flex:1}
-  .ep-name{font-size:13px;color:#c4c4cc;margin-bottom:4px}
-  .ep-dur{font-size:10px;color:#4a3b80;font-family:monospace}
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animetv Interface Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* 1. Base / Reset Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-<div class="root">
-  <div class="hero">
-    <div class="magic-circuit"></div>
-    <div class="hero-img-placeholder">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span style="letter-spacing: 0.5em; font-size: 10px;">I AM ATOMIC</span>
+    body {
+      background: #0d0d10; /* Dark overall background */
+      color: #ededea; /* Near-white primary text */
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Primary Accent Color: Neon Green/Lime */
+    :root {
+      --accent-color: #d4f55e;
+      --accent-alpha: rgba(212, 245, 94, 0.1); /* 10% alpha version for tints */
+    }
+
+    /* 2. Utility / Typography Classes */
+    .ff-syne { font-family: 'Syne', sans-serif; }
+    .w-bold { font-weight: 800; }
+    .w-medium { font-weight: 500; }
+    .uppercase { text-transform: uppercase; letter-spacing: 0.15em; }
+    .text-sm { font-size: 11px; }
+    .text-xs { font-size: 10px; }
+    .text-dim { color: rgba(237, 237, 234, 0.5); } /* Reduced opacity for secondary text */
+    .text-accent { color: var(--accent-color); }
+
+    /* 3. Main Layout Structure */
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* 4. Left Sidebar Navigation */
+    .sidebar {
+      width: 64px;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      margin-bottom: 32px;
+      color: var(--accent-color);
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .nav-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      color: rgba(237, 237, 234, 0.5);
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .nav-icon:hover {
+      color: #ededea;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* 5. Main Content Area */
+    .main-content {
+      flex: 1;
+    }
+
+    /* 6. Hero / Spotlight Section (Header) */
+    .hero {
+      position: relative;
+      height: 380px;
+      overflow: hidden;
+    }
+
+    /* Mock Hero Image/Visual using CSS Gradients */
+    .hero-visual {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 70% 30%, #1e293b 0%, #111116 100%);
+      opacity: 0.8;
+    }
+
+    /* Gradient Fades: Bottom-to-dark, Left-to-dark for legibility */
+    .hero-fade-bottom {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 160px;
+      background: linear-gradient(to top, #0d0d10 0%, rgba(13, 13, 16, 0.8) 40%, transparent 100%);
+    }
+
+    .hero-fade-left {
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 40%;
+      background: linear-gradient(to right, rgba(13, 13, 16, 0.7) 0%, transparent 100%);
+    }
+
+    /* Inner padding and bottom alignment for hero text */
+    .hero-body {
+      position: relative;
+      padding: 40px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end; /* Bottom align title content */
+    }
+
+    /* Metadata above the main title */
+    .hero-meta-top {
+      color: rgba(237, 237, 234, 0.6);
+      margin-bottom: 8px;
+    }
+
+    /* Main Show Title (Syne Font) */
+    .hero-title {
+      font-size: 32px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #ededea;
+      margin-bottom: 12px;
+      max-width: 600px;
+    }
+
+    /* Show description/synopsis, limited to 3 lines */
+    .hero-synopsis {
+      color: rgba(237, 237, 234, 0.5);
+      font-weight: 300;
+      max-width: 600px;
+      margin-bottom: 20px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Primary CTA Buttons */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-watch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-color);
+      color: #0d0d10;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-watch:hover { opacity: 0.9; }
+
+    .btn-secondary {
+      background: rgba(13, 13, 16, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(237, 237, 234, 0.7);
+      border-radius: 4px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ededea;
+    }
+
+    /* Progress Indicators (Mock) */
+    .hero-sliders {
+      position: absolute;
+      bottom: 20px;
+      right: 40px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .slider-dot {
+      width: 24px; height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 1px;
+    }
+
+    .slider-dot.active { background: var(--accent-color); }
+
+    /* 7. Content Body: Shelf/Carousel Sections */
+    .content-body {
+      padding: 40px;
+    }
+
+    .shelf {
+      margin-bottom: 40px;
+    }
+
+    /* Shelf Header with Title, Divider, and Nav Arrows */
+    .shelf-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .shelf-title {
+      color: #ededea;
+      flex-shrink: 0;
+      padding-right: 16px;
+    }
+
+    /* Short accent line divider next to the title */
+    .shelf-divider {
+      width: 40px;
+      height: 2px;
+      background: var(--accent-color);
+    }
+
+    .shelf-spacer {
+      flex: 1; /* Pushes navigation buttons to the right */
+    }
+
+    .shelf-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .shelf-nav-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(237, 237, 234, 0.6);
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .shelf-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.05);
+      color: #ededea;
+    }
+
+    /* Media Grid for Posters (Based on 16:9 thumbnails in the image) */
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+
+    .media-card {
+      cursor: pointer;
+    }
+
+    /* Thumbnail aspect ratio box (roughly 16:9) */
+    .media-thumb-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #1a1a22; /* Fallback color */
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    /* Placeholder gradient inner for visual feedback */
+    .media-thumb-placeholder {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #2a2a35, #14141a);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    /* Fade-out effect seen on the rightmost element in the provided image */
+    .media-card.fade-out {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    /* Labels below media thumbnails */
+    .media-label {
+      line-height: 1.3;
+      color: rgba(237, 237, 234, 0.8);
+      /* Basic Japanese text alignment */
+      display: block;
+      margin-top: 2px;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+  
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+        <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"/>
+      </svg>
     </div>
-    <div class="hero-overlay"></div>
-    <div class="ep-badge">Manifesting Destiny</div>
+    <nav class="sidebar-nav">
+      <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+      <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
     
-    <div class="hero-bottom">
-      <div class="ep-number">Ascension 20 // Final</div>
-      <div class="ep-title">I Am Atomic</div>
-      <div class="hero-actions">
-        <button class="btn-play">REWATCH THE TRUTH</button>
-        <div class="btn-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <div class="btn-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="progress-strip"><div class="progress-fill"></div></div>
-
-  <div class="body">
-    <div class="info">
-      <div class="anime-title">The Eminence in Shadow</div>
-      <div class="meta-grid">
-        <div class="mk">Organization</div><div class="mv">Shadow Garden</div>
-        <div class="mk">Studio</div><div class="mv">Nexus</div>
-        <div class="mk">Status</div><div class="mv">Completed</div>
-        <div class="mk">Threat Level</div><div class="mv">World-Ending</div>
-      </div>
-      <div class="synopsis">
-        Everything is going according to the script. Or so Cid Kagenou thinks. Having lived his life in the shadows to become a mastermind who pulls strings from behind the scenes, he is reincarnated into a world of magic where his "made-up" delusions are actually true...
-      </div>
-    </div>
-
-    <div class="ep-list">
-      <div class="ep-list-header">The Chronicles</div>
-      <div class="ep-item">
-        <span class="ep-n">18</span>
-        <div class="ep-info">
-          <div class="ep-name">Betting Everything on a Moment</div>
-          <div class="ep-dur">23:40</div>
+    <header class="hero">
+      <div class="hero-visual"></div>
+      <div class="hero-fade-left"></div>
+      <div class="hero-fade-bottom"></div>
+      <div class="hero-body">
+        <div class="hero-meta-top text-xs w-medium uppercase">
+          TV Series · 12 Episodes · Winter 2026
+        </div>
+        <h1 class="hero-title ff-syne w-bold">ヘルモード 〜やり込み好きのゲーマーは廃設定の…</h1>
+        <p class="hero-synopsis text-sm">
+          Thirty-five-year-old Kenichi Yamada has spent his life playing every single MMORPG he can get his hands on. Tired of new games that cater to casual players, he leaps at the chance to try out a never-ending game with an intimidating "Hell Mode" that raises the difficulty (and chances to level up) to impossible heights. But, as soon as he selects...
+        </p>
+        <div class="hero-actions text-xs uppercase w-medium">
+          <button class="btn-watch">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Watch Now
+          </button>
+          <button class="btn-secondary">View Details</button>
+          <button class="btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button class="btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
         </div>
       </div>
-      <div class="ep-item">
-        <span class="ep-n">19</span>
-        <div class="ep-info">
-          <div class="ep-name">Dancing Puppet</div>
-          <div class="ep-dur">23:40</div>
-        </div>
+      <div class="hero-sliders">
+        <div class="slider-dot"></div>
+        <div class="slider-dot"></div>
+        <div class="slider-dot"></div>
+        <div class="slider-dot active"></div>
+        <div class="slider-dot"></div>
       </div>
-      <div class="ep-item current">
-        <span class="ep-n">20</span>
-        <div class="ep-info">
-          <div class="ep-name">I Am Atomic</div>
-          <div class="ep-dur">24:00</div>
-        </div>
-      </div>
-    </div>
-  </div>
+    </header>
+
+    <section class="content-body">
+      
+      <div class="shelf">
+        <header class="shelf-header">
+          <h2 class="shelf-title ff-syne w-medium">Romance</h2>
+          <div class="shelf-divider"></div>
+          <div class="shelf-spacer"></div>
+          <div class="shelf-nav">
+            <button class="shelf-nav-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="shelf-nav-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="media-grid">
+          
+          <article class="media-card">
+            <div class="media-thumb-container">
+              <div class="media-thumb-placeholder"></div>
+            </div>
+            <span class="media-label text-sm">正反対な君と僕</span>
+          </article>
+
+          <article class="media-card">
+            <div class="media-thumb-container">
+              <div class="media-thumb-placeholder"></div>
+            </div>
+            <span class="media-label text-sm">幼馴染とはラブコメにならな</span>
+          </article>
+
+          <article class="media-card">
+            <div class="media-thumb-container">
+              <div class="media-thumb-placeholder"></div>
+            </div>
+            <span class="media-label text-sm">綺麗にしてもらえますか。</span>
+          </article>
+
+          <article class="media-card fade-out">
+            <div class="media-thumb-container">
+              <div class="media-thumb-placeholder"></div>
+            </div>
+            <span class="media-label text-sm">うるわしの宵の月</span>
+          </article>
+
+        </div> </div> </section>
+
+  </main>
 </div>
+
+</body>
+</html>

@@ -1,0 +1,258 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Montserrat:wght@300;500&family=Pinyon+Script&display=swap');
+
+  :root {
+    --romance-bg: #fffcf9;
+    --petal-pink: #f8e1e7;
+    --gold: #c5a35d;
+    --ink: #3d3436;
+    --font-serif: 'Cormorant Garamond', serif;
+    --font-script: 'Pinyon Script', cursive;
+    --font-sans: 'Montserrat', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--romance-bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    overflow: hidden;
+    background-image: 
+      radial-gradient(var(--petal-pink) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .otome-container {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    height: 100vh;
+  }
+
+  /* --- LEFT: DECORATIVE INFO --- */
+  .profile-section {
+    padding: 60px 40px;
+    background: white;
+    border-right: 1px solid var(--petal-pink);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 10px 0 30px rgba(248, 225, 231, 0.3);
+    z-index: 2;
+  }
+
+  .ornament {
+    font-family: var(--font-script);
+    color: var(--gold);
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .anime-title {
+    font-family: var(--font-serif);
+    font-size: 38px;
+    font-style: italic;
+    line-height: 1.1;
+    text-align: center;
+    margin-bottom: 30px;
+    color: var(--ink);
+  }
+
+  .stat-ring {
+    width: 120px;
+    height: 120px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .stat-ring::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border: 1px solid var(--petal-pink);
+    border-radius: 50%;
+  }
+
+  .score-val {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    color: var(--gold);
+  }
+
+  .details-list {
+    list-style: none;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .details-list li {
+    padding: 15px 0;
+    border-bottom: 1px cursive var(--petal-pink);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .details-list b { color: var(--gold); }
+
+  /* --- RIGHT: THEATER AREA --- */
+  .theater {
+    padding: 40px;
+    overflow-y: auto;
+    background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(248,221,231,0.2) 100%);
+  }
+
+  .stage-frame {
+    background: white;
+    padding: 15px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+    border: 1px solid var(--petal-pink);
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .stage-placeholder {
+    aspect-ratio: 16/9;
+    background: #fdf5f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-script);
+    font-size: 40px;
+    color: var(--petal-pink);
+  }
+
+  .episode-overlay {
+    position: absolute;
+    bottom: -20px;
+    right: 40px;
+    background: var(--ink);
+    color: white;
+    padding: 20px 40px;
+    font-family: var(--font-serif);
+    font-size: 20px;
+  }
+
+  .ep-nav {
+    margin-top: 60px;
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 20px;
+  }
+
+  .ep-card {
+    min-width: 180px;
+    height: 240px;
+    background: white;
+    border: 1px solid var(--petal-pink);
+    padding: 15px;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ep-card:hover {
+    transform: translateY(-15px);
+    border-color: var(--gold);
+  }
+
+  .ep-card.watched { opacity: 0.6; }
+
+  .ep-thumb-mini {
+    width: 100%;
+    height: 100px;
+    background: var(--petal-pink);
+    margin-bottom: 15px;
+  }
+
+  .ep-num-label {
+    font-family: var(--font-serif);
+    color: var(--gold);
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .ep-name-label {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { height: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+</style>
+
+<div class="otome-container">
+  <aside class="profile-section">
+    <div class="ornament">❧</div>
+    <h1 class="anime-title">You, My Polar Opposite</h1>
+    
+    <div class="stat-ring">
+      <div class="score-val">84%</div>
+    </div>
+
+    <ul class="details-list">
+      <li><span>Status</span> <b>Releasing</b></li>
+      <li><span>Season</span> <b>Summer 24</b></li>
+      <li><span>Studio</span> <b>CloverWorks</b></li>
+      <li><span>Rating</span> <b>PG-13</b></li>
+    </ul>
+
+    <p style="margin-top: 40px; font-size: 12px; line-height: 2; color: rgba(0,0,0,0.5); text-align: center;">
+      "A story of two hearts at opposite ends of the world, meeting in the quiet of a classroom..."
+    </p>
+  </aside>
+
+  <main class="theater">
+    <div class="stage-frame">
+      <div class="stage-placeholder">The Night We Decided Everything</div>
+      <div class="episode-overlay">Episode 07</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px; margin-top: 80px;">
+      <div style="height: 1px; flex: 1; background: var(--gold);"></div>
+      <div class="ornament" style="margin: 0;">Selection</div>
+      <div style="height: 1px; flex: 1; background: var(--gold);"></div>
+    </div>
+
+    <div class="ep-nav">
+      <div class="ep-card watched">
+        <div class="ep-thumb-mini"></div>
+        <span class="ep-num-label">Ep. 01</span>
+        <span class="ep-name-label">You, My Polar Opposite</span>
+      </div>
+      
+      <div class="ep-card watched">
+        <div class="ep-thumb-mini"></div>
+        <span class="ep-num-label">Ep. 02</span>
+        <span class="ep-name-label">A Small Date</span>
+      </div>
+
+      <div class="ep-card" style="border-width: 2px; border-color: var(--gold);">
+        <div class="ep-thumb-mini" style="background: var(--gold);"></div>
+        <span class="ep-num-label">Ep. 07</span>
+        <span class="ep-name-label">The Night We Decided...</span>
+      </div>
+
+      <div class="ep-card">
+        <div class="ep-thumb-mini"></div>
+        <span class="ep-num-label">Ep. 08</span>
+        <span class="ep-name-label">Episode Eight</span>
+      </div>
+      
+      <div class="ep-card">
+        <div class="ep-thumb-mini"></div>
+        <span class="ep-num-label">Ep. 09</span>
+        <span class="ep-name-label">Episode Nine</span>
+      </div>
+    </div>
+  </main>
+</div>
