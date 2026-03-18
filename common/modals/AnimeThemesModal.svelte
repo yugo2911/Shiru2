@@ -1,6 +1,6 @@
 <script>
   import SoftModal from '@/components/modals/SoftModal.svelte'
-  import { Music2 } from 'lucide-svelte'
+  import { Music } from 'lucide-svelte'
   import { writable } from 'simple-store-svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { click } from '@/modules/click.js'
@@ -98,7 +98,7 @@
   use:click={() => modal.toggle(modal.ANIME_THEMES)}
   disabled={!staticMedia?.id}
 >
-  <Music2 size='1.7rem' />
+  <Music size='1.7rem' />
 </button>
 
 <SoftModal 
