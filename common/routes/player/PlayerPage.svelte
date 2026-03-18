@@ -1755,8 +1755,8 @@
     </div>
   {/if}
   <ManagerModal playing={current} files={playableFiles} {playFile} />
-  <div class='top z-40 row d-title'>
-    <div class='stats pl-20 col-4 d-title'>
+<div class='top z-40 row d-title'>
+    <div class='stats pl-20 pb-10 col-12 d-title position-absolute bottom-0 left-0'>
       <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
         {#if media?.title}
           {media?.title}
