@@ -153,47 +153,59 @@
 </div>
 
 <style>
-  .airing::before {
-    content: '';
-    position: absolute;
-    inset: -1.3rem;
-    border-radius: .4rem;
-    pointer-events: none;
-    animation: airing-pulse 3.5s infinite;
-    will-change: box-shadow, opacity;
+  .small-card-ct { transition: transform 0.2s; outline: none; }
+  .small-card-ct:hover, .small-card-ct:focus-within { transform: translateY(-4px); z-index: 10; }
+  
+  .small-card { 
+    width: 160px; 
+    min-height: 280px; 
+    background: var(--secondary-color-dark); 
+    border-radius: 8px;
+    padding: 10px;
   }
-  @keyframes airing-pulse {
-    0%   { box-shadow: 0 0 0 0 var(--success-color); opacity: 0.9; }
-    25%  { box-shadow: 0 0 0 .7rem var(--dark-color); opacity: 0.6; }
-    40% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0.4; }
-    100% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0; }
+
+  .cover-img { 
+    aspect-ratio: 2 / 3; 
+    object-fit: cover; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
+
   .airing-badge {
     position: absolute;
-    top: -1rem;
-    right: -1rem;
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
     font-size: 1rem;
-    padding: .35rem .9rem;
-    box-shadow: 0 .2rem .5rem hsla(var(--black-color-hsl), 0.2);
+    z-index: 2;
   }
-  .small-card-ct:hover {
-    z-index: 30;
-    /* fixes transform scaling on click causing z-index issues */
-  }
+
   .title {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     line-height: 1.2;
+    margin-top: 8px;
+    height: 38px;
   }
-  .item {
-    width: 100%;
-    aspect-ratio: 152/296;
-  }
+
   .list-status-circle {
-    background: var(--statusColor);
-    height: 1.1rem;
-    width: 1.1rem;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
+    background-color: var(--statusColor, #eee);
+    flex-shrink: 0;
   }
+
+  .context-type { 
+    font-size: 1.2rem; 
+    color: var(--text-muted); 
+    margin: 4px 0; 
+  }
+
+  :global(.small-card-ct .cover-color) { background-color: var(--color); }
+  
+  /* Airing State Glow */
+  .airing .cover-img { border: 2px solid var(--success-color); }
+  
+  .not-reactive { pointer-events: none; }
 </style>
