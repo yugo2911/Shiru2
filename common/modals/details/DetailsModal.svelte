@@ -14,6 +14,7 @@
   import ToggleList from '@/modals/details/components/ToggleList.svelte'
   import Scoring from '@/components/Scoring.svelte'
   import TrailerModal from '@/modals/TrailerModal.svelte'
+  import AnimeThemesModal from '@/modals/AnimeThemesModal.svelte'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
   import Following from '@/modals/details/components/Following.svelte'
@@ -294,6 +295,8 @@
     {/if}
 
     <TrailerModal {staticMedia} />
+
+    <AnimeThemesModal {staticMedia} />
 
     {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
       {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
