@@ -1755,67 +1755,66 @@
     </div>
   {/if}
   <ManagerModal playing={current} files={playableFiles} {playFile} />
-<div class='top z-40 row d-title'>
-    <div class='stats pl-20 pb-10 col-12 d-title position-absolute bottom-0 left-0'>
-      <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
-        {#if media?.title}
-          {media?.title}
-        {:else if media?.media?.title} <!-- useful when a torrent is EXTREMELY slow at loading... -->
-          {anilistClient.title(media?.media)}
-        {:else if current}
-          {AnimeResolver.cleanFileName(current.name)}
-        {/if}
-      </div>
-      <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
-        {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
-          {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
-          Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
-          {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if} <!-- for when the media fails to resolve, we can predict that the file length is likely the episode count. -->
-        {:else if current && (videos?.length > 1)}
-          Episode {videos.indexOf(current) + 1} of {videos.length} <!-- fallback for when the media fails to resolve and we also fail to resolve the episode numbers, best to indicate what file we are currently on. -->
-        {/if}
-        {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
-        {#if media?.episodeTitle}{media.episodeTitle}{/if}
-      </div>
+<div class='top z-40 d-title' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;'>
+  
+  <div style='display: flex; justify-content: center; align-items: center; padding-top: 20px; pointer-events: auto; gap: 20px;'>
+    <div class='d-flex align-items-center'>
+      <Users class='pt-5 block-scale-30' strokeWidth={3} />
+      <span class='stats font-scale-24 ml-10'>{torrent.peers || 0}</span>
     </div>
-    <div class='d-flex justify-content-center bottom-0 col-4 d-title d-filler'>
-      <span class='icon'><Users class='pt-5 block-scale-30' strokeWidth={3} /> </span>
-      <span class='stats font-scale-24'>{torrent.peers || 0}</span>
-      <span class='icon'><ArrowDown class='block-scale-30' /></span>
-      <span class='stats font-scale-24'>{fastPrettyBytes(torrent.down)}/s</span>
-      <span class='icon'><ArrowUp class='block-scale-30' /></span>
-      <span class='stats font-scale-24'>{fastPrettyBytes(torrent.up)}/s</span>
-      {#if resolvePrompt}
-        <div class='position-absolute text-monospace rounded skipPrompt d-flex flex-column align-items-center text-center bg-dark-light p-20 z-50 mt-60' class:w-500={SUPPORTS.isAndroid}>
-          <div class='skipFont'>
-            Failed to <b>identify</b> the media from the file name, would you like to fix it?
-          </div>
-          <div class='d-flex justify-content-center mt-20'>
-            <button class='btn btn-primary mx-2 mr-20 d-flex align-items-center justify-content-center' type='button' use:click={() => resolveResponse(true)}>
-              <span>Yes</span>
-            </button>
-            <button class='btn btn-secondary mx-2 ml-20 d-flex align-items-center justify-content-center' type='button' use:click={() => resolveResponse(false)}>
-              <span>No</span>
-            </button>
-          </div>
-        </div>
-      {:else if skipPrompt}
-        <div class='position-absolute text-monospace rounded skipPrompt d-flex flex-column align-items-center text-center bg-dark-light p-20 z-50 mt-60' class:w-500={SUPPORTS.isAndroid}>
-          <div class='skipFont'>
-            This episode has been marked as a <b>{filler || recap}</b>, do you want to skip?
-          </div>
-          <div class='d-flex justify-content-center mt-20'>
-            <button class='btn btn-primary mx-2 mr-20 d-flex align-items-center justify-content-center' type='button' use:click={() => skipResponse(true)}>
-              <span>Yes</span>
-            </button>
-            <button class='btn btn-secondary mx-2 ml-20 d-flex align-items-center justify-content-center' type='button' use:click={() => skipResponse(false)}>
-              <span>No</span>
-            </button>
-          </div>
-        </div>
-      {/if}
+    <div class='d-flex align-items-center'>
+      <ArrowDown class='block-scale-30' />
+      <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.down)}/s</span>
+    </div>
+    <div class='d-flex align-items-center'>
+      <ArrowUp class='block-scale-30' />
+      <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.up)}/s</span>
     </div>
   </div>
+
+  <div style='position: absolute; bottom: 80px; left: 20px; max-width: 60%; pointer-events: auto; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);'>
+    <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
+      {#if media?.title}
+        {media?.title}
+      {:else if media?.media?.title}
+        {anilistClient.title(media?.media)}
+      {:else if current}
+        {AnimeResolver.cleanFileName(current.name)}
+      {/if}
+    </div>
+    <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
+      {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
+        {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
+        Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
+        {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if}
+      {:else if current && (videos?.length > 1)}
+        Episode {videos.indexOf(current) + 1} of {videos.length}
+      {/if}
+      {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
+      {#if media?.episodeTitle}{media.episodeTitle}{/if}
+    </div>
+  </div>
+
+  {#if resolvePrompt || skipPrompt}
+    <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto;'>
+      <div class='text-monospace rounded skipPrompt d-flex flex-column align-items-center text-center bg-dark-light p-20 z-50' class:w-500={SUPPORTS.isAndroid}>
+        {#if resolvePrompt}
+          <div class='skipFont'>Failed to <b>identify</b> the media, fix it?</div>
+          <div class='d-flex justify-content-center mt-20'>
+            <button class='btn btn-primary mx-2 mr-20' use:click={() => resolveResponse(true)}>Yes</button>
+            <button class='btn btn-secondary mx-2 ml-20' use:click={() => resolveResponse(false)}>No</button>
+          </div>
+        {:else}
+          <div class='skipFont'>This is a <b>{filler || recap}</b>, skip?</div>
+          <div class='d-flex justify-content-center mt-20'>
+            <button class='btn btn-primary mx-2 mr-20' use:click={() => skipResponse(true)}>Yes</button>
+            <button class='btn btn-secondary mx-2 ml-20' use:click={() => skipResponse(false)}>No</button>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+</div>
   <div class='middle d-flex align-items-center justify-content-center flex-grow-1 position-relative'>
     <div aria-hidden='true' class='w-full h-full position-absolute toggle-fullscreen' on:dblclick={toggleFullscreen} on:click|self={() => { if ($page === page.PLAYER && modal.length === 0) { playPause(); } else if (!miniplayerShelved) { page.navigateTo(page.PLAYER) } }} />
     <div aria-hidden='true' class='w-full h-full position-absolute toggle-immerse d-none' on:dblclick={toggleFullscreen} on:click|self={toggleImmerse} />
