@@ -1,178 +1,240 @@
-<div class="small-card-ct">
-  <div class="item small-card airing">
-    
-    <div class="airing-header">
-      Ep 12 out for&nbsp;
-      <span class="text-success">2h 15m</span>
-    </div>
+<script>
+  import { onMount, onDestroy } from 'svelte'
+  import PreviewCard from '@/components/cards/PreviewCard.svelte'
+  import { airingAt, getAiringInfo, getKitsuMappings, formatMap, statusColorMap } from '@/modules/anime/anime.js'
+  import { createListener } from '@/modules/util.js'
+  import { hoverClick } from '@/modules/click.js'
+  import SmartImage from '@/components/visual/SmartImage.svelte'
+  import AudioLabel from '@/components/AudioLabel.svelte'
+  import { anilistClient, currentYear } from '@/modules/anilist.js'
+  import { settings } from '@/modules/settings.js'
+  import { mediaCache } from '@/modules/cache.js'
+  import { modal } from '@/modules/navigation.js'
+  import { Skull, Swords, Shield, Crown } from 'lucide-svelte'
 
-    <div class="image-container">
-      <span class="airing-badge">AIRING</span>
-      <div class="cover-img" style="background-color: #2b2d42;">
-        <img src="https://via.placeholder.com/152x215" alt="Cover">
-      </div>
-      <div class="audio-label">SUB | DUB</div>
-    </div>
+  export let data
+  export let type = null
+  export let variables = null
+  let _variables = variables
 
-    <div class="context-type">
-      <svg class="icon text-success" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
-      1,240 likes
-    </div>
+  let media
+  $: if (data && !media) media = mediaCache.value[data?.id]
+  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
+  
+  function viewMedia() {
+    if (_variables?.fileEdit) _variables.fileEdit(media)
+    else modal.open(modal.ANIME_DETAILS, media)
+  }
 
-    <div class="title">
-      <div class="list-status-circle" style="--statusColor: #2db039;"></div>
-      Chainsaw Man: International Assassins Arc
-    </div>
+  let preview = false
+  let ignoreFocus = false
+  function setHoverState(state) {
+    if (settings.value.cardPreview) preview = state
+    else if (state) viewMedia()
+  }
 
-    <div class="meta-row">
-      <div class="meta-item">
-        <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <span>2026</span>
-      </div>
-      <div class="meta-item">
-        <span>TV</span>
-        <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
-      </div>
-    </div>
-  </div>
-</div>
+  let container
+  let previewCard
+  let focusTimeout
+
+  function handleFocus() {
+    if (ignoreFocus || preview) return
+    focusTimeout = setTimeout(() => {
+      if (settings.value.cardPreview) {
+        preview = true
+        ignoreFocus = true
+      }
+    }, 800)
+  }
+
+  let _airingAt = null
+  $: airingInfo = getAiringInfo(_airingAt)
+
+  onMount(() => {
+    _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
+  })
+
+  const { reactive, init } = createListener(['btn', 'preview-safe-area'])
+  $: init(preview)
+</script>
 
 <style>
-  :root {
-    --font-mono: 'Courier New', monospace;
-    --font-display: 'Inter', sans-serif;
-    --tertiary-color: #1a1a1a;
-    --card-fg: #ffffff;
-    --card-dim: #999;
-    --card-accent: #00ff88;
-    --bg-success: #2db039;
-  }
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Quicksand:wght@300;500&display=swap');
 
   .small-card-ct {
-    width: 190px;
-    padding: 15px;
-    background: transparent;
-    font-family: var(--font-mono);
-    border-radius: 6px;
-    transition: background 0.1s;
+    font-family: 'Quicksand', sans-serif;
+    /* Positioned higher as requested */
+    margin-top: -35px !important;
+    transition: filter 0.3s ease;
+  }
+
+  .nazarick-frame {
+    background: #050505;
+    border: 1px solid #2a2211;
     position: relative;
-    color: white;
-  }
-
-  .small-card-ct:hover {
-    z-index: 30;
-    background: rgba(237,237,234,0.04);
-  }
-
-  .item {
-    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .airing-header {
-    width: 100%;
-    text-align: center;
-    padding-bottom: 10px;
-    font-size: 0.9rem;
-    color: var(--card-dim);
-  }
-
-  .text-success { color: var(--card-accent) !important; }
-
-  /* Airing Glow */
-  .airing { position: relative; }
-  .airing::before {
+  /* Ornate Gold Corners */
+  .nazarick-frame::before, .nazarick-frame::after {
     content: '';
     position: absolute;
-    inset: -10px;
-    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #8e6d31;
+    z-index: 10;
     pointer-events: none;
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
-    border: 1px solid rgba(0, 255, 136, 0.3);
+    transition: all 0.5s ease;
+  }
+
+  .nazarick-frame::before { top: 5px; left: 5px; border-right: 0; border-bottom: 0; }
+  .nazarick-frame::after { bottom: 5px; right: 5px; border-left: 0; border-top: 0; }
+
+  .small-card-ct:hover .nazarick-frame {
+    border-color: #8e6d31;
+    box-shadow: 0 0 20px rgba(142, 109, 49, 0.3), inset 0 0 15px rgba(142, 109, 49, 0.1);
+    transform: scale(1.02);
   }
 
   .image-container {
     position: relative;
-    display: inline-block;
+    padding: 12px;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
   }
 
-  .airing-badge {
-    position: absolute;
-    top: -1rem;
-    right: -1rem;
-    background: var(--bg-success);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    z-index: 2;
+  :global(.cover-img) {
+    filter: sepia(0.5) contrast(1.2) brightness(0.7);
+    transition: all 0.8s ease !important;
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
   }
 
-  .cover-img {
-    width: 100%;
-    aspect-ratio: 152/215;
-    border-radius: 4px;
-    overflow: hidden;
+  .small-card-ct:hover :global(.cover-img) {
+    filter: sepia(0) contrast(1.1) brightness(0.9);
   }
 
-  .cover-img img { width: 100%; height: 100%; object-fit: cover; }
-
-  .audio-label {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    background: rgba(0,0,0,0.7);
-    font-size: 0.6rem;
-    padding: 2px 4px;
-    border-radius: 3px;
+  .title-area {
+    padding: 10px 15px 20px 15px;
+    text-align: center;
   }
 
-  .context-type {
-    display: flex;
-    align-items: center;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--card-dim);
-    padding-top: 8px;
+  .rank-label {
+    font-family: 'Cinzel Decorative', cursive;
+    font-size: 8px;
+    color: #8e6d31;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
   }
 
   .title {
+    font-family: 'Cinzel Decorative', cursive;
+    font-weight: 900;
+    font-size: 1.1rem !important;
+    line-height: 1.1;
+    color: #e2d1b1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-height: 1.25;
-    font-family: var(--font-display) !important;
-    font-size: 1.1rem !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em;
-    color: var(--card-fg);
-    margin-top: 0.7rem;
-    margin-bottom: 10px;
   }
 
-  .list-status-circle {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--statusColor);
-    display: inline-block;
-    margin-right: 5px;
-  }
-
-  .meta-row {
+  .meta-scroll {
+    margin-top: auto;
+    background: #0a0a0a;
+    border-top: 1px solid #1a1a1a;
+    padding: 8px 12px;
     display: flex;
     justify-content: space-between;
-    margin-top: auto;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-size: 0.85rem;
-    color: var(--card-dim);
+    align-items: center;
+    font-size: 9px;
+    color: #555;
   }
 
-  .meta-item { display: flex; align-items: center; gap: 5px; }
-  .icon { opacity: 0.7; }
+  .airing-pulse {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: #4a0000;
+    color: #ff4d4d;
+    padding: 2px 10px;
+    font-size: 8px;
+    font-weight: 900;
+    border: 1px solid #ff4d4d;
+    box-shadow: 0 0 10px #4a0000;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; text-shadow: 0 0 5px #ff4d4d; }
+    100% { opacity: 0.6; }
+  }
+
+  .tier-icon {
+    position: absolute;
+    top: -10px;
+    right: 15px;
+    color: #8e6d31;
+    background: #050505;
+    padding: 5px;
+    border: 1px solid #8e6d31;
+    border-radius: 50%;
+    z-index: 15;
+  }
 </style>
+
+<div bind:this={container} 
+     class='d-flex p-15 position-relative small-card-ct {$reactive ? `` : `not-reactive`}' 
+     use:hoverClick={[viewMedia, setHoverState, viewMedia]} 
+     on:focus={handleFocus}>
+  
+  {#if preview}
+    <PreviewCard {media} {type} {_variables} bind:element={previewCard}/>
+  {/if}
+
+  <div class='nazarick-frame item load-in pointer {airingInfo?.episode.match(/out for/i) ? `airing` : ``}'>
+    <div class="tier-icon">
+      <Crown size="14" />
+    </div>
+
+    {#if airingInfo?.episode.match(/out for/i)}
+      <div class="airing-pulse">UNSEALED</div>
+    {/if}
+
+    <div class='image-container'>
+      <SmartImage class='cover-img cover-color cover-ratio w-full' color="#050505" images={[media.coverImage.extraLarge, media.coverImage?.medium]}/>
+      
+      {#if !_variables?.scheduleList}
+        <div class="position-absolute bottom-15 right-15 opacity-40">
+          <AudioLabel {media} />
+        </div>
+      {/if}
+    </div>
+
+    <div class='title-area'>
+      <span class="rank-label">Supreme Being Entry</span>
+      <div class='title'>
+        {anilistClient.title(media)}
+      </div>
+    </div>
+
+    <div class="px-15 d-flex justify-content-center gap-4 mb-10 opacity-30">
+      <Swords size="12" />
+      <Skull size="12" />
+      <Shield size="12" />
+    </div>
+
+    <div class='meta-scroll'>
+      <span>{formatMap[media.format] || 'SCROLL'}</span>
+      <span style="color: #8e6d31">{media.averageScore || '??'} MP</span>
+    </div>
+  </div>
+</div>
