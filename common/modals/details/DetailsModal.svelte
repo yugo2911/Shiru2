@@ -24,6 +24,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
+  import { ExternalLink } from 'lucide-svelte'
   import { Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10 } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
@@ -171,6 +172,15 @@
     })
   }
 
+  let showExternalLinks = false
+  let showAnimeThemes = false
+
+  function closeOnClickOutside(node, onClose) {
+    function handle(e) { if (!node.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', handle, true)
+    return { destroy() { document.removeEventListener('mousedown', handle, true) } }
+  }
+
   let resizeObserver
   let leftColumn, rightColumn
   function syncHeights() {
@@ -262,33 +272,99 @@
                     </div>
                   {/if}
                 </div>
-                <div class='d-flex flex-row flex-wrap play'>
-                  <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20'
-                          use:click={() => play(media)}
-                          disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
-                    <Play class='mr-10' fill='currentColor' size='1.6rem' />
-                    {playButtonText}
-                  </button>
-                  <div class='mt-20 d-flex'>
-                    {#if Helper.isAuthorized()}
-                      <Scoring class='mr-10 '{media} viewAnime={true} />
-                    {/if}
-                    {#if Helper.isAniAuth()}
-                      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
-                        <div class='favourite d-flex align-items-center justify-content-center' title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
-                          <Heart color={media.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={media.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
-                        </div>
-                      </button>
-                    {/if}
-                    <TrailerModal {staticMedia} />
-                    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
-                      <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
-                    </button>
-                    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
-                      <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
-                    </button>
-                  </div>
-                </div>
+<div class='d-flex flex-row flex-wrap play'>
+  <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20'
+          use:click={() => play(media)}
+          disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
+    <Play class='mr-10' fill='currentColor' size='1.6rem' />
+    {playButtonText}
+  </button>
+
+  <div class='mt-20 d-flex align-items-center'>
+    {#if Helper.isAuthorized()}
+      <Scoring class='mr-10' {media} viewAnime={true} />
+    {/if}
+
+    {#if Helper.isAniAuth()}
+      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
+        <div class='favourite d-flex align-items-center justify-content-center' title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
+          <Heart color={media.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={media.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
+        </div>
+      </button>
+    {/if}
+
+    <TrailerModal {staticMedia} />
+
+    {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
+      {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
+      {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
+      {@const streamingLinks = activeLinks.filter(l => l.type === 'STREAMING')}
+      {@const infoLinks = activeLinks.filter(l => l.type === 'INFO')}
+      {@const socialLinks = activeLinks.filter(l => l.type === 'SOCIAL')}
+      {@const otherLinks = activeLinks.filter(l => !['OFFICIAL','STREAMING','INFO','SOCIAL'].includes(l.type))}
+      <div class='position-relative mr-10' use:closeOnClickOutside={() => showExternalLinks = false}>
+        <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0' data-toggle='tooltip' data-title='External Links' use:click={() => showExternalLinks = !showExternalLinks}>
+          <ExternalLink size='1.5rem' />
+        </button>
+        {#if showExternalLinks}
+          <div class='ext-dropdown position-absolute'>
+            {#if officialLinks.length}
+              <div class='ext-group-label'>Official</div>
+              {#each officialLinks as link}
+                <button class='ext-item ext-item-official d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg ext-icon-svg-official' />{/if}
+                  <span class='ext-site'>{link.site || 'Official Website'}</span>
+                </button>
+              {/each}
+            {/if}
+            {#if streamingLinks.length}
+              <div class='ext-group-label'>Streaming</div>
+              {#each streamingLinks as link}
+                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                  <span class='ext-site'>{link.site}</span>
+                  {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
+                </button>
+              {/each}
+            {/if}
+            {#if infoLinks.length}
+              <div class='ext-group-label'>Info</div>
+              {#each infoLinks as link}
+                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                  <span class='ext-site'>{link.site}</span>
+                </button>
+              {/each}
+            {/if}
+            {#if socialLinks.length}
+              <div class='ext-group-label'>Social</div>
+              {#each socialLinks as link}
+                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                  <span class='ext-site'>{link.site}</span>
+                </button>
+              {/each}
+            {/if}
+            {#each otherLinks as link}
+              <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
+                <span class='ext-site'>{link.site}</span>
+                {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
+      <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
+    </button>
+    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
+      <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
+    </button>
+  </div>
+</div>
                 <Following media={staticMedia} />
               </div>
             </div>
@@ -568,4 +644,51 @@
     -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
     mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
   }
+  /* ── External links dropdown ─────────────────── */
+.ext-dropdown {
+  position: absolute;
+  bottom: calc(100% + 0.8rem);
+  right: 0;
+  min-width: 20rem;
+  max-width: 28rem;
+  background: #111116;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 5px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(14px);
+  z-index: 200;
+  padding: 0.5rem 0;
+}
+.ext-group-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(237,237,234,0.25);
+  padding: 0.65rem 1.1rem 0.25rem;
+}
+.ext-item {
+  display: flex;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: rgba(237,237,234,0.65);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.98rem;
+  padding: 0.6rem 1.1rem;
+  text-align: left;
+  cursor: pointer;
+  gap: 0.8rem;
+  align-items: center;
+  transition: background .1s, color .1s;
+}
+.ext-item:hover { background: rgba(237,237,234,0.07); color: #ededea; }
+.ext-item-official { color: #d4f55e; }
+.ext-item-official:hover { background: rgba(212,245,94,0.09) !important; }
+.ext-icon { width: 1.4rem; height: 1.4rem; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
+:global(.ext-icon-svg) { flex-shrink: 0; color: rgba(237,237,234,0.3); }
+:global(.ext-icon-svg-official) { color: #d4f55e !important; }
+.ext-site { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ext-lang { font-size: 0.73rem; color: rgba(237,237,234,0.25); text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
 </style>
