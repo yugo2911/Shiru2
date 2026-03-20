@@ -5,6 +5,7 @@
   import { uniqueStore } from '@/modules/util.js'
   import Helper from '@/modules/helper.js'
   import WPC from '@/modules/wpc.js'
+  import { mediaCache } from '@/modules/cache.js'
   import { writable } from 'simple-store-svelte'
   import { fade } from 'svelte/transition'
   import { playActive } from '@/components/TorrentButton.svelte'
@@ -44,19 +45,23 @@
   const resolveData = async (data) => {
     const raw = await data
     if (!raw) return []
-    return Promise.all(
+    const cache = mediaCache?.value || {}
+    const results = await Promise.all(
       raw.map(async item => {
         const resolved = item.data && typeof item.data.then === 'function' ? await item.data : item.data
         const media = resolved?.media || resolved
         if (!media) return null
-        // Spread EVERYTHING from media so coverImage, bannerImage, etc. are all present
+        const cachedMedia = cache[media.id] || {}
         return { 
           ...item, 
-          ...media, 
-          mediaListEntry: media.mediaListEntry || resolved 
+          ...media,
+          ...cachedMedia,
+          id: media.id || item.id,
+          mediaListEntry: resolved?.media ? resolved : media.mediaListEntry 
         }
       })
-    ).then(res => res.filter(Boolean))
+    )
+    return results.filter(Boolean)
   }
 
   export const CYCLE_SECTIONS = ['Continue Watching', 'Watching List', 'Planning List', 'Completed List']
@@ -70,7 +75,8 @@
 
   function refreshSections(list, sectionTitles) {
     uniqueStore(list).subscribe(async (_value) => {
-      if (!await _value) return
+      const val = await _value
+      if (!val) return
       for (const section of manager.sections) {
         if (sectionTitles.includes(section.title) && !section.hide) {
           section.preview.value = section.load(1, 50, section.variables)
@@ -107,7 +113,7 @@
   $: sectionName = CYCLE_SECTIONS[$currentSectionIndex]
   $: animeList = $resolvedCatalog
   $: selectedAnime = animeList[$selectedIndex] || null
-  $: banner = selectedAnime?.bannerImage || ''
+  $: banner = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || selectedAnime?.coverImage?.large || ''
   $: title = selectedAnime?.title?.userPreferred || selectedAnime?.title?.romaji || ''
   $: description = selectedAnime?.description?.replace(/<[^>]*>/g, '').slice(0, 160) + '...' || ''
   $: studio = selectedAnime?.studios?.nodes?.[0]?.name || ''
@@ -189,7 +195,7 @@
     <div class="scroll-wrapper">
       {#each animeList as anime, i (anime.id)}
         <button class="card-unit" class:is-active={i === $selectedIndex} on:click={() => selectedIndex.set(i)}>
-          <img src={anime.coverImage?.large} alt="" loading="lazy" />
+          <img src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''} alt="" loading="lazy" />
           <div class="card-overlay"><div class="index">{(i + 1).toString().padStart(2, '0')}</div></div>
         </button>
       {/each}
