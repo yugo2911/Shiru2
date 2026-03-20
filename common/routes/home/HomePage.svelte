@@ -615,10 +615,5 @@
     .media-card.active {
       width: 11rem;
     }
-
-    .section-cycler {
-      top: 1rem;
-      right: 4%;
-    }
   }
 </style>
