@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniList // Home Theater</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;700&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #3db4f2; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: 'Outfit', sans-serif; overflow: hidden; height: 100vh; }
+        
+        /* Cinematic Background */
+        #theater-bg { position: fixed; inset: 0; z-index: -1; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); filter: brightness(0.3) blur(40px) scale(1.1); }
+        .vignette { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 50%, #050505 100%); pointer-events: none; }
+
+        /* The Shelf Styling */
+        .shelf-container { display: flex; gap: 1rem; padding: 0 5%; position: absolute; bottom: 8%; width: 100%; transition: 0.5s ease; z-index: 10; }
+        .media-card { width: 180px; height: 260px; border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; border: 2px solid transparent; transition: 0.4s cubic-bezier(0.2, 1, 0.3, 1); flex-shrink: 0; }
+        .media-card img { width: 100%; height: 100%; object-cover: cover; opacity: 0.6; transition: 0.4s; }
+        .media-card.active { width: 220px; border-color: #fff; transform: translateY(-20px); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .media-card.active img { opacity: 1; transform: scale(1.05); }
+
+        /* Detail Overlay */
+        .details-engine { position: absolute; top: 15%; left: 5%; opacity: 0; transform: translateX(-30px); transition: 0.6s 0.2s ease-out; }
+        .details-engine.show { opacity: 1; transform: translateX(0); }
+        .editorial-title { font-family: 'Syncopate', sans-serif; font-size: 5rem; letter-spacing: -4px; line-height: 0.8; margin-bottom: 2rem; }
+        .glass-pill { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 0.5rem 1.5rem; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="p-10">
+    <div id="theater-bg"></div>
+    <div class="vignette"></div>
+
+    <header class="flex justify-between items-center relative z-20 opacity-40 hover:opacity-100 transition-opacity">
+        <div class="flex items-center gap-8 font-bold tracking-widest text-xs">
+            <img src="https://anilist.co/img/icons/android-chrome-512x512.png" class="w-8">
+            <span>HOME</span> <span>LIBRARY</span> <span>DISCOVER</span>
+        </div>
+        <div class="text-xs font-black tracking-tighter" id="clock">00:00</div>
+    </header>
+
+    <div id="display-content" class="details-engine">
+        </div>
+
+    <div class="shelf-container" id="main-shelf">
+        </div>
+
+    <script>
+        const catalog = [
+            { title: "FRIEREN", studio: "Madhouse", year: "2023", score: "9.1", desc: "The adventure is over but life goes on for an elf mage just beginning to learn what it means to be human.", banner: "https://s4.anilist.co/file/anilistcdn/media/anime/banner/154587-4O3Ym9n9X7fB.jpg", cover: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-798Y9v7V9o7V.png" },
+            { title: "DUNGEON MESHI", studio: "Trigger", year: "2024", score: "8.4", desc: "Dungeons, dragons... and delicious monster stew. A journey to rescue a fallen comrade becomes a culinary tour of the deep.", banner: "https://s4.anilist.co/file/anilistcdn/media/anime/banner/153518-7Fv0T31fT6p9.jpg", cover: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153518-76Yv6O6rY6o8.jpg" },
+            { title: "MONSTER", studio: "Madhouse", year: "2004", score: "8.8", desc: "Dr. Kenzo Tenma saves a child's life, only to find that he has unleashed a sociopathic genius upon the world.", banner: "https://s4.anilist.co/file/anilistcdn/media/anime/banner/19-8p8Y6qB9p7yX.jpg", cover: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx19-96S8S8.png" },
+            { title: "PLUTO", studio: "M2", year: "2023", score: "8.6", desc: "In a world where robots and humans coexist, a series of murders targeting the world's most advanced robots begins.", banner: "https://s4.anilist.co/file/anilistcdn/media/anime/banner/99088-8p8Y6qB9p7yX.jpg", cover: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx99088-76Yv6O6rY6o8.jpg" }
+        ];
+
+        const shelf = document.getElementById('main-shelf');
+        const bg = document.getElementById('theater-bg');
+        const content = document.getElementById('display-content');
+
+        function selectMedia(index) {
+            const item = catalog[index];
+            bg.style.backgroundImage = `url(${item.banner})`;
+            
+            // Re-trigger Animation
+            content.classList.remove('show');
+            void content.offsetWidth; // Force reflow
+            
+            content.innerHTML = `
+                <div class="glass-pill inline-block text-[10px] font-bold mb-4 tracking-[0.3em] text-[#3db4f2]">${item.studio} // ${item.year}</div>
+                <h1 class="editorial-title">${item.title}</h1>
+                <div class="flex gap-6 items-center mb-8">
+                    <span class="text-2xl font-light">⭐ ${item.score}</span>
+                    <div class="w-px h-6 bg-white/20"></div>
+                    <p class="max-w-md text-sm opacity-60 leading-relaxed font-light">${item.desc}</p>
+                </div>
+                <div class="flex gap-4">
+                    <button class="bg-white text-black px-12 py-4 font-bold text-xs tracking-widest rounded-sm">RESUME</button>
+                    <button class="glass-pill px-8 py-4 font-bold text-xs tracking-widest">LIST SETTINGS</button>
+                </div>
+            `;
+            content.classList.add('show');
+
+            // Update Cards
+            document.querySelectorAll('.media-card').forEach((card, idx) => {
+                card.classList.toggle('active', idx === index);
+            });
+        }
+
+        function init() {
+            catalog.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = `media-card ${idx === 0 ? 'active' : ''}`;
+                card.innerHTML = `<img src="${item.cover}">`;
+                card.onclick = () => selectMedia(idx);
+                shelf.appendChild(card);
+            });
+            selectMedia(0);
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function updateClock() {
+            const d = new Date();
+            document.getElementById('clock').textContent = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+        }
+
+        init();
+    </script>
+</body>
+</html>
