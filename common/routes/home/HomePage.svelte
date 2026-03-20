@@ -101,7 +101,7 @@
     return false
   }
 
-  export const CYCLE_SECTIONS = ['Continue', 'Planning', 'Completed']
+  export const CYCLE_SECTIONS = ['Continue Watching', 'Watching List', 'Planning List', 'Completed List']
   export const currentSectionIndex = writable(0)
   export const selectedIndex = writable(0)
   export const resolvedCatalog = writable([])
@@ -614,6 +614,11 @@
 
     .media-card.active {
       width: 11rem;
+    }
+
+    .section-cycler {
+      top: 1rem;
+      right: 4%;
     }
   }
 </style>
