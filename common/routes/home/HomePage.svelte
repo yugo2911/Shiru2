@@ -366,7 +366,7 @@
   /* ── Content / meta ── */
   .content-gate { position: relative; z-index: 10; padding: 0 5%; margin-top: 5vh; min-height: 480px; width: 45%; }
   .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1; letter-spacing: -1px; margin: 0 0 1.5rem; text-transform: uppercase; }
-  .hero-title .accent { color: var(--accent-dynamic); }
+  .hero-title .accent { color: var(--accent-dynamic) !important; }
   .action-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
   .icon-btn { background: #fff; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: #2b2b2b; opacity: 0.9; padding: 0; transition: transform 0.1s; }
   .icon-btn:hover { transform: scale(1.1); color: #e60012; }
@@ -376,7 +376,7 @@
   .stat .value { font-size: 1.2rem; font-weight: 800; }
   .synopsis { font-size: 0.95rem; line-height: 1.5; opacity: 0.8; max-width: 500px; margin-bottom: 2rem; background: rgba(0,0,0,0.2); padding: 1rem 1.5rem; border-radius: 12px; }
   .cta-row { display: flex; gap: 1.5rem; }
-  .btn-play { background: var(--accent-dynamic); color: #fff; border: 3px solid transparent; border-radius: 50px; padding: 0.9rem 2.5rem; font-weight: 900; font-size: 0.85rem; letter-spacing: 0.05em; cursor: pointer; transition: transform 0.1s, border 0.1s; }
+  .btn-play { background: var(--accent-dynamic) !important; color: #fff; border: 3px solid transparent; border-radius: 50px; padding: 0.9rem 2.5rem; font-weight: 900; font-size: 0.85rem; letter-spacing: 0.05em; cursor: pointer; transition: transform 0.1s, border 0.1s; }
   .btn-play:hover { transform: scale(1.05); border-color: #fff; }
   .btn-ghost { background: rgba(255,255,255,0.1); color: #fff; border: 3px solid transparent; border-radius: 50px; padding: 0.9rem 2.5rem; font-weight: 900; font-size: 0.85rem; cursor: pointer; transition: background 0.1s; }
   .btn-ghost:hover { background: rgba(255,255,255,0.2); border-color: #00c3e3; }
@@ -392,11 +392,11 @@
   .scroll-wrapper::-webkit-scrollbar { display: none; }
   .card-unit { flex: 0 0 220px; height: 220px; border: 4px solid transparent; cursor: pointer; padding: 0; background: #3c3c3c; border-radius: 12px; overflow: hidden; transition: border-color 0.1s, transform 0.1s; outline: none; position: relative; }
   .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: opacity 0.2s; display: block; }
-  .card-unit.is-active { border-color: var(--card-color); transform: scale(1.05); z-index: 5; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+  .card-unit.is-active { border-color: var(--card-color) !important; transform: scale(1.05); z-index: 5; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
   .card-unit.is-active img { opacity: 1; }
   .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem 1rem 1rem; background: linear-gradient(to top, rgba(0,0,0,0.95) 40%, transparent); }
   .card-title { font-size: 1.1rem; font-weight: 800; line-height: 1.2; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; }
   .card-progress { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0.5rem 0; overflow: hidden; }
-  .card-progress-bar { height: 100%; border-radius: 2px; }
+  .card-progress-bar { height: 100%; border-radius: 2px; background: var(--card-color) !important; }
   .card-ep { font-size: 0.9rem; font-weight: 800; color: var(--card-color); margin: 0; }
 </style>
