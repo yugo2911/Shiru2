@@ -170,8 +170,12 @@
 
   async function scrollToActive() {
     await tick()
-    shelfContainer?.querySelector('.is-active')
-      ?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+    if (!shelfContainer) return
+    const activeCard = shelfContainer.querySelector('.is-active')
+    if (!activeCard) return
+    const containerCenter = shelfContainer.offsetWidth / 2
+    const cardCenter = activeCard.offsetLeft + activeCard.offsetWidth / 2
+    shelfContainer.scrollTo({ left: cardCenter - containerCenter, behavior: 'smooth' })
   }
 
   $: if ($selectedIndex !== undefined) scrollToActive()
@@ -179,8 +183,7 @@
   // ─── Section cycling ─────────────────────────────────────────────────────────
 
   $: if ($currentSectionIndex !== undefined) {
-    loadSectionData($currentSectionIndex)
-    selectedIndex.set(0)
+    loadSectionData($currentSectionIndex).then(() => selectedIndex.set(0))
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
