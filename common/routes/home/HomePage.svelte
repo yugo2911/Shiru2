@@ -9,6 +9,7 @@
   import { getMediaMaxEp } from '@/modules/anime/anime.js'
   import { writable } from 'simple-store-svelte'
   import { fade } from 'svelte/transition'
+
   import { playActive } from '@/components/TorrentButton.svelte'
   import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
@@ -223,7 +224,9 @@
 <div class="home-theater" style="--accent-dynamic: {bannerColor};">
 
   {#if banner}
-    <div in:fade={{duration: 250}} class="theater-bg" style="background-image: url({banner}); background-color: {bannerColor}40"></div>
+    {#key banner}
+      <div in:fade={{duration: 120}} class="theater-bg" style="background-image: url({banner}); background-color: {bannerColor}40"></div>
+    {/key}
   {/if}
 
   {#if selectedAnime}
@@ -263,7 +266,7 @@
 
   <main class="content-gate">
     {#if selectedAnime}
-      <div class="meta-block" in:fade={{ duration: 200 }}>
+      <div class="meta-block">
         <h1 class="hero-title">{titleFirst}<br/><span class="accent">{titleRest}</span></h1>
 
         <div class="action-row">
