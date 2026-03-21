@@ -234,7 +234,7 @@
   {#if selectedAnime}
     <div class="media-aside">
       <div class="curse-overlay"></div>
-      <img class="bg-image" src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
+      <img class="bg-image" class:transparent={trailerHide} src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
       {#if trailerId}
         {#await ELECTRON.getYouTube() then youtubeServer}
           {#key selectedAnime.id}
@@ -351,7 +351,7 @@
 
   /* ── Media aside / trailer ── */
   .media-aside { position: absolute; right: 0; top: 0; width: 60%; height: 100%; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); z-index: 1; background: #2b2b2b; overflow: hidden; }
-  .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); }
+  .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); transition: opacity 1.5s; }
   .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
   .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; transition: opacity 1.5s; }
   .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
