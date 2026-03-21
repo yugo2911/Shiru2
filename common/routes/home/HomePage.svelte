@@ -397,9 +397,9 @@
   .scroll-wrapper { display: flex; gap: 2rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 40px 0; }
   .scroll-wrapper::-webkit-scrollbar { display: none; }
   .card-unit { flex: 0 0 280px; height: 380px; border: 5px solid transparent; cursor: pointer; padding: 0; background: #3c3c3c; border-radius: 16px; overflow: hidden; transition: border-color 0.15s, transform 0.15s; outline: none; position: relative; }
-  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: opacity 0.2s; display: block; }
+  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; filter: grayscale(80%) brightness(0.7); transition: opacity 0.2s, filter 0.2s; display: block; }
   .card-unit.is-active { border-color: var(--card-color) !important; transform: scale(1.08) translateY(-10px); z-index: 5; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
-  .card-unit.is-active img { opacity: 1; }
+  .card-unit.is-active img { opacity: 1; filter: grayscale(0%) brightness(1); }
   .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 4rem 1.2rem 1.2rem; background: linear-gradient(to top, rgba(0,0,0,0.98) 30%, transparent); pointer-events: none; }
   .card-title { font-size: 1.3rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; text-transform: uppercase; }
   .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
