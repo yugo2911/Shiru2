@@ -500,16 +500,26 @@ function isInViewport({ top, left, bottom, right, width, height }) {
  */
 function getElementsInDesiredDirection(keyboardFocusable, currentElement, direction) {
   // first try finding visible elements in desired direction
-  return keyboardFocusable.filter(position => {
-    // in order of computation cost
+  const inViewport = keyboardFocusable.filter(position => {
     if (position.element === currentElement.element) return false
     if (getDirection(currentElement, position) !== Directions[direction]) return false
-
-    // filters out elements which are in the viewport, but are overlayed by other elements like a modal
     if (position.inViewport && !position.element.checkVisibility()) return false
-    if (!position.inViewport && direction === 'right') return false // HACK: prevent right navigation from going to offscreen elements, but allow vertical elements!
-    return true
+    return position.inViewport
   })
+
+  // If we found in-viewport elements, prefer those
+  if (inViewport.length) return inViewport
+
+  // For horizontal directions, allow offscreen elements so carousels/shelves can be navigated
+  if (direction === 'left' || direction === 'right') {
+    return keyboardFocusable.filter(position => {
+      if (position.element === currentElement.element) return false
+      if (getDirection(currentElement, position) !== Directions[direction]) return false
+      return true
+    })
+  }
+
+  return []
 }
 
 /**
@@ -542,7 +552,7 @@ function navigateDPad(direction = 'up') {
     }
     element.focus()
     if (isInput && !wasReadOnly) setTimeout(() => { element.readOnly = false })
-    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
     // return
   }
 

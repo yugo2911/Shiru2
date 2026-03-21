@@ -135,6 +135,17 @@
   let muted = true
   let trailerHide = true
   const toggleMute = () => muted = !muted
+
+  let shelfContainer
+
+  // Scroll the active card into view whenever selectedIndex changes
+  $: if (shelfContainer && $selectedIndex !== undefined) {
+    const cards = shelfContainer.querySelectorAll('.card-unit')
+    const activeCard = cards[$selectedIndex]
+    if (activeCard) {
+      activeCard.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+    }
+  }
   const toggleFavourite = () => {
     if (!selectedAnime) return
     selectedAnime.isFavourite = anilistClient.favourite({ id: selectedAnime.id })
@@ -156,8 +167,61 @@
     modal.open(modal.ANIME_DETAILS, selectedAnime)
   }
 
+  async function navigateRight() {
+    const idx = selectedIndex.value ?? 0
+    const count = resolvedCatalog.value?.length ?? 0
+    // At the end — re-resolve to pick up items whose promises have now settled
+    if (idx >= count - 1) {
+      await loadSectionData($currentSectionIndex)
+      const newCount = resolvedCatalog.value?.length ?? 0
+      if (newCount > count) selectedIndex.set(idx + 1)
+      // If still the same length, we're genuinely at the end — don't move
+    } else {
+      selectedIndex.set(idx + 1)
+    }
+  }
+
+  function handleKeydown(e) {
+    const count = resolvedCatalog.value?.length ?? 0
+    if (!count) return
+
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault()
+        e.stopPropagation()
+        navigateRight()
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        e.stopPropagation()
+        selectedIndex.update(n => Math.max(n - 1, 0))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        e.stopPropagation()
+        currentSectionIndex.update(n => (n - 1 + CYCLE_SECTIONS.length) % CYCLE_SECTIONS.length)
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        e.stopPropagation()
+        currentSectionIndex.update(n => (n + 1) % CYCLE_SECTIONS.length)
+        break
+      case 'Enter':
+        e.preventDefault()
+        handleWatch()
+        break
+      case 'Backspace':
+      case 'Escape':
+        e.preventDefault()
+        handleDetails()
+        break
+    }
+  }
+
   onMount(() => {
     setTimeout(() => loadSectionData($currentSectionIndex), 400)
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
   })
 </script>
 
@@ -257,7 +321,7 @@
   </main>
 
   <section class="horizontal-shelf">
-    <div class="scroll-wrapper">
+    <div class="scroll-wrapper" bind:this={shelfContainer}>
       {#each animeList as anime, i (anime.id)}
         <button class="card-unit" class:is-active={i === $selectedIndex} on:click={() => selectedIndex.set(i)}>
           <img src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''} alt="" loading="lazy" />
