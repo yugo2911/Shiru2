@@ -266,7 +266,8 @@
 
   <main class="content-gate">
     {#if selectedAnime}
-      <div class="meta-block">
+      {#key selectedAnime.id}
+        <div class="meta-block" in:fade={{ duration: 120 }}>
         <h1 class="hero-title">{titleFirst}<br/><span class="accent">{titleRest}</span></h1>
 
         <div class="action-row">
@@ -291,6 +292,7 @@
           <button class="btn-ghost" on:click={handleDetails}>DETAILS</button>
         </div>
       </div>
+      {/key}
     {:else}
       <div class="loading-wrap">
         <div class="spinner" style="border-top-color: var(--accent-dynamic);"></div>
@@ -302,17 +304,29 @@
   <section class="horizontal-shelf">
     <div class="scroll-wrapper" bind:this={shelfContainer} use:dragScroll>
       {#each animeList as anime, i (anime.id)}
+        {@const progress = anime.mediaListEntry?.progress ?? 0}
+        {@const total = anime.episodes || anime.nextAiringEpisode?.episode - 1 || null}
+        {@const color = anime.coverImage?.color || '#ffffff'}
         <button
           class="card-unit"
           class:is-active={i === $selectedIndex}
           on:click={() => selectedIndex.set(i)}
-          style="--card-color: {anime.coverImage?.color || '#ffffff'}"
+          style="--card-color: {color}"
         >
           <img
             src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''}
             alt=""
             loading="lazy"
           />
+          <div class="card-info">
+            <p class="card-title">{anime.title?.userPreferred || anime.title?.romaji || ''}</p>
+            {#if progress > 0}
+              <div class="card-progress">
+                <div class="card-progress-bar" style="width: {total ? (progress / total) * 100 : 0}%; background: {color};"></div>
+              </div>
+              <p class="card-ep">{progress}{total ? `/${total}` : ''} ep</p>
+            {/if}
+          </div>
         </button>
       {/each}
     </div>
@@ -376,8 +390,23 @@
   .horizontal-shelf { position: absolute; bottom: 3rem; left: 0; width: 100%; padding: 0 5%; z-index: 20; overflow: hidden; }
   .scroll-wrapper   { display: flex; gap: 1.5rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 20px 0; }
   .scroll-wrapper::-webkit-scrollbar { display: none; }
-  .card-unit        { flex: 0 0 190px; height: 270px; border: 3px solid transparent; cursor: pointer; padding: 0; background: #111; border-radius: 6px; overflow: hidden; transition: border-color 0.2s, transform 0.2s; outline: none; }
-  .card-unit img    { width: 100%; height: 100%; object-fit: cover; opacity: 0.3; }
+  .card-unit        { flex: 0 0 200px; height: 300px; border: 3px solid transparent; cursor: pointer; padding: 0; background: #111; border-radius: 6px; overflow: hidden; transition: border-color 0.2s, transform 0.2s; outline: none; position: relative; }
+  .card-unit img    { width: 100%; height: 100%; object-fit: cover; opacity: 0.35; transition: opacity 0.2s; display: block; }
   .card-unit.is-active     { border-color: var(--card-color); box-shadow: 0 15px 40px rgba(0,0,0,0.9); z-index: 5; }
   .card-unit.is-active img { opacity: 1; }
+
+  .card-info   {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 3rem 0.9rem 0.85rem;
+    background: linear-gradient(to top, rgba(0,0,0,0.97) 60%, transparent);
+  }
+  .card-title  {
+    font-size: 1.4rem; font-weight: 800; line-height: 1.25;
+    margin: 0 0 0.4rem;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+  }
+  .card-progress     { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 0.35rem 0; overflow: hidden; }
+  .card-progress-bar { height: 100%; border-radius: 2px; }
+  .card-ep     { font-family: 'JetBrains Mono'; font-size: 1.09rem; font-weight: 700; color: rgba(255,255,255,0.55); margin: 0; }
 </style>
