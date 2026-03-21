@@ -165,6 +165,8 @@
   let trailerHide = true
   const toggleMute = () => { muted = !muted }
 
+  $: if (selectedAnime?.id) trailerHide = true
+
   // ─── Shelf scroll-to-active ──────────────────────────────────────────────────
 
   let shelfContainer
@@ -235,14 +237,16 @@
       <img class="bg-image" src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
       {#if trailerId}
         {#await ELECTRON.getYouTube() then youtubeServer}
-          <div class="trailer-viewport" class:transparent={trailerHide}>
-            <iframe
-              title={title}
-              loading="lazy"
-              src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
-              on:load={() => { setTimeout(() => trailerHide = false, 500) }}
-            ></iframe>
-          </div>
+          {#key selectedAnime.id}
+            <div class="trailer-viewport" class:transparent={trailerHide}>
+              <iframe
+                title={title}
+                loading="lazy"
+                src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
+                on:load={() => { setTimeout(() => trailerHide = false, 500) }}
+              ></iframe>
+            </div>
+          {/key}
         {/await}
       {/if}
     </div>
@@ -351,7 +355,7 @@
   .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
   .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; transition: opacity 1.5s; }
   .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
-  .trailer-viewport.transparent { opacity: 0; transition: opacity 0.5s; }
+  .trailer-viewport.transparent { opacity: 0; }
 
   /* ── Header ── */
   .header { position: relative; z-index: 100; display: flex; justify-content: space-between; padding: 2rem 4%; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.05); }
