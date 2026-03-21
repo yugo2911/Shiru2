@@ -346,6 +346,8 @@ export function dragScroll(node) {
   let startX = 0
   let startY = 0
   let suppressClick = false
+  let lockedAxis = null // 'x' | 'y' | null
+  const axisLockThreshold = 8 // px before axis is decided
   const controller = new AbortController()
   const opts = { signal: controller.signal }
   node.addEventListener('pointerleave', () => {
@@ -369,6 +371,7 @@ export function dragScroll(node) {
       try { node.releasePointerCapture(activePointer) } catch {}
     }
     dragging = false
+    lockedAxis = null
   }, opts)
   node.addEventListener('pointerup', (e) => {
     if (dragging && dragged) {
@@ -381,6 +384,7 @@ export function dragScroll(node) {
       try { node.releasePointerCapture(activePointer) } catch {}
     }
     dragging = false
+    lockedAxis = null
   }, opts)
   node.addEventListener('mousedown', e => {
     const target = e.target
@@ -391,17 +395,34 @@ export function dragScroll(node) {
     draggedY = 0
     startX = e.clientX
     startY = e.clientY
+    lockedAxis = null
   }, opts)
   node.addEventListener('mousemove', e => {
     if (!dragging) return true
     if (isMouseLeave(node, e.clientX, e.clientY)) {
       if (activePointer) try { node.releasePointerCapture(activePointer) } catch {}
       dragging = false
+      lockedAxis = null
       return true
     }
-    draggedX += Math.abs(e.clientX - startX)
-    draggedY += Math.abs(e.clientY - startY)
-    node.scrollBy(startX - e.clientX, startY - e.clientY)
+    const dx = e.clientX - startX
+    const dy = e.clientY - startY
+
+    // Determine axis lock from the first intentional movement
+    if (!lockedAxis) {
+      if (Math.abs(dx) > axisLockThreshold || Math.abs(dy) > axisLockThreshold) {
+        lockedAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y'
+      }
+    }
+
+    if (lockedAxis === 'x') {
+      node.scrollBy(-dx, 0)
+      draggedX += Math.abs(dx)
+    } else if (lockedAxis === 'y') {
+      node.scrollBy(0, -dy)
+      draggedY += Math.abs(dy)
+    }
+
     startX = e.clientX
     startY = e.clientY
     node.style.cursor = 'grabbing'
