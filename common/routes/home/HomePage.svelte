@@ -13,7 +13,7 @@
   import { modal } from '@/modules/navigation.js'
   import { episodesList } from '@/modules/episodes.js'
   import { ELECTRON } from '@/modules/bridge.js'
-  import { Heart, Play, VolumeX, Volume2, Target, Zap } from 'lucide-svelte'
+  import { VolumeX, Volume2, Target, Zap } from 'lucide-svelte'
 
   const bannerData = writable(getTitles())
   setInterval(() => getTitles(true), 300000)
@@ -113,6 +113,7 @@
 <script>
   import { page } from '@/modules/navigation.js'
   import { onMount } from 'svelte'
+  import { dragScroll } from '@/modules/click.js'
 
   $: sectionName = CYCLE_SECTIONS[$currentSectionIndex]
   $: animeList = $resolvedCatalog
@@ -283,17 +284,9 @@
           </h1>
           
           <div class="action-row">
-            <button class="action-orb" on:click={handleWatch}>
-              <Play fill="currentColor" size="1.8rem" class="ml-1"/>
+            <button class="icon-btn" on:click={toggleMute}>
+              {#if muted}<VolumeX size="1.3rem"/>{:else}<Volume2 size="1.3rem"/>{/if}
             </button>
-            <div class="action-tools">
-              <button class="icon-btn" on:click={toggleFavourite}>
-                <Heart fill={isFavourite ? '#bc0000' : 'none'} color={isFavourite ? '#bc0000' : 'white'} size="1.3rem"/>
-              </button>
-              <button class="icon-btn" on:click={toggleMute}>
-                {#if muted}<VolumeX size="1.3rem"/>{:else}<Volume2 size="1.3rem"/>{/if}
-              </button>
-            </div>
           </div>
 
           <div class="data-grid">
@@ -326,11 +319,10 @@
   </main>
 
   <section class="horizontal-shelf">
-    <div class="scroll-wrapper" bind:this={shelfContainer}>
+    <div class="scroll-wrapper" bind:this={shelfContainer} use:dragScroll>
       {#each animeList as anime, i (anime.id)}
         <button class="card-unit" class:is-active={i === $selectedIndex} on:click={() => selectedIndex.set(i)}>
           <img src={anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || ''} alt="" loading="lazy" />
-          <div class="card-overlay"><div class="index">{(i + 1).toString().padStart(2, '0')}</div></div>
         </button>
       {/each}
     </div>
@@ -340,7 +332,7 @@
 <style>
   :global(body) { background: #050505; overflow: hidden; }
   .home-theater { position: fixed; inset: 0; color: #fff; font-family: 'Noto Sans JP', sans-serif; }
-  .theater-bg { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; opacity: 0.25; z-index: -1; }
+  .theater-bg { position: absolute; inset: 0; background-size: auto 100%; background-position: 15% center; background-repeat: no-repeat; opacity: 0.25; z-index: -1; }
   
   .media-aside {
     position: absolute;
@@ -399,9 +391,6 @@
   .hero-title .accent { color: #bc0000; }
   
   .action-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
-  .action-orb { width: 60px; height: 60px; border-radius: 50%; background: #bc0000; color: #fff; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1); cursor: pointer; }
-  .action-orb:hover { background: #fff; color: #000; transform: scale(1.15) rotate(5deg); }
-  .action-tools { display: flex; flex-direction: column; gap: 0.5rem; }
   .icon-btn { background: transparent; border: none; cursor: pointer; color: #fff; opacity: 0.3; padding: 0; }
   .icon-btn:hover { opacity: 1; }
   
