@@ -240,7 +240,7 @@
               title={title}
               loading="lazy"
               src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
-              on:load={() => { trailerHide = false }}
+              on:load={() => { setTimeout(() => trailerHide = false, 500) }}
             ></iframe>
           </div>
         {/await}
@@ -349,7 +349,7 @@
   .media-aside { position: absolute; right: 0; top: 0; width: 60%; height: 100%; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); z-index: 1; background: #2b2b2b; overflow: hidden; }
   .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); }
   .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
-  .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; }
+  .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; transition: opacity 1.5s; }
   .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
   .trailer-viewport.transparent { opacity: 0; transition: opacity 0.5s; }
 
