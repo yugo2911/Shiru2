@@ -13,7 +13,8 @@
   import { modal } from '@/modules/navigation.js'
   import { episodesList } from '@/modules/episodes.js'
   import { ELECTRON } from '@/modules/bridge.js'
-  import { VolumeX, Volume2, Target, Zap } from 'lucide-svelte'
+  import { VolumeX, Volume2 } from 'lucide-svelte'
+
 
   const bannerData = writable(getTitles())
   setInterval(() => getTitles(true), 300000)
@@ -289,11 +290,6 @@
             </button>
           </div>
 
-          <div class="data-grid">
-            <div class="data-row"><Target size="12" class="mr-2"/> TARGETS <span class="data-value">{maxEp}</span></div>
-            <div class="data-row"><Zap size="12" class="mr-2"/> SYNC <span class="data-value">{score}%</span></div>
-          </div>
-
           <div class="stat-grid">
             <div class="stat">
               <span class="label">PROGRESS</span>
@@ -332,7 +328,7 @@
 <style>
   :global(body) { background: #050505; overflow: hidden; }
   .home-theater { position: fixed; inset: 0; color: #fff; font-family: 'Noto Sans JP', sans-serif; }
-  .theater-bg { position: absolute; inset: 0; background-size: auto 100%; background-position: 15% center; background-repeat: no-repeat; opacity: 0.25; z-index: -1; }
+  .theater-bg { position: absolute; inset: 0; background-size: auto 80%; background-position: 15% top; background-repeat: no-repeat; opacity: 0.25; z-index: -1; }
   
   .media-aside {
     position: absolute;
@@ -393,11 +389,7 @@
   .action-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
   .icon-btn { background: transparent; border: none; cursor: pointer; color: #fff; opacity: 0.3; padding: 0; }
   .icon-btn:hover { opacity: 1; }
-  
-  .data-grid { display: flex; gap: 2rem; margin-bottom: 2rem; }
-  .data-row { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 12px 0; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #666; }
-  .data-value { color: #bc0000; float: right; font-weight: 800; }
-  
+
   .stat-grid { display: flex; gap: 4rem; margin-bottom: 2rem; }
   .stat { display: flex; flex-direction: column; }
   .stat .label { font-size: 0.6rem; font-weight: 900; opacity: 0.3; letter-spacing: 0.2em; margin-bottom: 0.4rem; }
