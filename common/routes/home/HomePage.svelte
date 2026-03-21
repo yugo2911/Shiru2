@@ -348,7 +348,7 @@
   /* ── Media aside / trailer ── */
   .media-aside { position: absolute; right: 0; top: 0; width: 60%; height: 100%; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); z-index: 1; background: #2b2b2b; overflow: hidden; }
   .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); }
-  .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43, 43, 43, 0.5) 40%, transparent 100%); z-index: 3; }
+  .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
   .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; }
   .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
   .trailer-viewport.transparent { opacity: 0; transition: opacity 0.5s; }
@@ -364,7 +364,7 @@
   .clock { font-size: 1.1rem; font-weight: 700; opacity: 0.8; }
 
   /* ── Content / meta ── */
-  .content-gate { position: relative; z-index: 10; padding: 0 5%; margin-top: 5vh; min-height: 480px; width: 45%; }
+  .content-gate { position: relative; z-index: 10; padding: 0 5%; margin-top: 5vh; min-height: 400px; width: 45%; }
   .hero-title { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1; letter-spacing: -1px; margin: 0 0 1.5rem; text-transform: uppercase; }
   .hero-title .accent { color: var(--accent-dynamic) !important; }
   .action-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
@@ -387,16 +387,16 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── Horizontal shelf ── */
-  .horizontal-shelf { position: absolute; bottom: 2rem; left: 0; width: 100%; padding: 0 5%; z-index: 20; overflow: hidden; }
-  .scroll-wrapper { display: flex; gap: 1.5rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 15px 0; }
+  .horizontal-shelf { position: absolute; bottom: 0; left: 0; width: 100%; padding: 0 5% 2rem; z-index: 20; overflow: hidden; }
+  .scroll-wrapper { display: flex; gap: 2rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 40px 0; }
   .scroll-wrapper::-webkit-scrollbar { display: none; }
-  .card-unit { flex: 0 0 220px; height: 220px; border: 4px solid transparent; cursor: pointer; padding: 0; background: #3c3c3c; border-radius: 12px; overflow: hidden; transition: border-color 0.1s, transform 0.1s; outline: none; position: relative; }
+  .card-unit { flex: 0 0 280px; height: 380px; border: 5px solid transparent; cursor: pointer; padding: 0; background: #3c3c3c; border-radius: 16px; overflow: hidden; transition: border-color 0.15s, transform 0.15s; outline: none; position: relative; }
   .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: opacity 0.2s; display: block; }
-  .card-unit.is-active { border-color: var(--card-color) !important; transform: scale(1.05); z-index: 5; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+  .card-unit.is-active { border-color: var(--card-color) !important; transform: scale(1.08) translateY(-10px); z-index: 5; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
   .card-unit.is-active img { opacity: 1; }
-  .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem 1rem 1rem; background: linear-gradient(to top, rgba(0,0,0,0.95) 40%, transparent); }
-  .card-title { font-size: 1.1rem; font-weight: 800; line-height: 1.2; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; }
-  .card-progress { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0.5rem 0; overflow: hidden; }
-  .card-progress-bar { height: 100%; border-radius: 2px; background: var(--card-color) !important; }
-  .card-ep { font-size: 0.9rem; font-weight: 800; color: var(--card-color); margin: 0; }
+  .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 4rem 1.2rem 1.2rem; background: linear-gradient(to top, rgba(0,0,0,0.98) 30%, transparent); pointer-events: none; }
+  .card-title { font-size: 1.3rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; text-transform: uppercase; }
+  .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
+  .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
+  .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
 </style>
