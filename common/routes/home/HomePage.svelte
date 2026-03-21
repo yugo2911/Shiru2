@@ -167,17 +167,22 @@
     modal.open(modal.ANIME_DETAILS, selectedAnime)
   }
 
+  let navigating = false
   async function navigateRight() {
-    const idx = selectedIndex.value ?? 0
-    const count = resolvedCatalog.value?.length ?? 0
-    // At the end — re-resolve to pick up items whose promises have now settled
-    if (idx >= count - 1) {
-      await loadSectionData($currentSectionIndex)
-      const newCount = resolvedCatalog.value?.length ?? 0
-      if (newCount > count) selectedIndex.set(idx + 1)
-      // If still the same length, we're genuinely at the end — don't move
-    } else {
-      selectedIndex.set(idx + 1)
+    if (navigating) return
+    navigating = true
+    try {
+      const idx = selectedIndex.value ?? 0
+      const count = resolvedCatalog.value?.length ?? 0
+      if (idx < count - 1) {
+        selectedIndex.set(idx + 1)
+      } else {
+        await loadSectionData($currentSectionIndex)
+        const newCount = resolvedCatalog.value?.length ?? 0
+        if (newCount > count) selectedIndex.set(idx + 1)
+      }
+    } finally {
+      navigating = false
     }
   }
 
