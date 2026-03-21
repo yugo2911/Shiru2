@@ -165,8 +165,6 @@
   let trailerHide = true
   const toggleMute = () => { muted = !muted }
 
-  $: if (selectedAnime?.id) trailerHide = true
-
   // ─── Shelf scroll-to-active ──────────────────────────────────────────────────
 
   let shelfContainer
@@ -234,19 +232,17 @@
   {#if selectedAnime}
     <div class="media-aside">
       <div class="curse-overlay"></div>
-      <img class="bg-image" class:transparent={trailerHide} src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
+      <img class="bg-image" src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
       {#if trailerId}
         {#await ELECTRON.getYouTube() then youtubeServer}
-          {#key selectedAnime.id}
-            <div class="trailer-viewport" class:transparent={trailerHide}>
-              <iframe
-                title={title}
-                loading="lazy"
-                src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
-                on:load={() => { setTimeout(() => trailerHide = false, 500) }}
-              ></iframe>
-            </div>
-          {/key}
+          <div class="trailer-viewport" class:transparent={trailerHide}>
+            <iframe
+              title={title}
+              loading="lazy"
+              src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
+              on:load={() => { trailerHide = false }}
+            ></iframe>
+          </div>
         {/await}
       {/if}
     </div>
@@ -351,11 +347,11 @@
 
   /* ── Media aside / trailer ── */
   .media-aside { position: absolute; right: 0; top: 0; width: 60%; height: 100%; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); z-index: 1; background: #2b2b2b; overflow: hidden; }
-  .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); transition: opacity 1.5s; }
+  .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); }
   .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
-  .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; transition: opacity 1.5s; }
+  .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; }
   .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
-  .trailer-viewport.transparent { opacity: 0; }
+  .trailer-viewport.transparent { opacity: 0; transition: opacity 0.5s; }
 
   /* ── Header ── */
   .header { position: relative; z-index: 100; display: flex; justify-content: space-between; padding: 2rem 4%; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.05); }
@@ -401,9 +397,9 @@
   .scroll-wrapper { display: flex; gap: 2rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding: 40px 0; }
   .scroll-wrapper::-webkit-scrollbar { display: none; }
   .card-unit { flex: 0 0 280px; height: 380px; border: 5px solid transparent; cursor: pointer; padding: 0; background: #3c3c3c; border-radius: 16px; overflow: hidden; transition: border-color 0.15s, transform 0.15s; outline: none; position: relative; }
-  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; filter: grayscale(80%) brightness(0.7); transition: opacity 0.2s, filter 0.2s; display: block; }
+  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: opacity 0.2s; display: block; }
   .card-unit.is-active { border-color: var(--card-color) !important; transform: scale(1.08) translateY(-10px); z-index: 5; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
-  .card-unit.is-active img { opacity: 1; filter: grayscale(0%) brightness(1); }
+  .card-unit.is-active img { opacity: 1; }
   .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 4rem 1.2rem 1.2rem; background: linear-gradient(to top, rgba(0,0,0,0.98) 30%, transparent); pointer-events: none; }
   .card-title { font-size: 1.3rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; text-transform: uppercase; }
   .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
