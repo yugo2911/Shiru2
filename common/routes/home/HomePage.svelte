@@ -20,7 +20,6 @@
   // ─── Constants ──────────────────────────────────────────────────────────────
 
   export const cycleList = writable([])
-  const BANNER_REFRESH_MS = 300_000
 
   // ─── Section manager ────────────────────────────────────────────────────────
 
@@ -62,33 +61,6 @@
   export const selectedIndex = writable(0)
   export const resolvedCatalog = writable([])
 
-  // ─── Banner data ─────────────────────────────────────────────────────────────
-
-  const isHentaiBanner = () => settings.value.adult === 'hentai' && settings.value.hentaiBanner
-
-  function buildSearchParams() {
-    return {
-      method: 'Search',
-      sort: 'TRENDING_DESC',
-      perPage: 50,
-      onList: false,
-      status_not: 'NOT_YET_RELEASED',
-      ...(isHentaiBanner() ? { genre: ['Hentai'] } : { season: currentSeason, year: currentYear }),
-    }
-  }
-
-  async function fetchBannerTitles() {
-    return anilistClient.search(buildSearchParams())
-  }
-
-  async function refreshBannerTitles() {
-    const data = await fetchBannerTitles()
-    bannerData.set(Promise.resolve(data))
-  }
-
-  export const bannerData = writable(fetchBannerTitles())
-  setInterval(refreshBannerTitles, BANNER_REFRESH_MS)
-
   // ─── Section data resolution ─────────────────────────────────────────────────
 
   async function resolveItem(item, cache) {
@@ -101,7 +73,9 @@
       ...media,
       ...cachedMedia,
       id: media.id || item.id,
-      mediaListEntry: resolved?.media ? resolved : media.mediaListEntry,
+      // BUG FIX: was setting mediaListEntry to the entire resolved object when resolved.media
+      // existed, instead of resolved.mediaListEntry
+      mediaListEntry: resolved?.media ? resolved.mediaListEntry : media.mediaListEntry,
     }
   }
 
@@ -124,7 +98,8 @@
   // ─── User list subscription ──────────────────────────────────────────────────
 
   function refreshSections(list, sectionTitles) {
-    uniqueStore(list).subscribe(async _value => {
+    // BUG FIX: was never unsubscribed, leaking on remounts
+    const unsubscribe = uniqueStore(list).subscribe(async _value => {
       const val = await _value
       if (!val) return
       for (const section of manager.sections) {
@@ -134,9 +109,8 @@
         }
       }
     })
+    return unsubscribe
   }
-
-  if (Helper.getUser()) refreshSections(Helper.getClient().userLists, cycleList.value)
 
   // ─── Clock ───────────────────────────────────────────────────────────────────
 
@@ -152,20 +126,28 @@
 
 <script>
   import { page } from '@/modules/navigation.js'
-  import { onMount, tick } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
   import { dragScroll } from '@/modules/click.js'
 
   // ─── Derived display values ──────────────────────────────────────────────────
 
-  $: sectionName    = $cycleList[$currentSectionIndex]
-  let studioFilter = null
+  $: sectionName = $cycleList[$currentSectionIndex]
+
+  // BUG FIX: store studioFilter as ID (number) instead of name string to avoid
+  // collisions between studios with identical names
+  let studioFilterId = null
+  let studioFilterName = null
+
   let relationsData = []
   let recommendationsData = []
   let relationsLoadedFor = null
   let recommendationsLoadedFor = null
 
-  $: catalogAnime = studioFilter
-    ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.name === studioFilter))
+  // BUG FIX: studioFilter now uses node.id for matching, not name.
+  // Also only works reliably in Complex query mode since studios are in queryComplexObjects.
+  // In Simple mode we still attempt the filter but it may show nothing — this is expected.
+  $: catalogAnime = studioFilterId
+    ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.id === studioFilterId))
     : $resolvedCatalog
 
   $: currentAnime = catalogAnime?.[$selectedIndex] || null
@@ -226,7 +208,7 @@
         )
         ?.sort((a, b) => b.node.rating - a.node.rating)
         ?.map(({ node }) => node.mediaRecommendation) || []
-      
+
       if (recs.length === 0) {
         recommendationsData = []
         return
@@ -243,11 +225,9 @@
     ? [currentAnime, ...($filterMode === 'relations' ? relationsData : recommendationsData)].filter(Boolean)
     : catalogAnime) || []
 
-  $: selectedAnime  = animeList?.[$selectedIndex] || null
-
-  $: if (($filterMode === 'relations' || $filterMode === 'recommendations') && animeList.length > 0) {
-    selectedIndex.set(1)
-  }
+  $: selectedAnime = ($filterMode === 'relations' || $filterMode === 'recommendations') && currentAnime
+    ? currentAnime
+    : animeList?.[$selectedIndex] || null
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
   $: bannerColor = selectedAnime?.coverImage?.color || '#bc0000'
@@ -261,9 +241,10 @@
   $: description = selectedAnime?.description
     ? selectedAnime.description.replace(/<[^>]*>/g, '').slice(0, 160) + '...'
     : ''
-  $: studio   = selectedAnime?.studios?.nodes?.[0]?.name || ''
-  $: year     = selectedAnime?.seasonYear || ''
-  $: progress = selectedAnime?.mediaListEntry?.progress || 0
+  $: studioNode = selectedAnime?.studios?.nodes?.[0] || null
+  $: studio     = studioNode?.name || ''
+  $: year       = selectedAnime?.seasonYear || ''
+  $: progress   = selectedAnime?.mediaListEntry?.progress || 0
 
   // ─── Trailer mute ────────────────────────────────────────────────────────────
 
@@ -307,9 +288,15 @@
   }
 
   function handleStudioClick() {
-    const name = selectedAnime?.studios?.nodes?.[0]?.name
-    if (!name) return
-    studioFilter = studioFilter === name ? null : name
+    if (!studioNode) return
+    // BUG FIX: filter by ID not name to avoid collisions between same-named studios
+    if (studioFilterId === studioNode.id) {
+      studioFilterId = null
+      studioFilterName = null
+    } else {
+      studioFilterId = studioNode.id
+      studioFilterName = studioNode.name
+    }
     selectedIndex.set(0)
   }
 
@@ -317,9 +304,11 @@
 
   function handleKeydown(e) {
     if ($modal[modal.SEARCH]) return
-    if (!$resolvedCatalog?.length) return
+    // BUG FIX: was using $resolvedCatalog.length as bounds but navigation operates
+    // on animeList (which differs in relations/recommendations mode)
+    if (!animeList?.length) return
     switch (e.key) {
-      case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, $resolvedCatalog.length - 1)); break
+      case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
       case 'ArrowLeft':   e.preventDefault(); selectedIndex.update(n => Math.max(n - 1, 0)); break
       case 'ArrowUp':     e.preventDefault(); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
       case 'ArrowDown':   e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
@@ -331,10 +320,22 @@
     }
   }
 
+  // ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+  let cleanupRefreshSections
+
   onMount(() => {
     loadSectionData($currentSectionIndex)
     window.addEventListener('keydown', handleKeydown)
+    // BUG FIX: capture unsubscribe so it can be cleaned up on destroy
+    if (Helper.getUser()) {
+      cleanupRefreshSections = refreshSections(Helper.getClient().userLists, cycleList.value)
+    }
     return () => window.removeEventListener('keydown', handleKeydown)
+  })
+
+  onDestroy(() => {
+    cleanupRefreshSections?.()
   })
 </script>
 
@@ -405,7 +406,7 @@
               <span class="label">STUDIO</span>
               <button
                 class="value studio-btn"
-                class:studio-active={studioFilter === studio}
+                class:studio-active={studioFilterId === studioNode?.id}
                 on:click={handleStudioClick}
               >{studio}</button>
             </div>
@@ -489,7 +490,7 @@
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; }
   .nav-item.active { opacity: 1; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
   .section-toggle { opacity: 1; padding-left: 1.5rem; border-left: 2px solid rgba(255,255,255,0.2); color: #fff; }
-  
+
   .clock { font-size: 1.1rem; font-weight: 700; opacity: 0.8; }
 
   /* ── Content / meta ── */
@@ -503,7 +504,7 @@
   .stat { display: flex; flex-direction: column; }
   .stat .label { font-size: 0.7rem; font-weight: 800; opacity: 0.6; letter-spacing: 0.12em; margin-bottom: 0.3rem; text-transform: uppercase; }
   .stat .value { font-size: 1.4rem; font-weight: 800; }
-  
+
   .studio-btn {
     background: none; border: none; color: inherit;
     font-size: 1.4rem; font-weight: 800;
@@ -512,11 +513,11 @@
   }
   .studio-btn:hover { color: var(--accent-dynamic); }
   .studio-active { color: var(--accent-dynamic) !important; text-decoration: underline; }
-  
-  .synopsis { 
-    font-size: 1.15rem; line-height: 1.6; opacity: 0.95; max-width: 650px; margin-bottom: 2.5rem; 
-    background: rgba(0, 0, 0, 0.4); 
-    padding: 1.5rem 2rem; border-radius: 16px; 
+
+  .synopsis {
+    font-size: 1.15rem; line-height: 1.6; opacity: 0.95; max-width: 650px; margin-bottom: 2.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1.5rem 2rem; border-radius: 16px;
   }
 
   .cta-row { display: flex; gap: 1.5rem; }
