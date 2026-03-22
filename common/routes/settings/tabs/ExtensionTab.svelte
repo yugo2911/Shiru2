@@ -13,6 +13,8 @@
 
   $: query = searchQuery.toLowerCase()
   $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: contentSection = () => !query || query.includes('torrent') || query.includes('auto') || query.includes('quality') || query.includes('audio') || query.includes('provider') || query.includes('content')
+  $: extensionSection = () => !query || query.includes('extension') || query.includes('source') || query.includes('add') || query.includes('validate')
 
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
@@ -65,7 +67,9 @@
   }
 </script>
 
+{#if contentSection()}
 <h4 class='mb-10 font-weight-bold'>Content Settings</h4>
+{/if}
 {#if matches('Auto-Select Torrents', 'Automatically selects torrents based on quality')}
 <SettingCard title='Auto-Select Torrents' description='Automatically selects torrents based on quality and amount of seeders. Disable this to have more precise control over played torrents.'>
   <div class='custom-switch'>
@@ -165,7 +169,9 @@
 </SettingCard>
 {/if}
 
+{#if extensionSection()}
 <h4 class='mb-10 font-weight-bold'>Extension Settings</h4>
+{/if}
 <div class='d-flex bg-dark-light rounded-3 p-4 mw-300 mb-20'>
   <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={mainTab} class:bg-transparent={!mainTab} use:click={()=> { mainTab = true }}>Extensions</button>
   <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={!mainTab} class:bg-transparent={mainTab} use:click={()=> { mainTab = false }}>Sources</button>

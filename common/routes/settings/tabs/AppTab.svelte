@@ -69,6 +69,8 @@
 
   $: query = searchQuery.toLowerCase()
   $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: appSection = () => !query || query.includes('app') || query.includes('about') || query.includes('update') || query.includes('exit') || query.includes('query') || query.includes('reset') || query.includes('notification') || query.includes('history') || query.includes('cache') || query.includes('settings') || query.includes('import') || query.includes('export')
+  $: debugSection = () => !query || query.includes('debug') || query.includes('log') || query.includes('toast') || query.includes('info') || query.includes('devtools') || query.includes('torrent')
 
   function resetSettings () {
     IPC.emit('set:angle', defaults.angle)
@@ -109,7 +111,9 @@
   IPC.on('device-info', writeAppInfo)
 </script>
 
+{#if appSection()}
 <h4 class='mb-10 font-weight-bold'>App Settings</h4>
+{/if}
 {#if matches('About This App', 'Restart may be required')}
 <SettingCard title='About This App' description="Restart may be required for some settings to take effect. If you don't know what settings do what, use defaults." class='d-lg-none'>
   <div class='d-flex flex-column'>
@@ -185,7 +189,9 @@
 </SettingCard>
 {/if}
 
+{#if debugSection()}
 <h4 class='mb-10 font-weight-bold'>Debug Settings</h4>
+{/if}
 {#if matches('Logging Levels', 'logging of specific parts of the app')}
 <SettingCard title='Logging Levels' description='Enable logging of specific parts of the app.{!SUPPORTS.isAndroid ? ` These logs are saved to ${VERSION.platform === `win32` ? `%appdata%` : `~/config`}/Shiru/logs/main.log.` : ``}'>
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={$debugStore}>
