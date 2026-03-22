@@ -11,6 +11,7 @@
   import { fade } from 'svelte/transition'
 
   import { playActive } from '@/components/TorrentButton.svelte'
+  import { prefetchTorrent } from '@/modals/torrent/components/TorrentResults.svelte'
   import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
   import { VolumeX, Volume2 } from 'lucide-svelte'
@@ -73,8 +74,6 @@
       ...media,
       ...cachedMedia,
       id: media.id || item.id,
-      // BUG FIX: was setting mediaListEntry to the entire resolved object when resolved.media
-      // existed, instead of resolved.mediaListEntry
       mediaListEntry: resolved?.media ? resolved.mediaListEntry : media.mediaListEntry,
     }
   }
@@ -98,7 +97,6 @@
   // ─── User list subscription ──────────────────────────────────────────────────
 
   function refreshSections(list, sectionTitles) {
-    // BUG FIX: was never unsubscribed, leaking on remounts
     const unsubscribe = uniqueStore(list).subscribe(async _value => {
       const val = await _value
       if (!val) return
@@ -141,9 +139,6 @@
   let relationsLoadedFor = null
   let recommendationsLoadedFor = null
 
-  // pinnedAnime is captured when entering relations/recs mode and stays fixed.
-  // It is shown as a non-interactive parent card in the shelf and drives the
-  // initial data load — it does NOT shift when you navigate the related list.
   let pinnedAnime = null
   let savedSectionIndex = 0
 
@@ -151,13 +146,10 @@
     ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.id === studioFilterId))
     : $resolvedCatalog
 
-  // In relations/recs mode the parent is index 0 — selectable, just visually distinct.
-  // The related items follow from index 1 onward.
   $: animeList = ($filterMode === 'relations' || $filterMode === 'recommendations')
     ? [pinnedAnime, ...($filterMode === 'relations' ? relationsData : recommendationsData)].filter(Boolean)
     : catalogAnime || []
 
-  // In relations/recs mode load once from the pinned parent, never re-trigger on index change.
   $: if ($filterMode === 'relations' && pinnedAnime?.id && relationsLoadedFor !== pinnedAnime.id) {
     loadRelations(pinnedAnime.id)
   }
@@ -241,6 +233,14 @@
   $: year       = selectedAnime?.seasonYear || ''
   $: progress   = selectedAnime?.mediaListEntry?.progress || 0
 
+  // ─── Prefetch helper ─────────────────────────────────────────────────────────
+
+  function maybePrefetch(anime) {
+    if (!settings.value.rssAutoSelect || !anime?.id) return
+    const episode = (anime.mediaListEntry?.progress ?? 0) + 1
+    prefetchTorrent({ media: anime, episode })
+  }
+
   // ─── Trailer mute ────────────────────────────────────────────────────────────
 
   let muted = true
@@ -275,13 +275,11 @@
 
   function enterMode(mode) {
     if ($filterMode === mode) {
-      // Toggle off — return to section view at the saved position
       filterMode.set('section')
       pinnedAnime = null
       selectedIndex.set(savedSectionIndex)
       return
     }
-    // Capture the currently selected anime as the fixed parent before switching
     const current = catalogAnime?.[$selectedIndex] || null
     if (!current) return
     savedSectionIndex = $selectedIndex
@@ -295,7 +293,6 @@
   // ─── Actions ─────────────────────────────────────────────────────────────────
 
   function handleWatch() {
-    // In relations/recs mode, play the selected related item (not the pinned parent)
     const target = selectedAnime || pinnedAnime
     if (!target) return
     playActive(target.hash, { media: target, episode: target.episode }, target.link, !target.link)
@@ -308,7 +305,6 @@
 
   function handleStudioClick() {
     if (!studioNode) return
-    // BUG FIX: filter by ID not name to avoid collisions between same-named studios
     if (studioFilterId === studioNode.id) {
       studioFilterId = null
       studioFilterName = null
@@ -323,8 +319,6 @@
 
   function handleKeydown(e) {
     if ($modal[modal.SEARCH]) return
-    // BUG FIX: was using $resolvedCatalog.length as bounds but navigation operates
-    // on animeList (which differs in relations/recommendations mode)
     if (!animeList?.length) return
     switch (e.key) {
       case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
@@ -347,7 +341,6 @@
   onMount(() => {
     loadSectionData($currentSectionIndex)
     window.addEventListener('keydown', handleKeydown)
-    // BUG FIX: capture unsubscribe so it can be cleaned up on destroy
     if (Helper.getUser()) {
       cleanupRefreshSections = refreshSections(Helper.getClient().userLists, cycleList.value)
     }
@@ -437,7 +430,11 @@
         <p class="synopsis">{description}</p>
 
         <div class="cta-row">
-          <button class="btn-play" on:click={handleWatch}>WATCH NOW</button>
+          <button
+            class="btn-play"
+            on:click={handleWatch}
+            on:mouseenter={() => maybePrefetch(selectedAnime)}
+          >WATCH NOW</button>
           <button class="btn-ghost" on:click={handleDetails}>DETAILS</button>
         </div>
       </div>
@@ -462,6 +459,7 @@
           class:is-active={i === $selectedIndex}
           class:card-pinned={isParent}
           on:click={() => selectedIndex.set(i)}
+          on:mouseenter={() => maybePrefetch(anime)}
           style="--card-color: {color}"
         >
           <img

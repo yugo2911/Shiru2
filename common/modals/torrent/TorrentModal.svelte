@@ -2,11 +2,10 @@
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import TorrentResults from '@/modals/torrent/components/TorrentResults.svelte'
   import { fetchBestTorrent } from '@/modals/torrent/components/TorrentResults.svelte'
-  import { findInCurrent } from '@/components/MediaHandler.svelte'
+  import { findInCurrent, nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
   import { page, modal } from '@/modules/navigation.js'
   import { settings } from '@/modules/settings.js'
   import { add } from '@/modules/torrent.js'
-  import { nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
   import { cache, caches } from '@/modules/cache.js'
 
   export function playAnime (media, episode = 1, force = false) {
@@ -23,7 +22,7 @@
     modal.open(modal.TORRENT_MENU, { media, episode })
   }
 
-  async function autoSelectAndPlay(search) {
+  async function autoSelectAndPlay (search) {
     try {
       const best = await fetchBestTorrent(search)
       if (!best) {
