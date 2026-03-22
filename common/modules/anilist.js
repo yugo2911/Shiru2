@@ -634,20 +634,73 @@ class AnilistClient {
     return mappedResults ? cache.cacheEntry(caches.COMPOUND, JSON.stringify(flattenedTitles), { mappings: true, ...(malClient.userID ? { fillLists: malClient.userLists.value } : {}) }, mappedResults, Date.now() + getRandomInt(60, 90) * 60 * 1000) : cache.cachedEntry(caches.COMPOUND, JSON.stringify(flattenedTitles), true)
   }
 
+  /** @type {Map<number, Promise<number[]>>} */
+  studioMediaCache = new Map()
+
+  fetchStudioMediaIDs(studioId) {
+    if (this.studioMediaCache.has(studioId)) return this.studioMediaCache.get(studioId)
+    const studioMediaQuery = /* js */`
+    query($studioId: Int, $page: Int) {
+      Studio(id: $studioId) {
+        media(isMain: true, page: $page, perPage: 25, sort: START_DATE_DESC) {
+          pageInfo { hasNextPage },
+          nodes { id }
+        }
+      }
+    }`
+    const promise = (async () => {
+      const ids = []
+      let page = 1
+      while (true) {
+        // Use handleRequest directly to avoid alRequest injecting perPage/sort/etc defaults
+        // as undeclared variables — AniList returns 500 for those
+        const options = {
+          method: 'POST',
+          credentials: 'omit',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            query: studioMediaQuery.replace(/\s/g, '').replaceAll('&nbsp;', ' '),
+            variables: { studioId, page }
+          })
+        }
+        if (alToken?.token) options.headers.Authorization = alToken.token
+        const res = await this.handleRequest(options)
+        const nodes = res?.data?.Studio?.media?.nodes || []
+        ids.push(...nodes.map(n => n.id))
+        if (!res?.data?.Studio?.media?.pageInfo?.hasNextPage) break
+        page++
+      }
+      return ids
+    })()
+    this.studioMediaCache.set(studioId, promise)
+    // Cache studio media IDs for 2 hours then evict so fresh data is fetched eventually
+    promise.then(() => setTimeout(() => this.studioMediaCache.delete(studioId), 2 * 60 * 60 * 1000))
+    return promise
+  }
+
+  async getMediaIDsForStudios(studioIds) {
+    const results = await Promise.all(studioIds.map(id => this.fetchStudioMediaIDs(Number(id))))
+    return [...new Set(results.flat())]
+  }
+
   search(variables = {}) {
     if (settings.value.adult === 'none') variables.isAdult = false
     if (settings.value.adult !== 'hentai' && (!variables.genre_not || !variables.genre_not.includes('Hentai'))) variables.genre_not = [ ...(variables.genre_not ? variables.genre_not : []), 'Hentai' ]
 
+    const studioIds = variables.studio?.length ? [...variables.studio] : null
+    delete variables.studio
+
     debug(`Searching ${JSON.stringify(variables)}`)
-    const cachedEntry = cache.cachedEntry(caches.SEARCH, JSON.stringify(variables), status.value.match(/offline/i))
+    const cacheKey = JSON.stringify({ ...variables, ...(studioIds ? { studio: studioIds } : {}) })
+    const cachedEntry = cache.cachedEntry(caches.SEARCH, cacheKey, status.value.match(/offline/i))
     if (cachedEntry) return cachedEntry
     const query = /* js */` 
-    query($page: Int, $perPage: Int, $sort: [MediaSort], $search: String, $onList: Boolean, $status: [MediaStatus], $status_not: [MediaStatus], $season: MediaSeason, $year: Int, $genre: [String], $genre_not: [String], $tag: [String], $tag_not: [String], $studios: [Int], $format: [MediaFormat], $format_not: [MediaFormat], $id_not: [Int], $idMal_not: [Int], $id: [Int], $idMal: [Int], $isAdult: Boolean) {
+    query($page: Int, $perPage: Int, $sort: [MediaSort], $search: String, $onList: Boolean, $status: [MediaStatus], $status_not: [MediaStatus], $season: MediaSeason, $year: Int, $genre: [String], $genre_not: [String], $tag: [String], $tag_not: [String], $format: [MediaFormat], $format_not: [MediaFormat], $id_not: [Int], $idMal_not: [Int], $id: [Int], $idMal: [Int], $isAdult: Boolean) {
       Page(page: $page, perPage: $perPage) {
         pageInfo {
           hasNextPage
         },
-        media(id_not_in: $id_not, idMal_not_in: $idMal_not, id_in: $id, idMal_in: $idMal, type: ANIME, search: $search, sort: $sort, onList: $onList, status_in: $status, status_not_in: $status_not, season: $season, seasonYear: $year, genre_in: $genre, genre_not_in: $genre_not, tag_in: $tag, tag_not_in: $tag_not, studios: $studios, format_in: $format, format_not: MUSIC, format_not_in: $format_not, isAdult: $isAdult) {
+        media(id_not_in: $id_not, idMal_not_in: $idMal_not, id_in: $id, idMal_in: $idMal, type: ANIME, search: $search, sort: $sort, onList: $onList, status_in: $status, status_not_in: $status_not, season: $season, seasonYear: $year, genre_in: $genre, genre_not_in: $genre_not, tag_in: $tag, tag_not_in: $tag_not, format_in: $format, format_not: MUSIC, format_not_in: $format_not, isAdult: $isAdult) {
           ${queryObjects}${settings.value.queryComplexity === 'Complex' ? `, ${queryComplexObjects}` : ``}
         }
       }
@@ -655,13 +708,24 @@ class AnilistClient {
 
     const request = (async () => {
       try {
+        if (studioIds?.length) {
+          const studioMediaIds = await this.getMediaIDsForStudios(studioIds)
+          if (!studioMediaIds.length) {
+            return { data: { Page: { pageInfo: { hasNextPage: false }, media: [] } } }
+          }
+          // Intersect with any existing id filter, otherwise restrict to studio media
+          variables.id = variables.id?.length
+            ? variables.id.filter(id => studioMediaIds.includes(id))
+            : studioMediaIds
+        }
         return await this.alRequest(query, variables)
       } catch {
+        if (studioIds?.length) variables.studio = studioIds
         return this.fallbackSearch(variables)
       }
     })()
 
-    return cache.cacheEntry(caches.SEARCH, JSON.stringify(variables), { ...variables, ...(malClient.userID ? { fillLists: malClient.userLists.value } : {}) }, request, Date.now() + getRandomInt(75, 100) * 60 * 1000)
+    return cache.cacheEntry(caches.SEARCH, cacheKey, { ...variables, ...(studioIds ? { studio: studioIds } : {}), ...(malClient.userID ? { fillLists: malClient.userLists.value } : {}) }, request, Date.now() + getRandomInt(75, 100) * 60 * 1000)
   }
 
   searchIDSingle(variables) {
@@ -958,7 +1022,7 @@ class AnilistClient {
         if (variables.tag && !variables.tag.some(tag => _media.tags?.some(mediaTag => mediaTag.name === tag))) return false
         if (variables.tag_not && variables.tag_not.some(tag => _media.tags?.some(mediaTag => mediaTag.name === tag))) return false
 
-        if (variables.studios && !variables.studios.some(studioId => _media.studios?.nodes?.some(studio => studio.id === studioId))) return false
+        if (variables.studio?.length && !variables.studio.some(studioId => _media.studios?.nodes?.some(studio => studio.id === Number(studioId)))) return false
 
         if (variables.search) {
           const searchText = variables.search.toLowerCase()
