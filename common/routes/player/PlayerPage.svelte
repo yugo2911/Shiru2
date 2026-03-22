@@ -88,6 +88,7 @@
   let gain = 0
   let volume = Number(cache.getEntry(caches.GENERAL, 'volume')) || 1
   let volumeBoosted = false
+  let volumeLimit = 1
   let volumeText = ''
   let volumeVisible = false
   let volumeTimeout
@@ -807,6 +808,12 @@
   let fitWidth = false
   let showKeybinds = false
   let showTorrentStats = false
+
+  function closeOnClickOutside(node, onClose) {
+    function handle(e) { if (!node.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', handle, true)
+    return { destroy() { document.removeEventListener('mousedown', handle, true) } }
+  }
   loadWithDefaults({
     KeyX: {
       fn: () => !viewAnime && screenshot(),
@@ -1929,8 +1936,11 @@
       <input type='file' class='d-none' id='search-subtitle' accept='.srt,.vtt,.ass,.ssa,.sub,.txt' on:input|preventDefault|stopPropagation={handleFile} bind:this={fileInput}/>
       <div class='dropdown dropleft with-arrow' use:click={() => { showOptions.set(!$showOptions) }}>
         <span class='icon text-white ctrl d-flex align-items-center h-full' title='More'><EllipsisVertical size='2.5rem' strokeWidth={2.5} /></span>
-        <div class='position-absolute hm-40 text-capitalize text-nowrap bg-dark rounded dr-arrow' style='margin-top: {launchedExternal ? -14 : externalPlayback ? -10.3 : SUPPORTS.isAndroid || $settings.playerPath ? -21 : -17.5}rem !important; margin-left: {launchedExternal ? -11.1 : externalPlayback ? -9.8 : -11.4}rem !important; transition: opacity 0.1s ease-in;' class:hidden={!$showOptions}>
-          <div role='button' aria-label='Add External Subtitles' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-top option' class:d-flex={!externalPlayback} title='Add External Subtitles' use:click={() => { fileInput.click(); showOptions.set(false) }}>
+        <div class='position-absolute hm-40 text-capitalize text-nowrap bg-dark rounded dr-arrow' style='margin-top: {launchedExternal ? -14 : externalPlayback ? -10.3 : SUPPORTS.isAndroid || $settings.playerPath ? -21 : -17.5}rem !important; margin-left: {launchedExternal ? -11.1 : externalPlayback ? -9.8 : -11.4}rem !important; transition: opacity 0.1s ease-in;' class:hidden={!$showOptions} use:closeOnClickOutside={() => showOptions.set(false)}>
+          <div role='button' aria-label='Volume Limit' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' title='Volume Limit: {(volumeLimit * 100).toFixed(0)}%' use:click={() => { volumeLimit = volumeLimit >= 3 ? 1 : volumeLimit + 0.5 }}>
+            <Volume2 size='2rem' strokeWidth={2.5} /><span class='ml-10'>Volume Limit: {(volumeLimit * 100).toFixed(0)}%</span>
+          </div>
+          <div role='button' aria-label='Add External Subtitles' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' class:d-flex={!externalPlayback} title='Add External Subtitles' use:click={() => { fileInput.click(); showOptions.set(false) }}>
             <FilePlus2 size='2rem' strokeWidth={2.5} /> <div class='ml-10'>Add Subtitles</div>
           </div>
           <div class='dropdown dropleft with-arrow pointer bg-dark option font-size-16 bd-highlight' class:d-none={externalPlayback}>
