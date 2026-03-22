@@ -156,7 +156,11 @@
   // ─── Derived display values ──────────────────────────────────────────────────
 
   $: sectionName    = $cycleList[$currentSectionIndex]
-  $: animeList      = $resolvedCatalog
+  let studioFilter = null
+
+  $: animeList = studioFilter
+    ? $resolvedCatalog.filter(a => a.studios?.nodes?.some(n => n.name === studioFilter))
+    : $resolvedCatalog
   $: selectedAnime  = animeList[$selectedIndex] || null
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
@@ -213,6 +217,13 @@
   function handleDetails() {
     if (!selectedAnime) return
     modal.open(modal.ANIME_DETAILS, selectedAnime)
+  }
+
+  function handleStudioClick() {
+    const name = selectedAnime?.studios?.nodes?.[0]?.name
+    if (!name) return
+    studioFilter = studioFilter === name ? null : name
+    selectedIndex.set(0)
   }
 
   // ─── Keyboard handler ────────────────────────────────────────────────────────
@@ -300,7 +311,16 @@
             <span class="label">PROGRESS</span>
             <span class="value">{progress}<small>/{selectedAnime.episodes || '?'}</small></span>
           </div>
-          {#if studio}<div class="stat"><span class="label">STUDIO</span><span class="value">{studio}</span></div>{/if}
+          {#if studio}
+            <div class="stat">
+              <span class="label">STUDIO</span>
+              <button
+                class="value studio-btn"
+                class:studio-active={studioFilter === studio}
+                on:click={handleStudioClick}
+              >{studio}</button>
+            </div>
+          {/if}
           {#if year}<div class="stat"><span class="label">YEAR</span><span class="value">{year}</span></div>{/if}
         </div>
 
@@ -394,6 +414,15 @@
   .stat { display: flex; flex-direction: column; }
   .stat .label { font-size: 0.7rem; font-weight: 800; opacity: 0.6; letter-spacing: 0.12em; margin-bottom: 0.3rem; text-transform: uppercase; }
   .stat .value { font-size: 1.4rem; font-weight: 800; }
+  
+  .studio-btn {
+    background: none; border: none; color: inherit;
+    font-size: 1.4rem; font-weight: 800;
+    cursor: pointer; padding: 0; text-align: left;
+    transition: color 0.15s;
+  }
+  .studio-btn:hover { color: var(--accent-dynamic); }
+  .studio-active { color: var(--accent-dynamic) !important; text-decoration: underline; }
   
   .synopsis { 
     font-size: 1.15rem; line-height: 1.6; opacity: 0.95; max-width: 650px; margin-bottom: 2.5rem; 
