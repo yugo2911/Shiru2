@@ -13,7 +13,7 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: matches = (title, description, section = '') => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query) || section.toLowerCase().includes(query))
 
   function updateAngle () {
     IPC.emit('set:angle', settings.angle)
@@ -23,7 +23,7 @@
 
 {#if SUPPORTS.discord}
 <h4 class='mb-10 font-weight-bold'>Rich Presence Settings</h4>
-{#if matches('Discord Rich Presence', 'Discord rich presence')}
+{#if matches('Discord Rich Presence', 'Discord rich presence', 'Rich Presence Settings')}
 <SettingCard title='Discord Rich Presence' description={'Enables the use of Discord rich presence to display app activity.\nFull enables complete rich presence support showing anime details, limited reduces what is seen not showing the currently played anime and episode, disabled completely disables rich presence.'}>
   <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.enableRPC}>
     <option value='full' selected>Full</option>
@@ -35,7 +35,7 @@
 {/if}
 
 <h4 class='mb-10 font-weight-bold'>Interface Settings</h4>
-{#if matches('Theme', 'how the app looks and feels')}
+{#if matches('Theme', 'how the app looks and feels', 'Interface Settings')}
 <SettingCard title='Theme' description='Select how the app looks and feels, including colors, layouts, and other visual styles.'>
   <select class='form-control bg-dark w-160 mw-full text-truncate' bind:value={settings.presetTheme} on:change={() => setStyle()}>
     <option value='default-dark' selected>Default (Dark)</option>
@@ -43,7 +43,7 @@
   </select>
 </SettingCard>
 {/if}
-{#if matches('Scale', 'text, buttons, and other interface elements')}
+{#if matches('Scale', 'text, buttons, and other interface elements', 'Interface Settings')}
 <SettingCard title='Scale' description='Adjust the size of text, buttons, and other interface elements to match your preference and screen size.'>
   <div class='form-group w-160 flex-shrink-0 my-auto'>
     <input class='w-full p-2 bg-dark-light' type='range' id='ui-scale' min='0.5' max='2' step='0.05' bind:value={settings.uiScale} on:change={() => setScale()}/>
@@ -54,7 +54,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('CSS Variables', 'custom themes')}
+{#if matches('CSS Variables', 'custom themes', 'Interface Settings')}
 <SettingCard title='CSS Variables' description='Used for custom themes. Can change colors, sizes, spacing and more. Supports only variables.{!SUPPORTS.isAndroid ? ` Best way to discover variables is to use the built-in devtools.` : ``}'>
   <div class='d-flex flex-column'>
     <textarea class='form-control w-md-500 w-full bg-dark' placeholder='--accent-color: #e5204c;' bind:value={$variables} />
@@ -63,7 +63,7 @@
 </SettingCard>
 {/if}
 {#if !SUPPORTS.isAndroid}
-{#if matches('Donate Button', 'Support This App button')}
+{#if matches('Donate Button', 'Support This App button', 'Interface Settings')}
 <SettingCard title='Donate Button' description='Enables the "Support This App" button on the side bar.'>
   <div class='custom-switch'>
     <input type='checkbox' id='donate' bind:checked={settings.donate} />
@@ -72,7 +72,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('Expandable Sidebar', 'sidebar to expand')}
+{#if matches('Expandable Sidebar', 'sidebar to expand', 'Interface Settings')}
 <SettingCard title='Expandable Sidebar' description='Enables the sidebar to expand revealing detailed text for the navigation buttons.'>
   <div class='custom-switch'>
     <input type='checkbox' id='disable-sidebar' bind:checked={settings.expandingSidebar} />
@@ -81,7 +81,7 @@
 </SettingCard>
 {/if}
 {#if SUPPORTS.isAndroid}
-{#if matches('Expandable Lists', 'lists like recommendations or relations')}
+{#if matches('Expandable Lists', 'lists like recommendations or relations', 'Interface Settings')}
 <SettingCard title='Expandable Lists' description='Choose whether lists like recommendations or relations, open as dropdowns or scroll horizontally. Scrollable lists work better on smaller screens.'>
   <div class='custom-switch'>
     <input type='checkbox' id='toggle-list' bind:checked={settings.toggleList} />
@@ -91,7 +91,7 @@
 {/if}
 {/if}
 {#if !Helper.isAniAuth()}
-{#if matches('Preferred Title Language', 'title language to automatically select')}
+{#if matches('Preferred Title Language', 'title language to automatically select', 'Interface Settings')}
 <SettingCard title='Preferred Title Language' description='What title language to automatically select when displaying the title of an anime.'>
   <select class='form-control bg-dark mw-150 w-150' bind:value={settings.titleLang}>
     <option value='romaji' selected>Japanese</option>
@@ -100,7 +100,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('Card Type', 'cards to display in menus')}
+{#if matches('Card Type', 'cards to display in menus', 'Interface Settings')}
 <SettingCard title='Card Type' description='What type of cards to display in menus.'>
   <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.cards}>
     <option value='small' selected>Small</option>
@@ -109,7 +109,7 @@
 </SettingCard>
 {/if}
 {#if SUPPORTS.isAndroid && settings.cards === 'small'}
-{#if matches('Card Preview', 'detailed preview card')}
+{#if matches('Card Preview', 'detailed preview card', 'Interface Settings')}
 <SettingCard title='Card Preview' description='If a detailed preview card should be shown when tapping or hovering over the small card.'>
   <div class='custom-switch'>
     <input type='checkbox' id='card-preview' bind:checked={settings.cardPreview} />
@@ -118,7 +118,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('Card Audio', 'sub, dub, partial dub, and age rating icons')}
+{#if matches('Card Audio', 'sub, dub, partial dub, and age rating icons', 'Interface Settings')}
 <SettingCard title='Card Audio' description={'If the sub, dub, partial dub, and age rating icons should be shown on the cards, the corresponding episode number will be shown when possible. Additionally a label will be shown on the preview cards, anime view, episode cards, and the home banner of the highest possible audio available, either dub, partial dub, or sub. Note these will not be visible when viewing the schedule page. '}>
   <div class='custom-switch'>
     <input type='checkbox' id='card-audio' bind:checked={settings.cardAudio} />
@@ -126,7 +126,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Prefer Dubs', 'progress on a series matches the latest aired dubbed episode')}
+{#if matches('Prefer Dubs', 'progress on a series matches the latest aired dubbed episode', 'Interface Settings')}
 <SettingCard title='Prefer Dubs' description={'If your progress on a series matches the latest aired dubbed episode, the series will be hidden from Continue Watching until the next dub is available. Notifications will only be sent when a dubbed episode is released or if the series is sub-only (i.e., no dub exists).\n\nIf your progress goes beyond the latest dubbed episode, this setting will be ignored and the series will be treated as subbed. The Subbed Releases section will automatically hide dubbed series, and Dubbed Releases will hide subbed ones.\n\nThis setting is ideal for viewers who prefer dubbed content whenever available.'}>
   <div class='custom-switch'>
     <input type='checkbox' id='prefer-dubs' bind:checked={settings.preferDubs} />
@@ -134,7 +134,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Adult Content', 'adult (18+) rated anime')}
+{#if matches('Adult Content', 'adult (18+) rated anime', 'Interface Settings')}
 <SettingCard title='Adult Content' description={'Adult enables searching for adult (18+) rated anime, typically series with nudity. Hentai enables searching straight up Hentai. This includes adding the Hentai home feed, Hentai genre, and Hentai related tags for search queries.'}>
   <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.adult}>
     <option value='none' selected>None</option>
@@ -144,7 +144,7 @@
 </SettingCard>
 {/if}
 {#if settings.adult === 'hentai'}
-{#if matches('Hentai Banner', 'hentai home page banner')}
+{#if matches('Hentai Banner', 'hentai home page banner', 'Interface Settings')}
 <SettingCard title='Hentai Banner' description={'Changes the displayed series on the home page banner to be exclusively Hentai.'}>
   <div class='custom-switch'>
     <input type='checkbox' id='hentai-banner' bind:checked={settings.hentaiBanner} />
@@ -155,7 +155,7 @@
 {/if}
 {#if SUPPORTS.angle}
 <h4 class='mb-10 font-weight-bold'>Rendering Settings</h4>
-{#if matches('ANGLE Backend', 'ANGLE backend to use for rendering')}
+{#if matches('ANGLE Backend', 'ANGLE backend to use for rendering', 'Rendering Settings')}
 <SettingCard title='ANGLE Backend' description="What ANGLE backend to use for rendering. DON'T CHANGE WITHOUT REASON! On some Windows machines D3D9 might help with flicker. Changing this setting to something your device doesn't support might prevent Shiru from opening which will require a full reinstall. While Vulkan is an available option it might not be fully supported on Linux.">
   <select class='form-control bg-dark w-300 mw-full text-truncate' bind:value={settings.angle} on:change={updateAngle}>
     <option value='default' selected>Default</option>
@@ -172,7 +172,7 @@
 {/if}
 {/if}
 <h4 class='mb-10 font-weight-bold'>Notification Settings</h4>
-{#if matches('System Notifications', 'custom system notifications')}
+{#if matches('System Notifications', 'custom system notifications', 'Notification Settings')}
 <SettingCard title='System Notifications' description={'Allows custom system notifications to be sent, with this disabled you will still get in-app notifications. If you enable system notifications and have MULTIPLE Notification Feeds specified, such as RSS, Releases, and Anilist you WILL be spammed with multiple notifications. Consider choosing a single feed based on your needs.'}>
   <div class='custom-switch'>
     <input type='checkbox' id='system-notify' bind:checked={settings.systemNotify} />
@@ -181,7 +181,7 @@
 </SettingCard>
 {/if}
 {#if Helper.isAniAuth()}
-{#if matches('AniList Notifications', 'notifications from your AniList account')}
+{#if matches('AniList Notifications', 'notifications from your AniList account', 'Notification Settings')}
 <SettingCard title='AniList Notifications' description='Get notifications from your AniList account, showing when episodes have aired and any new anime titles you are following have been added to the database. Limited will only get important notifications like when a new season is announced.'>
   <select class='form-control bg-dark w-120 mw-120 mw-full text-truncate' bind:value={settings.aniNotify}>
     <option value='all' selected>All</option>
@@ -193,7 +193,7 @@
 {/if}
 {#each ['Sub', 'Dub', 'Hentai'] as type}
 {#if type !== 'Hentai' || settings.adult === 'hentai'}
-{#if matches(type + ' Announcements', 'announcement notifications when an airing date is confirmed')}
+{#if matches(type + ' Announcements', 'announcement notifications when an airing date is confirmed', 'Notification Settings')}
 <SettingCard title='{type} Announcements' description={`Get ${type} announcement notifications when an airing date is confirmed. Choose to get all announcements, updates on sequels for related anime you're following, or turn off notifications entirely.`}>
   <select class='form-control bg-dark w-120 mw-120 text-truncate' bind:value={settings[`${type.toLowerCase()}Announce`]}>
     <option value='all' selected>All</option>
@@ -204,7 +204,7 @@
 {/if}
 {/if}
 {/each}
-{#if matches('Releases Notifications', 'new episode is added to the Releases feeds')}
+{#if matches('Releases Notifications', 'new episode is added to the Releases feeds', 'Notification Settings')}
 <SettingCard title='Releases Notifications' description={`When a new episode is added to any of the Releases feeds, a notification will be sent depending on your list status.`}>
   <div>
     {#each settings.releasesNotify as status, i}
@@ -224,7 +224,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('RSS Feed', 'RSS feed updates with new entries')}
+{#if matches('RSS Feed', 'RSS feed updates with new entries', 'Notification Settings')}
 <SettingCard title='RSS Feed' description={'When each RSS feed updates with new entries, notifications will be sent depending on your list status. These notifications will combine with Anilist and Releases notifications for the in-app notification tray.'}>
   <div>
     {#each settings.rssNotify as status, i}
@@ -247,7 +247,7 @@
 
 <h4 class='mb-10 font-weight-bold'>Home Screen Settings</h4>
 {#if Helper.isAuthorized()}
-{#if matches('Hide My Anime', 'Watching, Rewatching, Completed, and Dropped list')}
+{#if matches('Hide My Anime', 'Watching, Rewatching, Completed, and Dropped list', 'Home Screen Settings')}
 <SettingCard title='Hide My Anime' description={'The anime on your Watching, Rewatching, Completed, and Dropped list will automatically be hidden from the default sections, this excludes manually added RSS feeds and user specific feeds.'}>
   <div class='custom-switch'>
     <input type='checkbox' id='hide-my-anime' bind:checked={settings.hideMyAnime} />
@@ -256,7 +256,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('RSS Feeds', 'RSS feeds to display on the home screen')}
+{#if matches('RSS Feeds', 'RSS feeds to display on the home screen', 'Home Screen Settings')}
 <SettingCard title='RSS Feeds' description={`RSS feeds to display on the home screen. This needs to be a CORS enabled URL to a RSS feed which cotains either an "infoHash" or "enclosure" tag. This only shows the releases on the home screen, it doesn't automatically download the content.\n\nSince the feeds only provide the name of the file, Shiru might not always detect the anime correctly! Some presets for popular groups are already provided as an example, custom feeds require the FULL URL. Be aware that adding more than 5 RSS URLs could result in getting rate limited. These will always be resolved and handle notifications so not adding them as a home sections makes no difference.`}>
   <div>
     {#each settings.rssFeedsNew as _, i}
@@ -272,7 +272,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Custom Sections', 'custom sections that can be added to the home screen')}
+{#if matches('Custom Sections', 'custom sections that can be added to the home screen', 'Home Screen Settings')}
 <SettingCard title='Custom Sections' description={'Create custom sections that can be added to the home screen.'}>
   <div>
     {#each settings.customSections as _, i}
@@ -309,7 +309,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Sections And Order', 'order on the home screen')}
+{#if matches('Sections And Order', 'order on the home screen', 'Home Screen Settings')}
 <SettingCard title='Sections And Order' description="Sections and their order on the home screen, if you want more RSS feeds to show up here, create them first in the RSS feed list. Adding many multiple normal lists doesn't impact performance, but adding a lot of RSS feeds will impact app startup times. Drag/drop these sections to re-order them.">
   <div class='position-relative'>
     <HomeSections bind:homeSections={settings.homeSections} />
