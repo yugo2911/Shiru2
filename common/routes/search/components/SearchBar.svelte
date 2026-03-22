@@ -1,6 +1,6 @@
 <script context='module'>
-  const badgeKeys = ['title', 'search', 'genre', 'genre_not', 'tag', 'tag_not', 'season', 'year', 'format', 'format_not', 'status', 'status_not', 'sort', 'hideSubs', 'hideMyAnime', 'hideStatus', 'showMyAnime', 'showStatus']
-  const badgeDisplayNames = { title: BookUser, search: Type, genre: Hash, genre_not: Hash, tag: Hash, tag_not: Hash, season: CalendarRange, year: Leaf, format: Tv, format_not: MonitorUp, status: MonitorPlay, status_not: MonitorX, sort: ArrowDownWideNarrow, hideMyAnime: EyeOff, showMyAnime: Hourglass, hideSubs: Mic }
+  const badgeKeys = ['title', 'search', 'genre', 'genre_not', 'tag', 'tag_not', 'studio', 'season', 'year', 'format', 'format_not', 'status', 'status_not', 'sort', 'hideSubs', 'hideMyAnime', 'hideStatus', 'showMyAnime', 'showStatus']
+  const badgeDisplayNames = { title: BookUser, search: Type, genre: Hash, genre_not: Hash, tag: Hash, tag_not: Hash, studio: Factory, season: CalendarRange, year: Leaf, format: Tv, format_not: MonitorUp, status: MonitorPlay, status_not: MonitorX, sort: ArrowDownWideNarrow, hideMyAnime: EyeOff, showMyAnime: Hourglass, hideSubs: Mic }
   const sortOptions = { TITLE_ROMAJI: 'Title', START_DATE_DESC: 'Release Date', SCORE_DESC: 'Score', POPULARITY_DESC: 'Popularity', UPDATED_AT_DESC: 'Date Updated', UPDATED_TIME_DESC: 'Last Updated', STARTED_ON_DESC: 'Start Date', FINISHED_ON_DESC: 'Completed Date', PROGRESS_DESC: 'Your Progress', USER_SCORE_DESC: 'Your Score' }
   const formatOptions = { TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }
 
@@ -11,7 +11,7 @@
 
 <script>
   import { traceAnime, genreIcons, genreList, tagList } from '@/modules/anime/anime.js'
-  import { currentYear } from '@/modules/anilist.js'
+  import { currentYear, anilistClient } from '@/modules/anilist.js'
   import { page } from '@/modules/navigation.js'
   import { settings } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
@@ -19,7 +19,7 @@
   import { toast } from 'svelte-sonner'
   import Helper from '@/modules/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
-  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2 } from 'lucide-svelte'
+  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, Factory } from 'lucide-svelte'
 
   export let clearNow
   export let search
@@ -27,6 +27,23 @@
   let form
   let searchTextInput = search.search || null
   let searchTags = getTags()
+  let studioList = {}
+
+  async function loadStudios() {
+    const res = await anilistClient.alRequest(/* js */`
+      query {
+        Page {
+          studios {
+            id,
+            name
+          }
+        }
+      }
+    `, {})
+    const studios = res?.data?.Page?.studios || []
+    studioList = studios.reduce((acc, s) => ({ ...acc, [s.id]: s.name }), {})
+  }
+  loadStudios()
   $: if (clearNow) searchTags = getTags()
 
   function getTags() {
@@ -62,6 +79,7 @@
       genre_not: [],
       tag: [],
       tag_not: [],
+      studio: [],
       format: [],
       format_not: [],
       status: [],
@@ -102,7 +120,7 @@
         searchTags.tags = searchTags.tags.filter((item) => item !== badge.value)
         searchTags.tags_not = searchTags.tags_not.filter((item) => item !== badge.value)
       }
-      if (search[badge.key].length === 0) search[badge.key] = badge.key.includes('status') || badge.key.includes('format') ? [] : ''
+      if (search[badge.key].length === 0) search[badge.key] = badge.key.includes('status') || badge.key.includes('format') || badge.key.startsWith('studio') || badge.key.startsWith('genre') || badge.key.startsWith('tag') ? [] : ''
     } else search[badge.key] = ''
     form.dispatchEvent(new Event('input', { bubbles: true }))
   }
@@ -199,6 +217,15 @@
       </div>
       <div class='input-group' title={(!Helper.isAniAuth() && Helper.isUserSort(search)) ? 'Cannot use with sort: ' + sortOptions[search.sort] : ''}>
         <CustomDropdown id={`tags-input`} bind:form headers={searchTags.headers} options={[...toArray(genreList), ...toArray(tagList)]} bind:value={searchTags.tags} bind:altValue={searchTags.tags_not} constrainAlt={false} disabled={search.disableSearch || (!Helper.isAniAuth() && Helper.isUserSort(search))}/>
+      </div>
+    </div>
+    <div class='col-lg col-4 p-10 z-4 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
+      <div class='pb-10 font-weight-semi-bold d-flex align-items-center font-scale-24'>
+        <Factory class='mr-10 block-scale-30'/>
+        <div>Studio</div>
+      </div>
+      <div class='input-group'>
+        <CustomDropdown id={`studio-input`} bind:form options={studioList} bind:value={search.studio} bind:altValue={search.studio_not} disabled={search.disableSearch}/>
       </div>
     </div>
     <div class='col-lg col-4 p-10 z-4 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
