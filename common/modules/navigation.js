@@ -160,6 +160,13 @@ export const modal = (() => {
       get siblings() {
         return []
       }
+    },
+    SEARCH: {
+      id: 'search',
+      priority: 10,
+      get siblings() {
+        return []
+      }
     }
   }
   return {

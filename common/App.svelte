@@ -27,6 +27,7 @@
   import Profiles from '@/components/Profiles.svelte'
   import NotificationsModal from '@/modals/NotificationsModal.svelte'
   import MinimizeModal from '@/modals/MinimizeModal.svelte'
+  import SearchModal from '@/modals/SearchModal.svelte'
   import Navbar from '@/components/navigation/Navbar.svelte'
   import Status from '@/components/Status.svelte'
   import { status } from '@/modules/networking.js'
@@ -76,6 +77,7 @@
     <DetailsModal />
     <TorrentModal />
     <NotificationsModal />
+    <SearchModal />
     <Profiles />
     <Router bind:statusTransition={$statusTransition} />
   </div>
