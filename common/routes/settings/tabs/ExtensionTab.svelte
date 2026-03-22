@@ -12,10 +12,11 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: contentSection = () => !query || query.includes('torrent') || query.includes('auto') || query.includes('quality') || query.includes('audio') || query.includes('provider') || query.includes('content')
-  $: extensionSection = () => !query || query.includes('extension') || query.includes('source') || query.includes('add') || query.includes('validate')
-  $: hasResults = query ? (contentSection() || extensionSection()) : true
+  $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: contentSection = () => matches('Auto-Select Torrents', 'Automatically selects torrents based on quality', 'Content Settings') || matches('Auto-Select Files', 'Automatically selects the requested file', 'Content Settings') || matches('Auto-Scrape Results', 'scrapes seeder and leecher counts', 'Content Settings') || matches('Torrent Quality', 'quality to use when trying to find torrents', 'Content Settings') || matches('Torrent Order', 'Sorts the results by the preferred order', 'Content Settings') || matches('Preferred Audio', 'Prioritizes results matching the preferred language', 'Content Settings') || matches('Preferred Providers', 'Prioritizes results matching the preferred providers', 'Content Settings')
+  $: extensionSection = () => !query
+  export let hasResults = true
+  $: hasResults = query ? contentSection() : true
 
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
@@ -339,10 +340,6 @@
     {/if}
   {/if}
 {/if}
-{#if query && !hasResults}
-<p class='text-muted text-center py-20' style='margin-top: 5rem'>No settings found for "{searchQuery}"</p>
-{/if}
-
 <style>
   .font-size-28 {
     font-size: 2.8rem;

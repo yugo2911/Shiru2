@@ -67,6 +67,11 @@
   export let statusTransition = false
 
   let searchQuery = ''
+  let playerHasResults = true
+  let clientHasResults = true
+  let interfaceHasResults = true
+  let extensionHasResults = true
+  let appHasResults = true
 
   const groups = {
     player: {
@@ -181,11 +186,14 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <PlayerTab bind:settings={$settings} searchQuery={searchQuery} />
-              <ClientTab bind:settings={$settings} searchQuery={searchQuery} />
-              <InterfaceTab bind:settings={$settings} searchQuery={searchQuery} />
-              <ExtensionTab bind:settings={$settings} searchQuery={searchQuery} />
-              <AppTab {version} bind:settings={$settings} searchQuery={searchQuery} />
+              <PlayerTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={playerHasResults} />
+              <ClientTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={clientHasResults} />
+              <InterfaceTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={interfaceHasResults} />
+              <ExtensionTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={extensionHasResults} />
+              <AppTab {version} bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={appHasResults} />
+              {#if !(playerHasResults || clientHasResults || interfaceHasResults || extensionHasResults || appHasResults)}
+                <p class='text-muted text-center py-20' style='margin-top: 5rem'>No settings found for "{searchQuery}"</p>
+              {/if}
             </div>
           </div>
         </div>

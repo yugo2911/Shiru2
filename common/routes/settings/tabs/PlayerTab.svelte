@@ -19,6 +19,7 @@
   $: languageSection = () => matches('Preferred Subtitle Language', 'subtitle language to automatically select', 'Language')
   $: playbackSection = () => matches('Autoplay Next Episode', 'Automatically starts playing next episode', 'Playback') || matches('Pause On Lost Focus', 'Pauses/Resumes video playback when tabbing', 'Playback') || matches('Auto-Complete Episodes', 'Automatically marks episodes as complete', 'Playback') || matches('Deband Video', 'Reduces banding on dark and compressed videos', 'Playback') || matches('Seek Duration', 'skip forward or backward when using the seek buttons', 'Playback') || matches('Chapter Source', 'chapter source to use during video playback', 'Playback') || matches('Auto-Skip Intro', 'automatically skip intro and outro', 'Playback')
   $: externalSection = () => matches('External Player', 'external video player to play video', 'External') || matches('External Video Player', 'Executable for an external video player', 'External')
+  export let hasResults = true
   $: hasResults = query ? (playerSection() || subtitleSection() || subtitleIntSection() || languageSection() || playbackSection() || externalSection()) : true
 
   async function changeFont ({ detail }) {
@@ -255,7 +256,4 @@
 </SettingCard>
 {/if}
 {/if}
-{/if}
-{#if query && !hasResults}
-<p class='text-muted text-center py-20' style='margin-top: 5rem'>No settings found for "{searchQuery}"</p>
 {/if}
