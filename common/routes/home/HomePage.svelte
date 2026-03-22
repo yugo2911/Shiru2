@@ -15,6 +15,8 @@
   import { ELECTRON } from '@/modules/bridge.js'
   import { VolumeX, Volume2 } from 'lucide-svelte'
 
+  export const filterMode = writable('section')
+
   // ─── Constants ──────────────────────────────────────────────────────────────
 
   export const cycleList = writable([])
@@ -157,11 +159,93 @@
 
   $: sectionName    = $cycleList[$currentSectionIndex]
   let studioFilter = null
+  let relationsData = []
+  let recommendationsData = []
+  let relationsLoadedFor = null
+  let recommendationsLoadedFor = null
 
-  $: animeList = studioFilter
-    ? $resolvedCatalog.filter(a => a.studios?.nodes?.some(n => n.name === studioFilter))
+  $: catalogAnime = studioFilter
+    ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.name === studioFilter))
     : $resolvedCatalog
-  $: selectedAnime  = animeList[$selectedIndex] || null
+
+  $: currentAnime = catalogAnime?.[$selectedIndex] || null
+
+  $: {
+    if ($filterMode === 'relations' && currentAnime?.id && relationsLoadedFor !== currentAnime.id) {
+      loadRelations(currentAnime.id)
+    }
+  }
+
+  $: {
+    if ($filterMode === 'recommendations' && currentAnime?.id && recommendationsLoadedFor !== currentAnime.id) {
+      loadRecommendations(currentAnime.id)
+    }
+  }
+
+  async function loadRelations(id) {
+    try {
+      relationsData = []
+      relationsLoadedFor = id
+      const res = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: [id] })
+      const fullMedia = res?.data?.Page?.media?.[0]
+      if (!fullMedia?.relations?.edges) {
+        relationsData = []
+        return
+      }
+      const relationIds = fullMedia.relations.edges
+        .filter(({ node, relationType }) =>
+          relationType !== 'CHARACTER' &&
+          node.type === 'ANIME' &&
+          node.format !== 'MUSIC' &&
+          !(settings.value.adult === 'none' && node.isAdult) &&
+          !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai'))
+        )
+        .map(({ node }) => node.id)
+        .filter(Boolean)
+      if (relationIds.length === 0) {
+        relationsData = []
+        return
+      }
+      const res2 = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: relationIds })
+      relationsData = res2?.data?.Page?.media?.filter(m => m) || []
+    } catch (e) {
+      relationsData = []
+    }
+  }
+
+  async function loadRecommendations(id) {
+    try {
+      recommendationsData = []
+      recommendationsLoadedFor = id
+      const res = await anilistClient.recommendations({ id })
+      const recs = res?.data?.Media?.recommendations?.edges
+        ?.filter(({ node }) => node.mediaRecommendation)
+        ?.filter(({ node }) =>
+          !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) &&
+          !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai'))
+        )
+        ?.sort((a, b) => b.node.rating - a.node.rating)
+        ?.map(({ node }) => node.mediaRecommendation) || []
+      
+      if (recs.length === 0) {
+        recommendationsData = []
+        return
+      }
+      const ids = recs.map(r => r.id)
+      const res2 = await anilistClient.searchAllIDS({ page: 1, perPage: 50, id: ids })
+      recommendationsData = res2?.data?.Page?.media?.filter(m => m) || []
+    } catch (e) {
+      recommendationsData = []
+    }
+  }
+
+  $: animeList = ($filterMode === 'relations'
+    ? relationsData
+    : $filterMode === 'recommendations'
+      ? recommendationsData
+      : catalogAnime) || []
+
+  $: selectedAnime  = animeList?.[$selectedIndex] || null
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
   $: bannerColor = selectedAnime?.coverImage?.color || '#bc0000'
@@ -204,7 +288,12 @@
   // ─── Section cycling ─────────────────────────────────────────────────────────
 
   $: if ($currentSectionIndex !== undefined) {
+    filterMode.set('section')
     loadSectionData($currentSectionIndex).then(() => selectedIndex.set(0))
+  }
+
+  $: if ($filterMode !== 'section') {
+    selectedIndex.set(0)
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -282,10 +371,12 @@
 
   <header class="header">
     <div class="nav-cluster">
-      <button class="brand" on:click={() => page.navigateTo(page.HOME)}>A/N</button>
+      <button class="brand" on:click={() => { page.navigateTo(page.HOME); filterMode.set('section') }}>A/N</button>
       <nav class="nav-links">
-        <button class="nav-item active">HOME</button>
+        <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => filterMode.set('section')}>HOME</button>
         <button class="nav-item" on:click={() => page.navigateTo(page.SEARCH)}>LIBRARY</button>
+        <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => filterMode.set('relations')}>RELATIONS</button>
+        <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => filterMode.set('recommendations')}>RECS</button>
         <button class="nav-item section-toggle" on:click={() => currentSectionIndex.update(n => (n + 1) % $cycleList.length)}>
           {sectionName?.toUpperCase()}
         </button>
