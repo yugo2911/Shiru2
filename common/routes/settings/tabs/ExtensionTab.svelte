@@ -15,6 +15,7 @@
   $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
   $: contentSection = () => !query || query.includes('torrent') || query.includes('auto') || query.includes('quality') || query.includes('audio') || query.includes('provider') || query.includes('content')
   $: extensionSection = () => !query || query.includes('extension') || query.includes('source') || query.includes('add') || query.includes('validate')
+  $: hasResults = query ? (contentSection() || extensionSection()) : true
 
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
@@ -337,6 +338,9 @@
       {/if}
     {/if}
   {/if}
+{/if}
+{#if query && !hasResults}
+<p class='text-muted text-center py-20 mt-100'>No settings found for "{searchQuery}"</p>
 {/if}
 
 <style>

@@ -16,6 +16,7 @@
   $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
   $: dnsSection = () => matches('DNS Over HTTPS', 'DNS Over HTTPS', 'DNS') || matches('DNS Over HTTPS URL', 'URL to use for querying DNS', 'DNS')
   $: clientSection = () => matches('Download Location', 'folder used to store torrents', 'Client') || matches('Persist Files', 'Keeps torrents files instead of deleting them', 'Client') || matches('Streamed Download', 'single file that is currently being watched', 'Client') || matches('Transfer Speed Limit', 'Download/Upload speed limit for torrents', 'Client') || matches('Max Number of Connections', 'peers per torrent', 'Client') || matches('Seeding Limit', 'torrents that can be seeded at the same time', 'Client') || matches('Torrent Port', 'Port used for Torrent connections', 'Client') || matches('DHT Port', 'Port used for DHT connections', 'Client') || matches('Disable DHT', 'Distributed Hash Tables', 'Client') || matches('Disable PeX', 'Peer Exchange', 'Client') || matches('Disable µTP', 'UDP-based peer connection protocol', 'Client') || matches('Disable Auto-Load', 'loading the previously downloaded torrent', 'Client') || matches('Custom Trackers', 'tracker servers used for peer discovery', 'Client')
+  $: hasResults = query ? (dnsSection() || clientSection()) : true
 
   let trackers = settings.trackers.join('\n') || ''
   const updateTrackers = debounce((event) => {
@@ -164,4 +165,7 @@
   </div>
 </SettingCard>
 {/if}
+{/if}
+{#if query && !hasResults}
+<p class='text-muted text-center py-20 mt-100'>No settings found for "{searchQuery}"</p>
 {/if}

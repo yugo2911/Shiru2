@@ -19,6 +19,7 @@
   $: renderingSection = () => !query || query.includes('angle') || query.includes('render')
   $: notificationSection = () => !query || query.includes('notification') || query.includes('notify') || query.includes('announcement') || query.includes('release') || query.includes('rss')
   $: homeSection = () => !query || query.includes('home') || query.includes('rss') || query.includes('section') || query.includes('custom')
+  $: hasResults = query ? (richPresenceSection() || interfaceSection() || renderingSection() || notificationSection() || homeSection()) : true
 
   function updateAngle () {
     IPC.emit('set:angle', settings.angle)
@@ -330,6 +331,9 @@
     <HomeSections bind:homeSections={settings.homeSections} />
   </div>
 </SettingCard>
+{/if}
+{#if query && !hasResults}
+<p class='text-muted text-center py-20 mt-100'>No settings found for "{searchQuery}"</p>
 {/if}
 
 <style>
