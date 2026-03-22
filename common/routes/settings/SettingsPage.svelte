@@ -176,6 +176,20 @@
     </div>
     <div class='mt-75 mt-lg-0 w-full overflow-y-auto overflow-y-md-hidden' class:status-transition={statusTransition} class:pt-28px={!SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-lg-28px={SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-safe-area={SUPPORTS.isAndroid && !$status.match(/offline/i)}>
       <div class='shadow-overlay d-lg-none' />
+      {#if searchQuery}
+        <!-- Cross-tab search: render all tabs at once so results appear regardless of active tab -->
+        <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
+          <div class='scroll-container'>
+            <div class='page pb-100'>
+              <PlayerTab bind:settings={$settings} searchQuery={searchQuery} />
+              <ClientTab bind:settings={$settings} searchQuery={searchQuery} />
+              <InterfaceTab bind:settings={$settings} searchQuery={searchQuery} />
+              <ExtensionTab bind:settings={$settings} searchQuery={searchQuery} />
+              <AppTab {version} bind:settings={$settings} searchQuery={searchQuery} />
+            </div>
+          </div>
+        </div>
+      {:else}
       <Tab>
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
@@ -241,6 +255,7 @@
         </div>
       </Tab>
       <Tab/> <!-- Skip Donate Tab -->
+      {/if}
     </div>
   </div>
 </Tabs>

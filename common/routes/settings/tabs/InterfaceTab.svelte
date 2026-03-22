@@ -13,12 +13,12 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: richPresenceSection = () => !query || query.includes('rich') || query.includes('presence') || query.includes('discord')
-  $: interfaceSection = () => !query || query.includes('theme') || query.includes('scale') || query.includes('css') || query.includes('sidebar') || query.includes('card') || query.includes('adult') || query.includes('interface')
-  $: renderingSection = () => !query || query.includes('angle') || query.includes('render')
-  $: notificationSection = () => !query || query.includes('notification') || query.includes('notify') || query.includes('announcement') || query.includes('release') || query.includes('rss')
-  $: homeSection = () => !query || query.includes('home') || query.includes('rss') || query.includes('section') || query.includes('custom')
+  $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: richPresenceSection = () => matches('Discord Rich Presence', 'Discord rich presence', 'Rich Presence')
+  $: interfaceSection = () => matches('Theme', 'how the app looks and feels', 'Interface') || matches('Scale', 'text, buttons, and other interface elements', 'Interface') || matches('CSS Variables', 'custom themes', 'Interface') || matches('Donate Button', 'Support This App button', 'Interface') || matches('Expandable Sidebar', 'sidebar to expand', 'Interface') || matches('Expandable Lists', 'lists like recommendations or relations', 'Interface') || matches('Preferred Title Language', 'title language to automatically select', 'Interface') || matches('Card Type', 'cards to display in menus', 'Interface') || matches('Card Preview', 'detailed preview card', 'Interface') || matches('Card Audio', 'sub, dub, partial dub, and age rating icons', 'Interface') || matches('Prefer Dubs', 'progress on a series matches the latest aired dubbed episode', 'Interface') || matches('Adult Content', 'adult (18+) rated anime', 'Interface')
+  $: renderingSection = () => matches('Angle Backend', 'graphics rendering backend', 'Rendering')
+  $: notificationSection = () => matches('Episode Notifications', 'episode release notifications', 'Notifications') || matches('Announcement Notifications', 'Anilist announcements', 'Notifications') || matches('Release Notifications', 'anime release notifications', 'Notifications') || matches('RSS Feed', 'RSS feed updates with new entries', 'Notifications')
+  $: homeSection = () => matches('Hide My Anime', 'Watching, Rewatching, Completed, and Dropped list', 'Home Screen') || matches('RSS Feeds', 'RSS feeds to display on the home screen', 'Home Screen') || matches('Custom Sections', 'custom sections that can be added to the home screen', 'Home Screen') || matches('Sections And Order', 'order on the home screen', 'Home Screen')
   $: hasResults = query ? (richPresenceSection() || interfaceSection() || renderingSection() || notificationSection() || homeSection()) : true
 
   function updateAngle () {

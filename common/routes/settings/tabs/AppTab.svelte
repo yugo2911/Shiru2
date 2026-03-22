@@ -68,10 +68,9 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: appSection = () => !query || query.includes('app') || query.includes('about') || query.includes('update') || query.includes('exit') || query.includes('query') || query.includes('reset') || query.includes('notification') || query.includes('history') || query.includes('cache') || query.includes('settings') || query.includes('import') || query.includes('export')
-  $: debugSection = () => !query || query.includes('debug') || query.includes('log') || query.includes('toast') || query.includes('info') || query.includes('devtools') || query.includes('torrent')
-  $: hasResults = query ? (appSection() || debugSection()) : true
+  $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+  $: appSection = () => matches('About This App', "Restart may be required for some settings to take effect. If you don't know what settings do what, use defaults.", 'App Settings') || matches('Update Channel', 'Choose which type of updates you receive. Stable provides tested releases only, while Nightly includes frequent pre-release builds with the latest features and fixes but may include bugs.', 'App Settings') || matches('Exit Action', 'Choose the functionality of the close button for the app. You can choose to receive a Prompt to Minimize or Exit, default to Minimize, or default to Exiting the app.', 'App Settings')
+  $: hasResults = query ? appSection() : true
 
   function resetSettings () {
     IPC.emit('set:angle', defaults.angle)
