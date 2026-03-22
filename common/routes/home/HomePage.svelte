@@ -331,6 +331,7 @@
       case 'ArrowLeft':   e.preventDefault(); selectedIndex.update(n => Math.max(n - 1, 0)); break
       case 'ArrowUp':     e.preventDefault(); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
       case 'ArrowDown':   e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
+      case 'r':           e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'm':           e.preventDefault(); toggleMute(); break
       case 's':           e.preventDefault(); modal.open(modal.SEARCH); break
       case 'Enter':       e.preventDefault(); handleWatch(); break
