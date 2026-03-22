@@ -257,5 +257,5 @@
 {/if}
 {/if}
 {#if query && !hasResults}
-<p class='text-muted text-center py-20 mt-100'>No settings found for "{searchQuery}"</p>
+<p class='text-muted text-center py-20' style='margin-top: 5rem'>No settings found for "{searchQuery}"</p>
 {/if}
