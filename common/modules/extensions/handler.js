@@ -15,6 +15,7 @@ const debug = Debug('ui:extensions')
 
 const exclusions = []
 const isDev = location.hostname === 'localhost'
+const resultsCache = new Map()
 
 const video = document.createElement('video')
 if (!isDev) {
@@ -32,6 +33,11 @@ video.remove()
  * Returns a Map of extension results keyed by extension id, each containing metadata and a result promise.
  */
 export async function getResultsFromExtensions({ media, episode, batch, movie, resolution }) {
+  const cacheKey = `${media?.id}:${episode}:${batch}:${movie}:${resolution}`
+  if (resultsCache.has(cacheKey)) {
+    return resultsCache.get(cacheKey)
+  }
+
   await extensionManager.whenReady.promise
   debug(`Fetching sources for ${media?.id}:${media?.title?.userPreferred} ${episode} ${batch} ${movie} ${resolution}`)
   const aniDBMeta = await ALToAniDB(media)
@@ -104,6 +110,10 @@ export async function getResultsFromExtensions({ media, episode, batch, movie, r
       promises.set(key, { name: source?.name || source?.id, icon: source?.icon, promise })
     }
   }
+  if (resultsCache.size > 100) {
+    for (const key of [...resultsCache.keys()].slice(0, 50)) resultsCache.delete(key)
+  }
+  resultsCache.set(cacheKey, promises)
   return promises
 }
 
@@ -350,4 +360,8 @@ export function dedupe (entries) {
   }
 
   return Object.values(deduped)
+}
+
+export function prefetchTorrent({ media, episode, batch, movie, resolution }) {
+  getResultsFromExtensions({ media, episode, batch, movie, resolution })
 }

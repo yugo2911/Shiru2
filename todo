@@ -1,4 +1,4 @@
-settings
-    skip torrent selection modal
+homepage
+    fetch torrents for selected entry
 
 scheduelpage is incorrect kinda..

@@ -9,7 +9,7 @@
   import { status } from '@/modules/networking.js'
   import { anitomyscript, getMediaMaxEp, getKitsuMappings, getEpisodeMetadataForMedia } from '@/modules/anime/anime.js'
   import { loadedTorrent, completedTorrents, seedingTorrents, stagingTorrents } from '@/modules/torrent.js'
-  import { dedupe, getResultsFromExtensions, updatePeerCounts } from '@/modules/extensions/handler.js'
+  import { dedupe, getResultsFromExtensions, updatePeerCounts, prefetchTorrent } from '@/modules/extensions/handler.js'
   import { getId, getHash } from '@/modules/anime/animehash.js'
   import AnimeResolver from '@/modules/anime/animeresolver.js'
   import { anilistClient } from '@/modules/anilist.js'
@@ -106,6 +106,15 @@
     } catch {
       return null
     }
+  }
+
+  export function prefetch(search) {
+    const movie = isMovie(search.media)
+    const dubAiring = animeSchedule.dubAiring.value?.find(entry => entry.media?.media?.id === search.media.id)
+    const finishedDub = !dubAiring || (dubAiring.episodeNumber === search.media.episodes && (new Date().getTime() >= new Date(dubAiring.episodeDate).getTime())) || ((search.media.mediaListEntry?.progress ?? 0) > dubAiring.episodeNumber)
+    const batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || finishedDub) && !movie
+    const resolution = settings.value.rssQuality
+    prefetchTorrent({ media: search.media, episode: search.episode, batch, movie, resolution })
   }
 
   function filterResults(results, searchText) {

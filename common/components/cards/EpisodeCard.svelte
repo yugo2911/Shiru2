@@ -20,6 +20,7 @@
   import { mediaCache } from '@/modules/cache.js'
   import { checkForZero } from '@/components/MediaHandler.svelte'
   import { modal } from '@/modules/navigation.js'
+  import { prefetchTorrent } from '@/modules/extensions/handler.js'
   export let data
   export let section = false
 
@@ -63,6 +64,11 @@
       setTimeout(() => {
         if (!preview) prompt.set(false)
       }).unref?.()
+    }
+    if (state && settings.value.rssAutoSelect && media && isValidNumber(episode) && !Array.isArray(episode)) {
+      const movie = media.format === 'MOVIE'
+      const batch = media.status === 'FINISHED' && !movie
+      prefetchTorrent({ media, episode, batch, movie, resolution: settings.value.rssQuality })
     }
   }
 
