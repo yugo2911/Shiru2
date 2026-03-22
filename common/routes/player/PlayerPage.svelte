@@ -27,7 +27,7 @@
   import 'rvfc-polyfill'
   import { IPC, ELECTRON, ANDROID } from '@/modules/bridge.js'
   import WPC from '@/modules/wpc.js'
-  import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
+  import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, EyeOff, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
   import { jimakuClient } from '@/modules/jimaku.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import Debug from 'debug'
@@ -806,6 +806,7 @@
   }
   let fitWidth = false
   let showKeybinds = false
+  let showTorrentStats = true
   loadWithDefaults({
     KeyX: {
       fn: () => !viewAnime && screenshot(),
@@ -1757,7 +1758,7 @@
   <ManagerModal playing={current} files={playableFiles} {playFile} />
 <div class='top z-40 d-title' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;'>
   
-  <div style='display: flex; justify-content: center; align-items: center; padding-top: 20px; pointer-events: auto; gap: 20px;'>
+  <div class:hidden={!showTorrentStats} style='display: flex; justify-content: center; align-items: center; padding-top: 20px; pointer-events: auto; gap: 20px;'>
     <div class='d-flex align-items-center'>
       <Users class='pt-5 block-scale-30' strokeWidth={3} />
       <span class='stats font-scale-24 ml-10'>{torrent.peers || 0}</span>
@@ -1948,6 +1949,9 @@
           </div>
           <div role='button' aria-label='Modify Existing Files or Change to a New File' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Modify Existing Files or Change to a New File' use:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); showOptions.set(false) }}>
             <SquarePen size='2rem' strokeWidth={2.5} /> <div class='ml-10'>File Manager</div>
+          </div>
+          <div role='button' aria-label='Toggle Torrent Stats' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Torrent Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
+            {#if showTorrentStats}<EyeOff size='2rem' strokeWidth={2.5} />{:else}<Eye size='2rem' strokeWidth={2.5} />{/if}<div class='ml-10'>{showTorrentStats ? 'Hide' : 'Show'} Torrent Stats</div>
           </div>
         </div>
       </div>
