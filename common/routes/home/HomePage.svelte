@@ -218,6 +218,7 @@
   // ─── Keyboard handler ────────────────────────────────────────────────────────
 
   function handleKeydown(e) {
+    if ($modal[modal.SEARCH]) return
     if (!$resolvedCatalog?.length) return
     switch (e.key) {
       case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, $resolvedCatalog.length - 1)); break
