@@ -584,6 +584,7 @@ export const defaults = {
   hentaiBanner: false,
   rssAutoplay: true,
   rssAutofile: true,
+  rssAutoSelect: false,
   rssQuality: '1080',
   rssFeedsNew: [],
   rssNotify: ['CURRENT', 'PLANNING'],

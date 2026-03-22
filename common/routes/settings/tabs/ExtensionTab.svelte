@@ -74,6 +74,14 @@
   </div>
 </SettingCard>
 {/if}
+{#if matches('Silent Auto-Select', 'Automatically selects and loads the best torrent without showing the torrent modal', 'Content Settings')}
+<SettingCard title='Silent Auto-Select' description='Skips the torrent selection modal entirely and immediately loads the best available torrent when you play an episode. If no suitable torrent is found, the selector will open as a fallback. Works independently of the Autoplay countdown setting.'>
+  <div class='custom-switch'>
+    <input type='checkbox' id='rss-autoselect' bind:checked={settings.rssAutoSelect} />
+    <label for='rss-autoselect'>{settings.rssAutoSelect ? 'On' : 'Off'}</label>
+  </div>
+</SettingCard>
+{/if}
 {#if matches('Auto-Select Files', 'Automatically selects the requested file', 'Content Settings')}
 <SettingCard title='Auto-Select Files' description='Automatically selects the requested file when clicking the desired episode if it already exists in the batch or if you already have the torrent file before prompting the torrent selection. With this setting enabled you may get unexpected results if the video file(s) fail to determine what media is playing. Disable this to always be prompted to select a torrent regardless of what you already downloaded or is in the current batch.'>
   <div class='custom-switch'>

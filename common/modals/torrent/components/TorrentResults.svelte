@@ -52,7 +52,7 @@
    * @param {string} audioLang
    * @param {string[]} torrentProvider
    */
-  async function getBest(search, results, audioLang, torrentProvider = []) {
+  export async function getBest(search, results, audioLang, torrentProvider = []) {
     if (!results || !results.length) return null
     const candidates = []
     if (audioLang !== 'jpn') {
@@ -74,6 +74,38 @@
       if (filteredByProvider.length) return filteredByProvider[0]
     }
     return toConsider[0] || results[0]
+  }
+
+  export async function fetchBestTorrent(search) {
+    const movie = isMovie(search.media)
+    const dubAiring = animeSchedule.dubAiring.value?.find(entry => entry.media?.media?.id === search.media.id)
+    const finishedDub = !dubAiring || (dubAiring.episodeNumber === search.media.episodes && (new Date().getTime() >= new Date(dubAiring.episodeDate).getTime())) || ((search.media.mediaListEntry?.progress ?? 0) > dubAiring.episodeNumber)
+    const batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || finishedDub) && !movie
+    const resolution = settings.value.rssQuality
+
+    let promises
+    try {
+      promises = await getResultsFromExtensions({ ...search, batch, movie, resolution })
+      if (!promises) return null
+    } catch {
+      return null
+    }
+
+    const extensionPromises = Array.from(promises, ([_, ext]) =>
+      ext.promise.then(results => {
+        if (!results?.length) throw new Error('empty')
+        const { results: sorted } = sortResults(results, settings.value.torrentSort)
+        const best = getBest(search, sorted, settings.value.audioLanguage, settings.value.torrentProvider)
+        if (!best) throw new Error('no match')
+        return best
+      })
+    )
+
+    try {
+      return await Promise.any(extensionPromises)
+    } catch {
+      return null
+    }
   }
 
   function filterResults(results, searchText) {
