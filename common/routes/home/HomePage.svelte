@@ -17,7 +17,7 @@
 
   // ─── Constants ──────────────────────────────────────────────────────────────
 
-  export const CYCLE_SECTIONS = ['Continue Watching', 'Watching List', 'Planning List', 'Completed List']
+  export const cycleList = writable([])
   const BANNER_REFRESH_MS = 300_000
 
   // ─── Section manager ────────────────────────────────────────────────────────
@@ -25,18 +25,34 @@
   const manager = new SectionsManager()
 
   let mappedSections = {}
-  mapSections()
+
+  function buildCycleList() {
+    const titles = settings.value.homeSections.map(([title]) => title)
+    cycleList.set(titles)
+    return titles
+  }
+
+  sections.subscribe(value => {
+    if (value?.length) {
+      mappedSections = {}
+      for (const section of value) mappedSections[section.title] = section
+      manager.clear()
+      for (const title of buildCycleList()) {
+        if (mappedSections[title]) manager.add(mappedSections[title])
+      }
+    }
+  })
 
   WPC.listen('remap-sections', () => {
     manager.clear()
     mappedSections = {}
-    mapSections()
+    if (sections.value?.length) {
+      for (const section of sections.value) mappedSections[section.title] = section
+      for (const title of buildCycleList()) {
+        if (mappedSections[title]) manager.add(mappedSections[title])
+      }
+    }
   })
-
-  function mapSections() {
-    for (const section of sections.value) mappedSections[section.title] = section
-    for (const [title] of settings.value.homeSections) manager.add(mappedSections[title])
-  }
 
   // ─── Exported stores ────────────────────────────────────────────────────────
 
@@ -96,7 +112,7 @@
   }
 
   export async function loadSectionData(index) {
-    const name = CYCLE_SECTIONS[index]
+    const name = cycleList.value[index]
     const section = manager.sections.find(s => s.title === name && !s.hide)
     if (!section) return resolvedCatalog.set([])
     if (!section.preview.value) section.preview.value = section.load(1, 50, section.variables)
@@ -118,7 +134,7 @@
     })
   }
 
-  if (Helper.getUser()) refreshSections(Helper.getClient().userLists, CYCLE_SECTIONS)
+  if (Helper.getUser()) refreshSections(Helper.getClient().userLists, cycleList.value)
 
   // ─── Clock ───────────────────────────────────────────────────────────────────
 
@@ -139,7 +155,7 @@
 
   // ─── Derived display values ──────────────────────────────────────────────────
 
-  $: sectionName    = CYCLE_SECTIONS[$currentSectionIndex]
+  $: sectionName    = $cycleList[$currentSectionIndex]
   $: animeList      = $resolvedCatalog
   $: selectedAnime  = animeList[$selectedIndex] || null
 
@@ -206,8 +222,8 @@
     switch (e.key) {
       case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, $resolvedCatalog.length - 1)); break
       case 'ArrowLeft':   e.preventDefault(); selectedIndex.update(n => Math.max(n - 1, 0)); break
-      case 'ArrowUp':     e.preventDefault(); currentSectionIndex.update(n => (n - 1 + CYCLE_SECTIONS.length) % CYCLE_SECTIONS.length); break
-      case 'ArrowDown':   e.preventDefault(); currentSectionIndex.update(n => (n + 1) % CYCLE_SECTIONS.length); break
+      case 'ArrowUp':     e.preventDefault(); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
+      case 'ArrowDown':   e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'Enter':       e.preventDefault(); handleWatch(); break
       case 'Backspace':
       case 'Escape':      e.preventDefault(); handleDetails(); break
@@ -256,7 +272,7 @@
       <nav class="nav-links">
         <button class="nav-item active">HOME</button>
         <button class="nav-item" on:click={() => page.navigateTo(page.SEARCH)}>LIBRARY</button>
-        <button class="nav-item section-toggle" on:click={() => currentSectionIndex.update(n => (n + 1) % CYCLE_SECTIONS.length)}>
+        <button class="nav-item section-toggle" on:click={() => currentSectionIndex.update(n => (n + 1) % $cycleList.length)}>
           {sectionName?.toUpperCase()}
         </button>
       </nav>
