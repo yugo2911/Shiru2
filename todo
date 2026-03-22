@@ -2,4 +2,7 @@ homepage
     fetch torrents for selected entry
     prefetch next episode rss
 
+torrents
+    download next ep when current one is done downloading
+
 scheduelpage is incorrect kinda..
