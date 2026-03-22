@@ -239,13 +239,15 @@
     }
   }
 
-  $: animeList = ($filterMode === 'relations'
-    ? relationsData
-    : $filterMode === 'recommendations'
-      ? recommendationsData
-      : catalogAnime) || []
+  $: animeList = ($filterMode === 'relations' || $filterMode === 'recommendations'
+    ? [currentAnime, ...($filterMode === 'relations' ? relationsData : recommendationsData)].filter(Boolean)
+    : catalogAnime) || []
 
   $: selectedAnime  = animeList?.[$selectedIndex] || null
+
+  $: if (($filterMode === 'relations' || $filterMode === 'recommendations') && animeList.length > 0) {
+    selectedIndex.set(1)
+  }
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
   $: bannerColor = selectedAnime?.coverImage?.color || '#bc0000'
@@ -290,10 +292,6 @@
   $: if ($currentSectionIndex !== undefined) {
     filterMode.set('section')
     loadSectionData($currentSectionIndex).then(() => selectedIndex.set(0))
-  }
-
-  $: if ($filterMode !== 'section') {
-    selectedIndex.set(0)
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
