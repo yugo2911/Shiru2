@@ -51,6 +51,7 @@
 <script>
   import { Tabs, TabLabel, Tab } from '@/components/tabs/Tabination.js'
   import { onDestroy } from 'svelte'
+  import { click } from '@/modules/click.js'
   import PlayerTab from '@/routes/settings/tabs/PlayerTab.svelte'
   import ClientTab from '@/routes/settings/tabs/ClientTab.svelte'
   import InterfaceTab from '@/routes/settings/tabs/InterfaceTab.svelte'
@@ -61,9 +62,11 @@
   import { status } from '@/modules/networking.js'
   import { modal } from '@/modules/navigation.js'
   import semver from 'semver'
-  import { AppWindow, Puzzle, User, Heart, Logs, Play, Rss, Download, LayoutDashboard } from 'lucide-svelte'
+  import { AppWindow, Puzzle, User, Heart, Logs, Play, Rss, Download, LayoutDashboard, Search, X } from 'lucide-svelte'
 
   export let statusTransition = false
+
+  let searchQuery = ''
 
   const groups = {
     player: {
@@ -130,6 +133,32 @@
   <div class='d-flex w-full h-full position-relative settings root flex-md-row flex-column'>
     <div class='d-flex flex-column h-lg-full bg-dark position-absolute position-lg-relative bb-10 w-full w-lg-300 z-10 flex-lg-shrink-0 br-10' class:status-transition={statusTransition} class:pt-28px={!SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-lg-28px={SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-safe-area={SUPPORTS.isAndroid && !$status.match(/offline/i)}>
       <div class='px-20 py-5 font-size-24 font-weight-semi-bold position-absolute d-none d-lg-block'>Settings</div>
+      <div class='d-none d-lg-block px-20 py-5 mt-20'>
+        <div class='input-group'>
+          <div class='input-group-prepend'>
+            <span class='input-group-text bg-dark border-0'><Search size='1.6rem' /></span>
+          </div>
+          <input type='text' class='form-control bg-dark border-0' placeholder='Search settings...' bind:value={searchQuery} />
+          {#if searchQuery}
+            <div class='input-group-append'>
+              <button type='button' use:click={() => searchQuery = ''} class='btn btn-dark btn-square px-10 d-flex align-items-center'><X size='1.6rem' /></button>
+            </div>
+          {/if}
+        </div>
+      </div>
+      <div class='position-relative d-lg-none px-20 py-10'>
+        <div class='input-group'>
+          <div class='input-group-prepend'>
+            <span class='input-group-text bg-dark border-0'><Search size='1.6rem' /></span>
+          </div>
+          <input type='text' class='form-control bg-dark border-0' placeholder='Search settings...' bind:value={searchQuery} />
+          {#if searchQuery}
+            <div class='input-group-append'>
+              <button type='button' use:click={() => searchQuery = ''} class='btn btn-dark btn-square px-10 d-flex align-items-center'><X size='1.6rem' /></button>
+            </div>
+          {/if}
+        </div>
+      </div>
       <div class='mt-lg-20 py-lg-20 py-10 d-flex flex-lg-column flex-row justify-content-center justify-content-lg-start align-items-center align-items-lg-start'>
         {#each Object.values(groups) as group}
           <TabLabel name={group.name} action={group.action} sidebar={group.sidebar} substitute={group.substitute} let:active>
@@ -151,7 +180,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <PlayerTab bind:settings={$settings} />
+              <PlayerTab bind:settings={$settings} searchQuery={searchQuery} />
             </div>
           </div>
         </div>
@@ -160,7 +189,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <ClientTab bind:settings={$settings} />
+              <ClientTab bind:settings={$settings} searchQuery={searchQuery} />
             </div>
           </div>
         </div>
@@ -178,7 +207,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <InterfaceTab bind:settings={$settings} />
+              <InterfaceTab bind:settings={$settings} searchQuery={searchQuery} />
             </div>
           </div>
         </div>
@@ -187,7 +216,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <ExtensionTab bind:settings={$settings} />
+              <ExtensionTab bind:settings={$settings} searchQuery={searchQuery} />
             </div>
           </div>
         </div>
@@ -197,7 +226,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <AppTab {version} bind:settings={$settings} />
+              <AppTab {version} bind:settings={$settings} searchQuery={searchQuery} />
             </div>
           </div>
         </div>
@@ -206,7 +235,7 @@
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
             <div class='page pb-100'>
-              <ChangelogTab {version} />
+              <ChangelogTab {version} searchQuery={searchQuery} />
             </div>
           </div>
         </div>

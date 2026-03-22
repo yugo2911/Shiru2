@@ -9,6 +9,11 @@
   import DOMPurify from 'dompurify'
   import { TriangleAlert, CircleAlert, Github, Folder, FileQuestion, Trash2, CircleX, ChevronDown, ChevronUp, SquarePlus, Adult } from 'lucide-svelte'
   export let settings
+  export let searchQuery = ''
+
+  $: query = searchQuery.toLowerCase()
+  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
   $: mainTab = true
@@ -61,24 +66,31 @@
 </script>
 
 <h4 class='mb-10 font-weight-bold'>Content Settings</h4>
+{#if matches('Auto-Select Torrents', 'Automatically selects torrents based on quality')}
 <SettingCard title='Auto-Select Torrents' description='Automatically selects torrents based on quality and amount of seeders. Disable this to have more precise control over played torrents.'>
   <div class='custom-switch'>
     <input type='checkbox' id='rss-autoplay' bind:checked={settings.rssAutoplay} />
     <label for='rss-autoplay'>{settings.rssAutoplay ? 'On' : 'Off'}</label>
   </div>
 </SettingCard>
+{/if}
+{#if matches('Auto-Select Files', 'Automatically selects the requested file')}
 <SettingCard title='Auto-Select Files' description='Automatically selects the requested file when clicking the desired episode if it already exists in the batch or if you already have the torrent file before prompting the torrent selection. With this setting enabled you may get unexpected results if the video file(s) fail to determine what media is playing. Disable this to always be prompted to select a torrent regardless of what you already downloaded or is in the current batch.'>
   <div class='custom-switch'>
     <input type='checkbox' id='rss-autofile' bind:checked={settings.rssAutofile} />
     <label for='rss-autofile'>{settings.rssAutofile ? 'On' : 'Off'}</label>
   </div>
 </SettingCard>
+{/if}
+{#if matches('Auto-Scrape Results', 'scrapes seeder and leecher counts')}
 <SettingCard title='Auto-Scrape Results' description={'Automatically scrapes seeder and leecher counts when fetching extension results for torrent selection. When enabled, you\'ll see accurate peer data but results may load slower (5-15 seconds). When disabled, results load instantly but show the counts reported by indexers, which may be outdated. You can always manually scrape using the "Scrape" button in the torrent menu to refresh peer data on demand.'}>
   <div class='custom-switch'>
     <input type='checkbox' id='rss-autoscrape' bind:checked={settings.torrentAutoScrape} />
     <label for='rss-autoscrape'>{settings.torrentAutoScrape ? 'On' : 'Off'}</label>
   </div>
 </SettingCard>
+{/if}
+{#if matches('Torrent Quality', 'quality to use when trying to find torrents')}
 <SettingCard title='Torrent Quality' description="What quality to use when trying to find torrents. None might rarely find less results than specific qualities. This doesn't exclude other qualities from being found like 4K or weird DVD resolutions.">
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={settings.rssQuality}>
     <option value='1080' selected>1080p</option>
@@ -88,6 +100,8 @@
     <option value=''>Any</option>
   </select>
 </SettingCard>
+{/if}
+{#if matches('Torrent Order', 'Sorts the results by the preferred order')}
 <SettingCard title='Torrent Order' description='Sorts the results by the preferred order. The auto-selected torrent will still consider your Preferred Audio setting.'>
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={settings.torrentSort}>
     <option value='seeders' selected>Seeders</option>
@@ -98,6 +112,8 @@
     <option value='best' selected>Best</option>
   </select>
 </SettingCard>
+{/if}
+{#if matches('Preferred Audio', 'Prioritizes results matching the preferred language')}
 <SettingCard title='Preferred Audio' description='Prioritizes results matching the preferred language, otherwise will default to Japanese. This language will be loaded automatically when the video is loaded.'>
   <select class='form-control bg-dark mw-220 w-220 text-truncate' bind:value={settings.audioLanguage}>
     <option value='eng'>English</option>
@@ -126,6 +142,8 @@
     <option value='idn'>Indonesian</option>
   </select>
 </SettingCard>
+{/if}
+{#if matches('Preferred Providers', 'Prioritizes results matching the preferred providers')}
 <SettingCard title='Preferred Providers' description='Prioritizes results matching the preferred providers. Providers are considered equally and used only when choosing the best available result.'>
   <div>
     {#each settings.torrentProvider as _, i}
@@ -145,6 +163,7 @@
     <button type='button' use:click={() => { settings.torrentProvider[settings.torrentProvider.length] = '' }} class='btn btn-primary mb-10 d-flex align-items-center justify-content-center'><span>Add Provider</span></button>
   </div>
 </SettingCard>
+{/if}
 
 <h4 class='mb-10 font-weight-bold'>Extension Settings</h4>
 <div class='d-flex bg-dark-light rounded-3 p-4 mw-300 mb-20'>
