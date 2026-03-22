@@ -1,9 +1,8 @@
-schedulepage
-    miniplayer prevents hover images appearing at all
-    *new* mark, or and user *status* mars
-    move all styles to css stroe as vars
-    cached at runtime or i mean shiru already does this onload hm? well we just need names& air time fetched quickly
+playerpage
+    more
+        hide torrent status
 
+settings
+    skip torrent selection modal
 
-jimaku
-    use newly added css/vars
+scheduelpage is incorrect kinda..
