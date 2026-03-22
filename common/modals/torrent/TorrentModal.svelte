@@ -8,7 +8,6 @@
   import { add } from '@/modules/torrent.js'
   import { nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
   import { cache, caches } from '@/modules/cache.js'
-  import { toast } from 'svelte-sonner'
 
   export function playAnime (media, episode = 1, force = false) {
     episode = Number(episode)
@@ -25,12 +24,9 @@
   }
 
   async function autoSelectAndPlay(search) {
-    const toastId = toast.loading(`Finding best torrent for episode ${search.episode}…`)
     try {
       const best = await fetchBestTorrent(search)
       if (!best) {
-        toast.dismiss(toastId)
-        toast.error('No torrent found — opening selector instead.')
         modal.open(modal.TORRENT_MENU, search)
         return
       }
@@ -43,11 +39,8 @@
           : { ...(existingMagnets[search.media.id] || {}), [`${search.episode}`]: best }
       })
       add(best.link, { media: search.media, episode: search.episode }, best.hash)
-      toast.dismiss(toastId)
       page.navigateTo(page.PLAYER)
-    } catch (err) {
-      toast.dismiss(toastId)
-      toast.error('Auto-select failed — opening selector instead.')
+    } catch {
       modal.open(modal.TORRENT_MENU, search)
     }
   }
