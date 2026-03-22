@@ -133,8 +133,6 @@
 
   $: sectionName = $cycleList[$currentSectionIndex]
 
-  // BUG FIX: store studioFilter as ID (number) instead of name string to avoid
-  // collisions between studios with identical names
   let studioFilterId = null
   let studioFilterName = null
 
@@ -143,25 +141,28 @@
   let relationsLoadedFor = null
   let recommendationsLoadedFor = null
 
-  // BUG FIX: studioFilter now uses node.id for matching, not name.
-  // Also only works reliably in Complex query mode since studios are in queryComplexObjects.
-  // In Simple mode we still attempt the filter but it may show nothing — this is expected.
+  // pinnedAnime is captured when entering relations/recs mode and stays fixed.
+  // It is shown as a non-interactive parent card in the shelf and drives the
+  // initial data load — it does NOT shift when you navigate the related list.
+  let pinnedAnime = null
+  let savedSectionIndex = 0
+
   $: catalogAnime = studioFilterId
     ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.id === studioFilterId))
     : $resolvedCatalog
 
-  $: currentAnime = catalogAnime?.[$selectedIndex] || null
+  // In relations/recs mode the selectable list is only the related items.
+  // The parent (pinnedAnime) is rendered separately in the shelf as a fixed header card.
+  $: animeList = ($filterMode === 'relations' || $filterMode === 'recommendations')
+    ? ($filterMode === 'relations' ? relationsData : recommendationsData)
+    : catalogAnime || []
 
-  $: {
-    if ($filterMode === 'relations' && currentAnime?.id && relationsLoadedFor !== currentAnime.id) {
-      loadRelations(currentAnime.id)
-    }
+  // In relations/recs mode load once from the pinned parent, never re-trigger on index change.
+  $: if ($filterMode === 'relations' && pinnedAnime?.id && relationsLoadedFor !== pinnedAnime.id) {
+    loadRelations(pinnedAnime.id)
   }
-
-  $: {
-    if ($filterMode === 'recommendations' && currentAnime?.id && recommendationsLoadedFor !== currentAnime.id) {
-      loadRecommendations(currentAnime.id)
-    }
+  $: if ($filterMode === 'recommendations' && pinnedAnime?.id && recommendationsLoadedFor !== pinnedAnime.id) {
+    loadRecommendations(pinnedAnime.id)
   }
 
   async function loadRelations(id) {
@@ -221,13 +222,7 @@
     }
   }
 
-  $: animeList = ($filterMode === 'relations' || $filterMode === 'recommendations'
-    ? [currentAnime, ...($filterMode === 'relations' ? relationsData : recommendationsData)].filter(Boolean)
-    : catalogAnime) || []
-
-  $: selectedAnime = ($filterMode === 'relations' || $filterMode === 'recommendations') && currentAnime
-    ? currentAnime
-    : animeList?.[$selectedIndex] || null
+  $: selectedAnime = animeList?.[$selectedIndex] || null
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
   $: bannerColor = selectedAnime?.coverImage?.color || '#bc0000'
@@ -272,14 +267,38 @@
 
   $: if ($currentSectionIndex !== undefined) {
     filterMode.set('section')
+    pinnedAnime = null
     loadSectionData($currentSectionIndex).then(() => selectedIndex.set(0))
+  }
+
+  // ─── Mode switching ──────────────────────────────────────────────────────────
+
+  function enterMode(mode) {
+    if ($filterMode === mode) {
+      // Toggle off — return to section view at the saved position
+      filterMode.set('section')
+      pinnedAnime = null
+      selectedIndex.set(savedSectionIndex)
+      return
+    }
+    // Capture the currently selected anime as the fixed parent before switching
+    const current = catalogAnime?.[$selectedIndex] || null
+    if (!current) return
+    savedSectionIndex = $selectedIndex
+    pinnedAnime = current
+    relationsData = []
+    recommendationsData = []
+    filterMode.set(mode)
+    selectedIndex.set(0)
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
 
   function handleWatch() {
-    if (!selectedAnime) return
-    playActive(selectedAnime.hash, { media: selectedAnime, episode: selectedAnime.episode }, selectedAnime.link, !selectedAnime.link)
+    // In relations/recs mode, play the selected related item (not the pinned parent)
+    const target = selectedAnime || pinnedAnime
+    if (!target) return
+    playActive(target.hash, { media: target, episode: target.episode }, target.link, !target.link)
   }
 
   function handleDetails() {
@@ -370,12 +389,12 @@
 
   <header class="header">
     <div class="nav-cluster">
-      <button class="brand" on:click={() => { page.navigateTo(page.HOME); filterMode.set('section') }}>A/N</button>
+      <button class="brand" on:click={() => { page.navigateTo(page.HOME); filterMode.set('section'); pinnedAnime = null }}>A/N</button>
       <nav class="nav-links">
-        <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => filterMode.set('section')}>HOME</button>
+        <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => { filterMode.set('section'); pinnedAnime = null; selectedIndex.set(savedSectionIndex) }}>HOME</button>
         <button class="nav-item" on:click={() => page.navigateTo(page.SEARCH)}>LIBRARY</button>
-        <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => filterMode.set('relations')}>RELATIONS</button>
-        <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => filterMode.set('recommendations')}>RECS</button>
+        <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => enterMode('relations')}>RELATIONS</button>
+        <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => enterMode('recommendations')}>RECS</button>
         <button class="nav-item section-toggle" on:click={() => currentSectionIndex.update(n => (n + 1) % $cycleList.length)}>
           {sectionName?.toUpperCase()}
         </button>
@@ -432,6 +451,21 @@
 
   <section class="horizontal-shelf">
     <div class="scroll-wrapper" bind:this={shelfContainer} use:dragScroll>
+      {#if pinnedAnime}
+        {@const color = pinnedAnime.coverImage?.color || '#ffffff'}
+        <div class="card-unit card-pinned" style="--card-color: {color}">
+          <img
+            src={pinnedAnime.coverImage?.extraLarge || pinnedAnime.coverImage?.large || pinnedAnime.coverImage?.medium || ''}
+            alt=""
+            loading="lazy"
+          />
+          <div class="card-info">
+            <p class="card-label">{$filterMode === 'relations' ? 'RELATIONS' : 'RECS'}</p>
+            <p class="card-title">{pinnedAnime.title?.userPreferred || pinnedAnime.title?.romaji || ''}</p>
+          </div>
+        </div>
+        <div class="shelf-divider"></div>
+      {/if}
       {#each animeList as anime, i (anime.id)}
         {@const progress = anime.mediaListEntry?.progress ?? 0}
         {@const total = anime.episodes || anime.nextAiringEpisode?.episode - 1 || null}
@@ -544,4 +578,10 @@
   .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
   .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
   .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ── Pinned parent card ── */
+  .card-pinned { cursor: default; opacity: 0.55; border-color: var(--card-color) !important; border-style: dashed !important; flex-shrink: 0; }
+  .card-pinned img { opacity: 0.6; }
+  .card-label { font-size: 0.65rem; font-weight: 900; letter-spacing: 0.18em; color: var(--card-color); margin: 0 0 0.3rem; text-transform: uppercase; opacity: 0.9; }
+  .shelf-divider { width: 2px; height: 80%; align-self: center; background: rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 2px; }
 </style>
