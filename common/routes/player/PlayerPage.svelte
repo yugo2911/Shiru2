@@ -806,7 +806,7 @@
   }
   let fitWidth = false
   let showKeybinds = false
-  let showTorrentStats = true
+  let showTorrentStats = false
   loadWithDefaults({
     KeyX: {
       fn: () => !viewAnime && screenshot(),
@@ -1950,8 +1950,8 @@
           <div role='button' aria-label='Modify Existing Files or Change to a New File' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Modify Existing Files or Change to a New File' use:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); showOptions.set(false) }}>
             <SquarePen size='2rem' strokeWidth={2.5} /> <div class='ml-10'>File Manager</div>
           </div>
-          <div role='button' aria-label='Toggle Torrent Stats' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Torrent Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
-            {#if showTorrentStats}<EyeOff size='2rem' strokeWidth={2.5} />{:else}<Eye size='2rem' strokeWidth={2.5} />{/if}<div class='ml-10'>{showTorrentStats ? 'Hide' : 'Show'} Torrent Stats</div>
+          <div role='button' aria-label='Toggle Stats' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
+            {#if showTorrentStats}<EyeOff size='2rem' strokeWidth={2.5} />{:else}<Eye size='2rem' strokeWidth={2.5} />{/if}<div class='ml-10'>{showTorrentStats ? 'Hide' : 'Show'} Stats</div>
           </div>
         </div>
       </div>
