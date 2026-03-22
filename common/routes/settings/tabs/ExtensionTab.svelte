@@ -12,11 +12,7 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: contentSection = () => matches('Auto-Select Torrents', 'Automatically selects torrents based on quality', 'Content Settings') || matches('Auto-Select Files', 'Automatically selects the requested file', 'Content Settings') || matches('Auto-Scrape Results', 'scrapes seeder and leecher counts', 'Content Settings') || matches('Torrent Quality', 'quality to use when trying to find torrents', 'Content Settings') || matches('Torrent Order', 'Sorts the results by the preferred order', 'Content Settings') || matches('Preferred Audio', 'Prioritizes results matching the preferred language', 'Content Settings') || matches('Preferred Providers', 'Prioritizes results matching the preferred providers', 'Content Settings')
-  $: extensionSection = () => !query
-  export let hasResults = true
-  $: hasResults = query ? contentSection() : true
+  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
 
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
@@ -69,9 +65,7 @@
   }
 </script>
 
-{#if contentSection()}
 <h4 class='mb-10 font-weight-bold'>Content Settings</h4>
-{/if}
 {#if matches('Auto-Select Torrents', 'Automatically selects torrents based on quality')}
 <SettingCard title='Auto-Select Torrents' description='Automatically selects torrents based on quality and amount of seeders. Disable this to have more precise control over played torrents.'>
   <div class='custom-switch'>
@@ -171,9 +165,7 @@
 </SettingCard>
 {/if}
 
-{#if extensionSection()}
 <h4 class='mb-10 font-weight-bold'>Extension Settings</h4>
-{/if}
 <div class='d-flex bg-dark-light rounded-3 p-4 mw-300 mb-20'>
   <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={mainTab} class:bg-transparent={!mainTab} use:click={()=> { mainTab = true }}>Extensions</button>
   <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={!mainTab} class:bg-transparent={mainTab} use:click={()=> { mainTab = false }}>Sources</button>
@@ -340,6 +332,7 @@
     {/if}
   {/if}
 {/if}
+
 <style>
   .font-size-28 {
     font-size: 2.8rem;

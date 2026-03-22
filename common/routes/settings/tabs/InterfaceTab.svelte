@@ -14,13 +14,6 @@
 
   $: query = searchQuery.toLowerCase()
   $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: richPresenceSection = () => !query || query.includes('rich') || query.includes('presence') || query.includes('discord')
-  $: interfaceSection = () => !query || query.includes('theme') || query.includes('scale') || query.includes('css') || query.includes('sidebar') || query.includes('card') || query.includes('adult') || query.includes('interface')
-  $: renderingSection = () => !query || query.includes('angle') || query.includes('render')
-  $: notificationSection = () => !query || query.includes('notification') || query.includes('notify') || query.includes('announcement') || query.includes('release') || query.includes('rss')
-  $: homeSection = () => !query || query.includes('home') || query.includes('rss') || query.includes('section') || query.includes('custom')
-  export let hasResults = true
-  $: hasResults = query ? (richPresenceSection() || interfaceSection() || renderingSection() || notificationSection() || homeSection()) : true
 
   function updateAngle () {
     IPC.emit('set:angle', settings.angle)
@@ -29,9 +22,7 @@
 </script>
 
 {#if SUPPORTS.discord}
-{#if richPresenceSection()}
 <h4 class='mb-10 font-weight-bold'>Rich Presence Settings</h4>
-{/if}
 {#if matches('Discord Rich Presence', 'Discord rich presence')}
 <SettingCard title='Discord Rich Presence' description={'Enables the use of Discord rich presence to display app activity.\nFull enables complete rich presence support showing anime details, limited reduces what is seen not showing the currently played anime and episode, disabled completely disables rich presence.'}>
   <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.enableRPC}>
@@ -43,9 +34,7 @@
 {/if}
 {/if}
 
-{#if interfaceSection()}
 <h4 class='mb-10 font-weight-bold'>Interface Settings</h4>
-{/if}
 {#if matches('Theme', 'how the app looks and feels')}
 <SettingCard title='Theme' description='Select how the app looks and feels, including colors, layouts, and other visual styles.'>
   <select class='form-control bg-dark w-160 mw-full text-truncate' bind:value={settings.presetTheme} on:change={() => setStyle()}>
@@ -165,9 +154,7 @@
 {/if}
 {/if}
 {#if SUPPORTS.angle}
-{#if renderingSection()}
 <h4 class='mb-10 font-weight-bold'>Rendering Settings</h4>
-{/if}
 {#if matches('ANGLE Backend', 'ANGLE backend to use for rendering')}
 <SettingCard title='ANGLE Backend' description="What ANGLE backend to use for rendering. DON'T CHANGE WITHOUT REASON! On some Windows machines D3D9 might help with flicker. Changing this setting to something your device doesn't support might prevent Shiru from opening which will require a full reinstall. While Vulkan is an available option it might not be fully supported on Linux.">
   <select class='form-control bg-dark w-300 mw-full text-truncate' bind:value={settings.angle} on:change={updateAngle}>
@@ -184,9 +171,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if notificationSection()}
 <h4 class='mb-10 font-weight-bold'>Notification Settings</h4>
-{/if}
 {#if matches('System Notifications', 'custom system notifications')}
 <SettingCard title='System Notifications' description={'Allows custom system notifications to be sent, with this disabled you will still get in-app notifications. If you enable system notifications and have MULTIPLE Notification Feeds specified, such as RSS, Releases, and Anilist you WILL be spammed with multiple notifications. Consider choosing a single feed based on your needs.'}>
   <div class='custom-switch'>
@@ -260,9 +245,7 @@
 </SettingCard>
 {/if}
 
-{#if homeSection()}
 <h4 class='mb-10 font-weight-bold'>Home Screen Settings</h4>
-{/if}
 {#if Helper.isAuthorized()}
 {#if matches('Hide My Anime', 'Watching, Rewatching, Completed, and Dropped list')}
 <SettingCard title='Hide My Anime' description={'The anime on your Watching, Rewatching, Completed, and Dropped list will automatically be hidden from the default sections, this excludes manually added RSS feeds and user specific feeds.'}>
@@ -333,7 +316,6 @@
   </div>
 </SettingCard>
 {/if}
-
 
 <style>
   .w-210 {

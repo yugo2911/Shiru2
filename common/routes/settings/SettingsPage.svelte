@@ -67,11 +67,6 @@
   export let statusTransition = false
 
   let searchQuery = ''
-  let playerHasResults = true
-  let clientHasResults = true
-  let interfaceHasResults = true
-  let extensionHasResults = true
-  let appHasResults = true
 
   const groups = {
     player: {
@@ -181,23 +176,6 @@
     </div>
     <div class='mt-75 mt-lg-0 w-full overflow-y-auto overflow-y-md-hidden' class:status-transition={statusTransition} class:pt-28px={!SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-lg-28px={SUPPORTS.isAndroid && !$status.match(/offline/i)} class:pt-safe-area={SUPPORTS.isAndroid && !$status.match(/offline/i)}>
       <div class='shadow-overlay d-lg-none' />
-      {#if searchQuery}
-        <!-- Cross-tab search: render all tabs at once so results appear regardless of active tab -->
-        <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
-          <div class='scroll-container'>
-            <div class='page pb-100'>
-              <PlayerTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={playerHasResults} />
-              <ClientTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={clientHasResults} />
-              <InterfaceTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={interfaceHasResults} />
-              <ExtensionTab bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={extensionHasResults} />
-              <AppTab {version} bind:settings={$settings} searchQuery={searchQuery} bind:hasResults={appHasResults} />
-              {#if !(playerHasResults || clientHasResults || interfaceHasResults || extensionHasResults || appHasResults)}
-                <p class='text-muted text-center py-20' style='margin-top: 5rem'>No settings found for "{searchQuery}"</p>
-              {/if}
-            </div>
-          </div>
-        </div>
-      {:else}
       <Tab>
         <div class='root h-full w-full overflow-y-md-auto p-20 pt-5'>
           <div class='scroll-container'>
@@ -263,7 +241,6 @@
         </div>
       </Tab>
       <Tab/> <!-- Skip Donate Tab -->
-      {/if}
     </div>
   </div>
 </Tabs>

@@ -12,15 +12,7 @@
   export let searchQuery = ''
 
   $: query = searchQuery.toLowerCase()
-  $: matches = (title, description, header = '') => !query || (header.toLowerCase().includes(query) || title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
-  $: playerSection = () => matches('Disable Miniplayer', 'miniplayer', 'Player') || matches('Auto-Hide Miniplayer', 'miniplayer shelve', 'Player')
-  $: subtitleSection = () => matches('Default Subtitle Font', 'font to use when the current loaded video', 'Subtitle') || matches('Missing Subtitle Fonts', 'finds and loads fonts that are missing', 'Subtitle') || matches('Fast Subtitle Rendering', 'Disables blur when rendering subtitles', 'Subtitle')
-  $: subtitleIntSection = () => matches('Jimaku API', 'Jimaku.cc', 'Subtitle') || matches('Subtitle Render Resolution', 'render subtitles at', 'Subtitle')
-  $: languageSection = () => matches('Preferred Subtitle Language', 'subtitle language to automatically select', 'Language')
-  $: playbackSection = () => matches('Autoplay Next Episode', 'Automatically starts playing next episode', 'Playback') || matches('Pause On Lost Focus', 'Pauses/Resumes video playback when tabbing', 'Playback') || matches('Auto-Complete Episodes', 'Automatically marks episodes as complete', 'Playback') || matches('Deband Video', 'Reduces banding on dark and compressed videos', 'Playback') || matches('Seek Duration', 'skip forward or backward when using the seek buttons', 'Playback') || matches('Chapter Source', 'chapter source to use during video playback', 'Playback') || matches('Auto-Skip Intro', 'automatically skip intro and outro', 'Playback')
-  $: externalSection = () => matches('External Player', 'external video player to play video', 'External') || matches('External Video Player', 'Executable for an external video player', 'External')
-  export let hasResults = true
-  $: hasResults = query ? (playerSection() || subtitleSection() || subtitleIntSection() || languageSection() || playbackSection() || externalSection()) : true
+  $: matches = (title, description) => !query || (title.toLowerCase().includes(query) || description.toLowerCase().includes(query))
 
   async function changeFont ({ detail }) {
     try {
@@ -48,9 +40,8 @@
   $: if (!settings.missingFont) removeFont()
 </script>
 
-{#if playerSection()}
 <h4 class='mb-10 font-weight-bold'>Player Settings</h4>
-{#if matches('Disable Miniplayer', 'miniplayer', 'Player')}
+{#if matches('Disable Miniplayer', 'miniplayer')}
 <SettingCard title='Disable Miniplayer' description='Disables the built-in Miniplayer, this is not recommended but could be useful for small screens. When utilizing the minimize button on the Miniplayer, this setting is changed automatically.'>
   <div class='custom-switch'>
     <input type='checkbox' id='miniplayer-disabled' bind:checked={$playPage} />
@@ -59,7 +50,7 @@
 </SettingCard>
 {/if}
 {#if !$playPage}
-{#if matches('Auto-Hide Miniplayer', 'miniplayer shelve', 'Player')}
+{#if matches('Auto-Hide Miniplayer', 'miniplayer shelve')}
 <SettingCard title='Auto-Hide Miniplayer' description='When enabled, the miniplayer will automatically shelve itself when playback is paused and unshelve when hovered or focused. When disabled, you can manually shelve and unshelve the miniplayer by clicking, tapping or swiping. Whether enabled or disabled the miniplayer will always unshelve itself when playback resumes.'>
   <div class='custom-switch'>
     <input type='checkbox' id='autohide-miniplayer' bind:checked={settings.autoHideMiniplayer} />
@@ -68,12 +59,9 @@
 </SettingCard>
 {/if}
 {/if}
-{/if}
-
-{#if subtitleSection()}
 <h4 class='mb-10 font-weight-bold'>Subtitle Settings</h4>
 {#if ('queryLocalFonts' in self)}
-{#if matches('Default Subtitle Font', 'font to use when the current loaded video', 'Subtitle')}
+{#if matches('Default Subtitle Font', 'font to use when the current loaded video')}
 <SettingCard title='Default Subtitle Font' description={"What font to use when the current loaded video doesn't provide or specify one.\nThis uses fonts installed on your OS."}>
   <div class='input-group w-400 mw-full'>
     <FontSelect class='form-control bg-dark w-300 mw-full text-truncate' on:change={changeFont} value={settings.font?.name ?? 'Roboto Medium'} />
@@ -83,7 +71,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Missing Subtitle Fonts', "finds and loads fonts that are missing", 'Subtitle')}
+{#if matches('Missing Subtitle Fonts', "finds and loads fonts that are missing")}
 <SettingCard title='Find Missing Subtitle Fonts' description="Automatically finds and loads fonts that are missing from a video's subtitles.">
   <div class='custom-switch'>
     <input type='checkbox' id='player-missingFont' bind:checked={settings.missingFont} />
@@ -92,7 +80,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('Fast Subtitle Rendering', 'Disables blur when rendering subtitles', 'Subtitle')}
+{#if matches('Fast Subtitle Rendering', 'Disables blur when rendering subtitles')}
 <SettingCard title='Fast Subtitle Rendering' description='Disables blur when rendering subtitles reducing lag. Will cause text and subtitle edges to appear sharper and in rare cases might break styling. If you want better rendering speeds without sacrificing accuracy lower the render resolution limit.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-sub-blur' bind:checked={settings.disableSubtitleBlur} />
@@ -100,16 +88,13 @@
   </div>
 </SettingCard>
 {/if}
-{/if}
-
-{#if subtitleIntSection()}
 <h4 class='mb-10 font-weight-bold'>Subtitle Integrations</h4>
-{#if matches('Jimaku API', 'Jimaku.cc', 'Subtitle')}
+{#if matches('Jimaku API', 'Jimaku.cc')}
 <SettingCard title='Jimaku API Key' description='API Key for Jimaku.cc. This enables the app to fetch japanese subtitles for your media.'>
   <input type='text' class='form-control bg-dark mw-100 w-300 mw-full' placeholder='Enter API Key' bind:value={settings.jimakuKey} />
 </SettingCard>
 {/if}
-{#if matches('Subtitle Render Resolution', 'render subtitles at', 'Subtitle')}
+{#if matches('Subtitle Render Resolution', 'render subtitles at')}
 <SettingCard title='Subtitle Render Resolution Limit' description="Max resolution to render subtitles at. If your resolution is higher than this setting the subtitles will be upscaled lineary. This will GREATLY improve rendering speeds for complex typesetting for slower devices. It's best to lower this on mobile devices which often have high pixel density where their effective resolution might be ~1440p while having small screens and slow processors.">
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={settings.subtitleRenderHeight}>
     <option value='0' selected>None</option>
@@ -120,11 +105,9 @@
   </select>
 </SettingCard>
 {/if}
-{/if}
 
-{#if languageSection()}
 <h4 class='mb-10 font-weight-bold'>Language Settings</h4>
-{#if matches('Preferred Subtitle Language', 'subtitle language to automatically select', 'Language')}
+{#if matches('Preferred Subtitle Language', 'subtitle language to automatically select')}
 <SettingCard title='Preferred Subtitle Language' description="What subtitle language to automatically select when a video is loaded if it exists. This won't find sources with this language automatically. If not found defaults to English.">
   <select class='form-control bg-dark mw-220 w-220 text-truncate' bind:value={settings.subtitleLanguage}>
     <option value=''>None</option>
@@ -155,11 +138,9 @@
   </select>
 </SettingCard>
 {/if}
-{/if}
 
-{#if playbackSection()}
 <h4 class='mb-10 font-weight-bold'>Playback Settings</h4>
-{#if matches('Autoplay Next Episode', 'Automatically starts playing next episode', 'Playback')}
+{#if matches('Autoplay Next Episode', 'Automatically starts playing next episode')}
 <SettingCard title='Autoplay Next Episode' description='Automatically starts playing next episode when a video ends.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-autoplay' bind:checked={settings.playerAutoplay} />
@@ -167,7 +148,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Pause On Lost Focus', 'Pauses/Resumes video playback when tabbing', 'Playback')}
+{#if matches('Pause On Lost Focus', 'Pauses/Resumes video playback when tabbing')}
 <SettingCard title='Pause On Lost Focus' description='Pauses/Resumes video playback when tabbing in/out of the app.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-pause' bind:checked={settings.playerPause} />
@@ -175,7 +156,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Auto-Complete Episodes', 'Automatically marks episodes as complete', 'Playback')}
+{#if matches('Auto-Complete Episodes', 'Automatically marks episodes as complete')}
 <SettingCard title='Auto-Complete Episodes' description='Automatically marks episodes as complete on AniList or MyAnimeList when you finish watching them. You must be logged in.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-autocomplete' bind:checked={settings.playerAutocomplete} />
@@ -184,7 +165,7 @@
 </SettingCard>
 {/if}
 {#if settings.playerAutocomplete}
-{#if matches('Auto-Complete Threshold', 'percentage of an episode that must be watched', 'Playback')}
+{#if matches('Auto-Complete Threshold', 'percentage of an episode that must be watched')}
 <SettingCard title='Auto-Complete Threshold' description='The percentage of an episode that must be watched before it is automatically marked as complete. A higher value means more of the episode must be watched.'>
   <div class='input-group w-100 mw-full'>
     <ClampedNumber bind:bindTo={settings.playerAutocompleteThreshold} min={1} max={100} class='form-control text-right bg-dark'/>
@@ -195,7 +176,7 @@
 </SettingCard>
 {/if}
 {/if}
-{#if matches('Deband Video', 'Reduces banding on dark and compressed videos', 'Playback')}
+{#if matches('Deband Video', 'Reduces banding on dark and compressed videos')}
 <SettingCard title='Deband Video' description='Reduces banding on dark and compressed videos. High performance impact, not recommended for high quality videos.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-deband' bind:checked={settings.playerDeband} />
@@ -203,7 +184,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Seek Duration', 'skip forward or backward when using the seek buttons', 'Playback')}
+{#if matches('Seek Duration', 'skip forward or backward when using the seek buttons')}
 <SettingCard title='Seek Duration' description='Seconds to skip forward or backward when using the seek buttons or keyboard shortcuts. Higher values might negatively impact buffering speeds.'>
   <div class='input-group w-100 mw-full'>
     <ClampedNumber bind:bindTo={settings.playerSeek} min={0.2} max={360} step={0.1} class='form-control text-right bg-dark'/>
@@ -213,7 +194,7 @@
   </div>
 </SettingCard>
 {/if}
-{#if matches('Chapter Source', 'chapter source to use during video playback', 'Playback')}
+{#if matches('Chapter Source', 'chapter source to use during video playback')}
 <SettingCard title='Chapter Source Preference' description={"The chapter source to use during video playback. If your preferred source isn't available, another source will be used automatically."}>
   <select class='form-control bg-dark mw-150 w-150 text-truncate' bind:value={settings.playerChapterSkip}>
     <option value='embedded' selected>Embedded</option>
@@ -221,7 +202,7 @@
   </select>
 </SettingCard>
 {/if}
-{#if matches('Auto-Skip Intro', 'automatically skip intro and outro', 'Playback')}
+{#if matches('Auto-Skip Intro', 'automatically skip intro and outro')}
 <SettingCard title='Auto-Skip Intro/Outro' description='Attempt to automatically skip intro and outro. This WILL sometimes skip incorrect chapters, as some of the chapter data is community sourced.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-skip' bind:checked={settings.playerSkip} />
@@ -229,11 +210,9 @@
   </div>
 </SettingCard>
 {/if}
-{/if}
 
-{#if externalSection()}
 <h4 class='mb-10 font-weight-bold'>External Player Settings</h4>
-{#if matches('External Player', 'external video player to play video', 'External')}
+{#if matches('External Player', 'external video player to play video')}
 <SettingCard title='Enable External Player' description='Tells Shiru to open a custom user-picked external video player to play video, instead of using the built-in one.'>
   <div class='custom-switch'>
     <input type='checkbox' id='player-external-enabled' bind:checked={settings.enableExternal} />
@@ -242,7 +221,7 @@
 </SettingCard>
 {/if}
 {#if SUPPORTS.externalPlayer}
-{#if matches('External Video Player', 'Executable for an external video player', 'External')}
+{#if matches('External Video Player', 'Executable for an external video player')}
 <SettingCard title='External Video Player' description='Executable for an external video player. Make sure the player supports HTTP sources.'>
   <div class='input-group mw-100 w-400 mw-full'>
     <div class='input-group-prepend'>
@@ -254,6 +233,5 @@
     </div>
   </div>
 </SettingCard>
-{/if}
 {/if}
 {/if}
