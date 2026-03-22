@@ -377,8 +377,9 @@
   .nav-cluster { display: flex; align-items: center; gap: 3rem; }
   .nav-links { display: flex; gap: 2rem; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 24px; border-radius: 50px; }
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; }
-  .nav-item.active { opacity: 1; color: #00c3e3; text-shadow: 0 0 10px rgba(0,195,227,0.4); }
-  .section-toggle { opacity: 1; padding-left: 1.5rem; border-left: 2px solid rgba(255,255,255,0.2); color: #e60012; }
+  .nav-item.active { opacity: 1; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+  .section-toggle { opacity: 1; padding-left: 1.5rem; border-left: 2px solid rgba(255,255,255,0.2); color: #fff; }
+  
   .clock { font-size: 1.1rem; font-weight: 700; opacity: 0.8; }
 
   /* ── Content / meta ── */
