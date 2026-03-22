@@ -1930,11 +1930,11 @@
       <div class='dropdown dropleft with-arrow' use:click={() => { showOptions.set(!$showOptions) }}>
         <span class='icon text-white ctrl d-flex align-items-center h-full' title='More'><EllipsisVertical size='2.5rem' strokeWidth={2.5} /></span>
         <div class='position-absolute hm-40 text-capitalize text-nowrap bg-dark rounded dr-arrow' style='margin-top: {launchedExternal ? -14 : externalPlayback ? -10.3 : SUPPORTS.isAndroid || $settings.playerPath ? -21 : -17.5}rem !important; margin-left: {launchedExternal ? -11.1 : externalPlayback ? -9.8 : -11.4}rem !important; transition: opacity 0.1s ease-in;' class:hidden={!$showOptions}>
-          <div role='button' aria-label='Add External Subtitles' class='pointer d-none align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-top option' class:d-flex={!externalPlayback} title='Add External Subtitles' use:click={() => { fileInput.click(); showOptions.set(false) }}>
+          <div role='button' aria-label='Add External Subtitles' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-top option' class:d-flex={!externalPlayback} title='Add External Subtitles' use:click={() => { fileInput.click(); showOptions.set(false) }}>
             <FilePlus2 size='2rem' strokeWidth={2.5} /> <div class='ml-10'>Add Subtitles</div>
           </div>
           <div class='dropdown dropleft with-arrow pointer bg-dark option font-size-16 bd-highlight' class:d-none={externalPlayback}>
-            <div role='button' class='d-flex align-items-center justify-content-center py-5 px-10' aria-label='Change the Source of the Video Chapters' title='Change the Source of the Video Chapters' use:click={toggleDropdown}><Milestone size='2rem' strokeWidth={2.5}  /><span class='ml-10'>Chapter Source</span></div>
+            <div role='button' class='d-flex align-items-center justify-content-start py-5 px-10' aria-label='Change the Source of the Video Chapters' title='Change the Source of the Video Chapters' use:click={toggleDropdown}><Milestone size='2rem' strokeWidth={2.5}  /><span class='ml-10'>Chapter Source</span></div>
             <div class='dropdown-menu dropdown-menu-right text-capitalize text-nowrap rounded'>
               <div class='custom-radio overflow-hidden pt-5 pl-5'>
                 <input name='chapter-embed-set' type='radio' id='chapter-embed-radio' tabindex='-1' value='embedded' checked={$settings.playerChapterSkip === 'embedded'} />
@@ -1944,13 +1944,13 @@
               </div>
             </div>
           </div>
-          <div role='button' aria-label='Play the Current Video in an External Player' class='pointer d-none align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 option' class:d-flex={(!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath)} title='Play the Current Video in an External Player' use:click={() => { setCurrent(current, true); showOptions.set(false) }}>
+          <div role='button' aria-label='Play the Current Video in an External Player' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' class:d-flex={(!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath)} title='Play the Current Video in an External Player' use:click={() => { setCurrent(current, true); showOptions.set(false) }}>
             <SquareArrowOutUpRight size='2rem' strokeWidth={2.5} /> <div class='ml-10'>External Player</div>
           </div>
-          <div role='button' aria-label='Modify Existing Files or Change to a New File' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Modify Existing Files or Change to a New File' use:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); showOptions.set(false) }}>
+          <div role='button' aria-label='Modify Existing Files or Change to a New File' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Modify Existing Files or Change to a New File' use:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); showOptions.set(false) }}>
             <SquarePen size='2rem' strokeWidth={2.5} /> <div class='ml-10'>File Manager</div>
           </div>
-          <div role='button' aria-label='Toggle Stats' class='pointer d-flex align-items-center justify-content-center font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
+          <div role='button' aria-label='Toggle Stats' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
             {#if showTorrentStats}<EyeOff size='2rem' strokeWidth={2.5} />{:else}<Eye size='2rem' strokeWidth={2.5} />{/if}<div class='ml-10'>{showTorrentStats ? 'Hide' : 'Show'} Stats</div>
           </div>
         </div>
