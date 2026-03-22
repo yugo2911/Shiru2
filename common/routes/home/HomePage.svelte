@@ -151,10 +151,10 @@
     ? $resolvedCatalog?.filter(a => a.studios?.nodes?.some(n => n.id === studioFilterId))
     : $resolvedCatalog
 
-  // In relations/recs mode the selectable list is only the related items.
-  // The parent (pinnedAnime) is rendered separately in the shelf as a fixed header card.
+  // In relations/recs mode the parent is index 0 — selectable, just visually distinct.
+  // The related items follow from index 1 onward.
   $: animeList = ($filterMode === 'relations' || $filterMode === 'recommendations')
-    ? ($filterMode === 'relations' ? relationsData : recommendationsData)
+    ? [pinnedAnime, ...($filterMode === 'relations' ? relationsData : recommendationsData)].filter(Boolean)
     : catalogAnime || []
 
   // In relations/recs mode load once from the pinned parent, never re-trigger on index change.
@@ -451,28 +451,15 @@
 
   <section class="horizontal-shelf">
     <div class="scroll-wrapper" bind:this={shelfContainer} use:dragScroll>
-      {#if pinnedAnime}
-        {@const color = pinnedAnime.coverImage?.color || '#ffffff'}
-        <div class="card-unit card-pinned" style="--card-color: {color}">
-          <img
-            src={pinnedAnime.coverImage?.extraLarge || pinnedAnime.coverImage?.large || pinnedAnime.coverImage?.medium || ''}
-            alt=""
-            loading="lazy"
-          />
-          <div class="card-info">
-            <p class="card-label">{$filterMode === 'relations' ? 'RELATIONS' : 'RECS'}</p>
-            <p class="card-title">{pinnedAnime.title?.userPreferred || pinnedAnime.title?.romaji || ''}</p>
-          </div>
-        </div>
-        <div class="shelf-divider"></div>
-      {/if}
       {#each animeList as anime, i (anime.id)}
         {@const progress = anime.mediaListEntry?.progress ?? 0}
         {@const total = anime.episodes || anime.nextAiringEpisode?.episode - 1 || null}
         {@const color = anime.coverImage?.color || '#ffffff'}
+        {@const isParent = pinnedAnime && i === 0 && ($filterMode === 'relations' || $filterMode === 'recommendations')}
         <button
           class="card-unit"
           class:is-active={i === $selectedIndex}
+          class:card-pinned={isParent}
           on:click={() => selectedIndex.set(i)}
           style="--card-color: {color}"
         >
@@ -482,6 +469,7 @@
             loading="lazy"
           />
           <div class="card-info">
+            {#if isParent}<p class="card-label">{$filterMode === 'relations' ? 'RELATIONS FOR' : 'RECS FOR'}</p>{/if}
             <p class="card-title">{anime.title?.userPreferred || anime.title?.romaji || ''}</p>
             {#if progress > 0}
               <div class="card-progress">
@@ -580,8 +568,8 @@
   .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
 
   /* ── Pinned parent card ── */
-  .card-pinned { cursor: default; opacity: 0.55; border-color: var(--card-color) !important; border-style: dashed !important; flex-shrink: 0; }
-  .card-pinned img { opacity: 0.6; }
+  .card-pinned:not(.is-active) { opacity: 0.55; }
+  .card-pinned:not(.is-active) img { opacity: 0.6; }
   .card-label { font-size: 0.65rem; font-weight: 900; letter-spacing: 0.18em; color: var(--card-color); margin: 0 0 0.3rem; text-transform: uppercase; opacity: 0.9; }
-  .shelf-divider { width: 2px; height: 80%; align-self: center; background: rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 2px; }
+
 </style>
