@@ -146,7 +146,7 @@ relations {
 }`
 
 const queryComplexObjects = /* js */`
-studios(sort: NAME, isMain: true) {
+studios(sort: NAME) {
   nodes {
     id,
     name
@@ -642,9 +642,22 @@ class AnilistClient {
     const studioMediaQuery = /* js */`
     query($studioId: Int, $page: Int) {
       Studio(id: $studioId) {
-        media(isMain: true, page: $page, perPage: 25, sort: START_DATE_DESC) {
-          pageInfo { hasNextPage },
-          nodes { id }
+        name
+        media(page: $page, perPage: 50, sort: START_DATE_DESC) {
+          pageInfo {
+            hasNextPage
+            total
+          }
+          nodes {
+            id
+            title {
+              romaji
+            }
+            format
+            startDate {
+              year
+            }
+          }
         }
       }
     }`
