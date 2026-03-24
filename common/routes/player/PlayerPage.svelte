@@ -805,7 +805,7 @@
       }
     }
   }
-  let fitWidth = false
+  let fitWidth = cache.getEntry(caches.GENERAL, 'fitWidth') === 'true'
   let showKeybinds = false
   let showTorrentStats = false
 
@@ -910,7 +910,7 @@
       desc: 'Skip Intro/90s'
     },
     KeyW: {
-      fn: () => !viewAnime && (fitWidth = !fitWidth),
+      fn: () => !viewAnime && (fitWidth = !fitWidth, cache.setEntry(caches.GENERAL, 'fitWidth', String(fitWidth))),
       id: 'fit_width',
       icon: Proportions,
       type: 'icon',
