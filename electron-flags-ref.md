@@ -5,4 +5,4 @@ Specific Platform,
     pnpm electron-builder --linux --dir
 
 Specific Arch,
-        pnpm electron-builder --dir --x64
+    pnpm electron-builder --dir --x64
