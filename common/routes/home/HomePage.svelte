@@ -474,7 +474,7 @@
               <div class="card-progress">
                 <div class="card-progress-bar" style="width: {total ? (progress / total) * 100 : 0}%; background: {color};"></div>
               </div>
-              <p class="card-ep">{progress}{total ? `/${total}` : ''} ep</p>
+            <p class="card-ep">{progress}{total ? `/${total}` : ''} ep</p>
             {/if}
           </div>
         </button>
