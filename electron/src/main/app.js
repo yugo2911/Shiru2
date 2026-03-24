@@ -1,12 +1,23 @@
 import { join } from 'node:path'
 import process from 'node:process'
 
+import { app, BrowserWindow, MessageChannelMain, Notification, Tray, Menu, nativeImage, dialog, ipcMain, powerMonitor, shell, session } from 'electron'
+if (process.platform === 'linux' && !app.isPackaged) {
+  app.commandLine.appendSwitch('enable-features', 'WaylandWindowDecorations,WaylandFractionalScaleV1')
+  app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
+  app.commandLine.appendSwitch('enable-accelerated-2d-canvas')
+  app.commandLine.appendSwitch('enable-zero-copy')
+  app.commandLine.appendSwitch('ignore-gpu-blocklist')
+  app.commandLine.appendSwitch('enable-gpu-rasterization')
+  app.commandLine.appendSwitch('enable-hardware-overlays', 'single-fullscreen,single-on-top,underlay')
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  app.commandLine.appendSwitch('disable-background-timer-throttling')
+}
+
 import { toXmlString } from 'powertoast'
 import { youtubeServer } from './youtube.js'
 import Jimp from 'jimp'
 import fs from 'fs'
-
-import { BrowserWindow, MessageChannelMain, Notification, Tray, Menu, nativeImage, app, dialog, ipcMain, powerMonitor, shell, session } from 'electron'
 import electronShutdownHandler from '@paymoapp/electron-shutdown-handler'
 
 import { development, getWindowState, saveWindowState, getDefaultBounds } from './util.js'
@@ -47,8 +58,11 @@ export default class App {
       webSecurity: !development,
       allowRunningInsecureContent: false,
       enableBlinkFeatures: 'FontAccess, AudioVideoTracks',
-      backgroundThrottling: false,
-      preload: join(__dirname, '/preload.js')
+      backgroundThrottling: true,
+      offscreen: false,
+      preload: join(__dirname, '/preload.js'),
+      spellcheck: false,
+      v8CacheOptions: 'code'
     },
     icon: this.icon,
     show: false
@@ -87,10 +101,6 @@ export default class App {
       this.mainWindow.webContents.send('electron:onMinimize', !isMinimized)
     }
     ipcMain.handle('electron:isMinimized', () => this.isMinimized)
-    this.mainWindow.on('minimize', () => minimize(true))
-    this.mainWindow.on('hide', () => minimize(true))
-    this.mainWindow.on('restore', () => minimize(false))
-    this.mainWindow.on('show', () => minimize(false))
     const debounceState = () => {
       clearTimeout(this.stateTimeout)
       this.stateTimeout = setTimeout(() => saveWindowState(this.mainWindow), 150)
@@ -222,7 +232,9 @@ export default class App {
             contextIsolation: true,
             backgroundThrottling: false,
             allowRunningInsecureContent: false,
-            partition: partitionName
+            partition: partitionName,
+            spellcheck: false,
+            v8CacheOptions: 'code'
           },
           icon: this.icon,
           title: 'Login',
@@ -276,7 +288,9 @@ export default class App {
         allowRunningInsecureContent: false,
         nodeIntegration: true,
         contextIsolation: false,
-        backgroundThrottling: false
+        backgroundThrottling: true,
+        spellcheck: false,
+        v8CacheOptions: 'code'
       },
       show: false
     })
