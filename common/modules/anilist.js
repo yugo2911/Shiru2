@@ -131,6 +131,12 @@ airingSchedule(page: 1, perPage: 1000) {
     airingAt
   }
 },
+studios(sort: NAME) {
+  nodes {
+    id,
+    name
+  }
+},
 relations {
   edges {
     relationType(version:2),
@@ -146,12 +152,6 @@ relations {
 }`
 
 const queryComplexObjects = /* js */`
-studios(sort: NAME) {
-  nodes {
-    id,
-    name
-  }
-},
 recommendations {
   edges {
     node {
