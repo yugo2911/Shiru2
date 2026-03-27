@@ -1,5 +1,5 @@
-Run via 
-    pnpm,pnpm electron-builder --dir
+Run via pnpm,
+    pnpm electron-builder --dir
 
 Specific Platform,
     pnpm electron-builder --linux --dir
