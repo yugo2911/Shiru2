@@ -232,6 +232,11 @@
   $: studio     = studioNode?.name || ''
   $: year       = selectedAnime?.seasonYear || ''
   $: progress   = selectedAnime?.mediaListEntry?.progress || 0
+  $: watchBtnText = selectedAnime?.mediaListEntry?.status === 'COMPLETED' 
+    ? 'Rewatch Now' 
+    : selectedAnime?.mediaListEntry?.progress 
+      ? 'Continue Now' 
+      : 'Watch Now'
 
   // ─── Prefetch helper ─────────────────────────────────────────────────────────
 
@@ -434,7 +439,7 @@
             class="btn-play"
             on:click={handleWatch}
             on:mouseenter={() => maybePrefetch(selectedAnime)}
-          >WATCH NOW</button>
+          >{watchBtnText}</button>
           <button class="btn-ghost" on:click={handleDetails}>DETAILS</button>
         </div>
       </div>
