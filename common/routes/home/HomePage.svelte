@@ -631,7 +631,7 @@
     border-color: var(--card-color) !important; 
     transform: scale(1.08) translateY(-10px); 
     z-index: 5; 
-    box-shadow: 0 20px 40px rgba(0,0,0,0.8); 
+    box-shadow: 0 10px 15px rgba(0,0,0,0.8), 0 0 10px var(--card-color); 
     opacity: 1;
   }
   .card-unit.is-active img { opacity: 1; }
