@@ -120,6 +120,19 @@
       d.getMinutes().toString().padStart(2, '0')
     )
   }, 1000)
+
+  // ─── SFX ────────────────────────────────────────────────────────────────────────
+
+  const sfx = {
+    nav: new Audio('/audio/カーソル移動9.mp3'),
+    section: new Audio('/audio/カーソル移動9.mp3'),
+    play: new Audio('/audio/決定ボタンを押す33.mp3'),
+  }
+
+  function playSfx(sound) {
+    sound.currentTime = 0
+    sound.play().catch(() => {})
+  }
 </script>
 
 <script>
@@ -300,6 +313,7 @@
   function handleWatch() {
     const target = selectedAnime || pinnedAnime
     if (!target) return
+    playSfx(sfx.play)
     playActive(target.hash, { media: target, episode: target.episode }, target.link, !target.link)
   }
 
@@ -387,6 +401,9 @@
   <div class="vignette"></div>
 
   <header class="header">
+    <button on:click={() => { sfx.nav.currentTime = 0; sfx.nav.play().catch(e => console.log('nav error:', e)) }}>TEST NAV</button>
+    <button on:click={() => { sfx.section.currentTime = 0; sfx.section.play().catch(e => console.log('section error:', e)) }}>TEST SECTION</button>
+    <button on:click={() => { sfx.play.currentTime = 0; sfx.play.play().catch(e => console.log('play error:', e)) }}>TEST PLAY</button>
     <div class="nav-cluster">
       <button class="brand" on:click={() => { page.navigateTo(page.HOME); filterMode.set('section'); pinnedAnime = null }}>A/N</button>
       <nav class="nav-links">
@@ -394,7 +411,7 @@
         <button class="nav-item" on:click={() => page.navigateTo(page.SEARCH)}>LIBRARY</button>
         <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => enterMode('relations')}>RELATIONS</button>
         <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => enterMode('recommendations')}>RECS</button>
-        <button class="nav-item section-toggle" on:click={() => currentSectionIndex.update(n => (n + 1) % $cycleList.length)}>
+        <button class="nav-item section-toggle" on:click={() => { playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length) }}>
           {sectionName?.toUpperCase()}
         </button>
       </nav>
@@ -463,7 +480,7 @@
           class="card-unit"
           class:is-active={i === $selectedIndex}
           class:card-pinned={isParent}
-          on:click={() => selectedIndex.set(i)}
+          on:click={() => { playSfx(sfx.nav); selectedIndex.set(i) }}
           on:mouseenter={() => maybePrefetch(anime)}
           style="--card-color: {color}"
         >
