@@ -508,7 +508,7 @@
             {#if isParent}<p class="card-label">{$filterMode === 'relations' ? 'RELATIONS FOR' : 'RECS FOR'}</p>{/if}
             <p class="card-title">{anime.title?.userPreferred || anime.title?.romaji || ''}</p>
             {#if airTime}
-              <p class="card-air">{airTime}</p>
+              <p class="card-air" style="color: {color}">{airTime}</p>
             {/if}
             {#if progress > 0}
               <div class="card-progress">
@@ -640,7 +640,7 @@
   .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
   .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
   .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
-  .card-air { font-size: 0.85rem; font-weight: 900; color: #00c3e3; margin: 0.8rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
+  .card-air { font-size: 0.85rem; font-weight: 900; margin: 0.8rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
 
   /* ── Pinned parent card ── */
   .card-pinned:not(.is-active) { opacity: 0.55; }
