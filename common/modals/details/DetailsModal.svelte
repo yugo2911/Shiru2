@@ -2,7 +2,6 @@
   import { onDestroy } from 'svelte'
   import { formatMap, genreIcons, getEpisodeMetadataForMedia, getKitsuMappings, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
   import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
-  import { copyToClipboard } from '@/modules/clipboard.js'
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { add } from '@/modules/torrent.js'
@@ -359,10 +358,10 @@
       </div>
     {/if}
 
-    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
+    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Open AniList' use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
       <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
     </button>
-    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')} on:contextmenu|preventDefault={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
+    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Open MyAnimeList' use:click={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
       <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
     </button>
   </div>
