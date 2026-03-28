@@ -55,10 +55,6 @@
   let shelveLeft = false
   let touchShelveTime = 0
   let hovered = false
-  let bounceId = 1
-  let bouncing = false
-  let peekActive = false
-  let idleTimeout = null
   let shelveTimeout = null
   let shelvingTime = 0
   let lastEdgeEnterUnshelve = 0
@@ -255,7 +251,7 @@
     if (isPaused && !hovered && autoHide) {
       shelveTimeout = setTimeout(() => {
         if (playbackPaused && !hovered && active && !dragging && !resizing) triggerShelve()
-      }, 5_000)
+      }, 100)
     } else if (!isPaused) unshelve()
   }
   function triggerShelve() {
@@ -263,14 +259,10 @@
     shelveLeft = !!(posStr.match(/left/i))
     shelved = true
     shelvingTime = Date.now()
-    resetIdleBounce()
   }
   function unshelve() {
     shelved = false
-    bouncing = false
-    bounceId++
     clearTimeout(shelveTimeout)
-    clearTimeout(idleTimeout)
   }
   function manualShelve() {
     if (!active || !playbackPaused) return
@@ -283,7 +275,6 @@
     hovered = true
     const now = Date.now()
     if (shelved && settings.value.autoHideMiniplayer && (!shelvingTime || (now - shelvingTime > 400))) {
-      if (peekActive) cancelBounce()
       unshelve()
       lastEdgeEnterUnshelve = now
     }
@@ -295,7 +286,7 @@
       clearTimeout(shelveTimeout)
       shelveTimeout = setTimeout(() => {
         if (playbackPaused && !hovered && active && !dragging && !resizing) triggerShelve()
-      }, 3_000)
+      }, 100)
     }
   }
   function handleShelfTap() {
@@ -345,41 +336,6 @@
     }
   }
 
-  function resetIdleBounce() {
-    clearTimeout(idleTimeout)
-    if (!shelved) return
-    idleTimeout = setTimeout(() => {
-      if (!shelved || hovered) return
-      triggerBounce()
-    }, 15_000)
-  }
-  function triggerBounce() {
-    const _bounceId = ++bounceId
-    peekActive = true
-    bouncing = true
-    setTimeout(() => {
-      if (bounceId !== _bounceId) return
-      bouncing = false
-      peekActive = false
-      resetIdleBounce()
-    }, 1_200)
-  }
-  function cancelBounce() {
-    if (!container) return
-    bounceId++
-    bouncing = false
-    peekActive = false
-    container.style.transform = `translateX(${(new DOMMatrix(window.getComputedStyle(container).transform)).m41}px)`
-    requestAnimationFrame(() => container.style.transform = '')
-    resetIdleBounce()
-  }
-  function onGlobalActivity() {
-    if (!shelved) return
-    if (peekActive) {
-      cancelBounce()
-    } else resetIdleBounce()
-  }
-
   const onFocus = () => requestAnimationFrame(() => windowFocused = true)
   const onBlur = () => windowFocused = false
   onMount(() => {
@@ -387,21 +343,12 @@
     window.addEventListener('blur', onBlur)
     window.addEventListener('focus', onFocus)
     window.addEventListener('resize', calculateWidth)
-    document.addEventListener('wheel', onGlobalActivity, { passive: true })
-    document.addEventListener('mousemove', onGlobalActivity, { passive: true })
-    document.addEventListener('touchstart', onGlobalActivity, { passive: true })
-    document.addEventListener('keydown', onGlobalActivity, { passive: true })
   })
   onDestroy(() => {
     window.removeEventListener('blur', onBlur)
     window.removeEventListener('focus', onFocus)
     window.removeEventListener('resize', calculateWidth)
-    document.removeEventListener('wheel', onGlobalActivity)
-    document.removeEventListener('mousemove', onGlobalActivity)
-    document.removeEventListener('touchstart', onGlobalActivity)
-    document.removeEventListener('keydown', onGlobalActivity)
     clearTimeout(shelveTimeout)
-    clearTimeout(idleTimeout)
   })
 </script>
 
@@ -415,7 +362,6 @@
   class:shelved-right={shelved && !shelveLeft}
   class:miniplayer-border={!shelved}
   class:player-page={playerPage}
-  class:bouncing
   style:--left={left}
   style:--top={top}
   style:--height={height}
@@ -540,34 +486,12 @@
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), left 0.5s cubic-bezier(0.3, 1.5, 0.8, 1);
   }
   .miniplayer-container.shelved-right:not(.player-page) {
-    transform: translateX(calc(100% - 3px));
-    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(calc(100% - 30px));
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .miniplayer-container.shelved-left:not(.player-page) {
-    transform: translateX(calc(-100% - 4px));
-    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .miniplayer-container.shelved-right.bouncing {
-    animation: peek-right 1.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-  .miniplayer-container.shelved-left.bouncing {
-    animation: peek-left 1.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-  @keyframes peek-right {
-    0%   { transform: translateX(calc(100% - 3px)); }
-    28%  { transform: translateX(calc(100% - 34px)); }
-    43%  { transform: translateX(calc(100% - 24px)); }
-    57%  { transform: translateX(calc(100% - 30px)); }
-    70%  { transform: translateX(calc(100% - 26px)); }
-    100% { transform: translateX(calc(100% - 3px)); }
-  }
-  @keyframes peek-left {
-    0%   { transform: translateX(calc(-100% - 4px)); }
-    28%  { transform: translateX(calc(-100% + 25px)); }
-    43%  { transform: translateX(calc(-100% + 15px)); }
-    57%  { transform: translateX(calc(-100% + 21px)); }
-    70%  { transform: translateX(calc(-100% + 17px)); }
-    100% { transform: translateX(calc(-100% - 4px)); }
+    transform: translateX(calc(-100% + 30px));
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .shelf-tab {
     background: var(--dark-color-light);
