@@ -57,7 +57,6 @@
   let hovered = false
   let shelveTimeout = null
   let shelvingTime = 0
-  let lastEdgeEnterUnshelve = 0
   let windowFocused = document.hasFocus()
 
   $: draggingPos = ''
@@ -276,7 +275,6 @@
     const now = Date.now()
     if (shelved && settings.value.autoHideMiniplayer && (!shelvingTime || (now - shelvingTime > 400))) {
       unshelve()
-      lastEdgeEnterUnshelve = now
     }
     clearTimeout(shelveTimeout)
   }
@@ -288,14 +286,6 @@
         if (playbackPaused && !hovered && active && !dragging && !resizing) triggerShelve()
       }, 100)
     }
-  }
-  function handleShelfTap() {
-    if (Date.now() - lastEdgeEnterUnshelve < 300) return
-    if (shelved) {
-      unshelve()
-      hovered = true
-      setTimeout(() => hovered = false, 3_000)
-    } else manualShelve()
   }
   function swipeShelve(node) {
     let startX = 0
@@ -380,29 +370,9 @@
   on:mouseenter={handleEdgeEnter}
   on:mouseleave={handleEdgeLeave}
   on:focusout={event => { if (!container.contains(event.relatedTarget)) handleEdgeLeave() }}>
-  {#if active}
-    <div
-      class='shelf-tab position-absolute top-0 bottom-0 d-flex z-5 align-items-center justify-content-center not-reactive'
-      class:pointer-events-none={!playbackPaused}
-      class:shelf-tab-left={shelveTabLeft}
-      class:shelf-tab-right={!shelveTabLeft}
-      class:shelf-tab-visible={shelved}
-      class:shelf-tab-ghost={!shelved}
-      class:shelf-pointer-left={((shelved && !shelveTabLeft) || (!shelved && shelveTabLeft)) && playbackPaused}
-      class:shelf-pointer-right={((shelved && shelveTabLeft) || (!shelved && !shelveTabLeft)) && playbackPaused}
-      role='button'
-      tabindex='0'
-      aria-label={shelved ? 'Show miniplayer' : 'Shelve miniplayer'}
-      on:focus={handleEdgeEnter}
-      use:click|stopPropagation={handleShelfTap}
-      on:keydown={event => event.key === 'Enter' && handleShelfTap()}>
-      <div class='shelf-grip d-flex flex-column align-items-center justify-content-center pointer-events-none'/>
-    </div>
-  {/if}
   <div class='resize resize-{position ? (position.match(/top/i) ? `b` : `t`) + (position.match(/left/i) ? `r` : `l`) : `tl`}' class:d-none={!resize || !active || shelved} use:resizable/>
   <slot/>
   <div class='miniplayer-footer touch-none' class:dragging use:draggable tabindex='-1'>::::</div>
-  <div class='h-full w-20 position-absolute top-0 z--1' class:mr--10={shelveTabLeft} class:ml--10={!shelveTabLeft} class:right-0={shelveTabLeft}/>
   <div class='h-20 w-full position-absolute mt--10 z--1'/>
 </div>
 
@@ -483,77 +453,16 @@
   }
   .miniplayer-container:not(.shelved):not(.player-page) {
     transform: translateX(0);
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), left 0.5s cubic-bezier(0.3, 1.5, 0.8, 1);
-  }
-  .miniplayer-container.shelved-right:not(.player-page) {
-    transform: translateX(calc(100% - 30px));
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .miniplayer-container.shelved-left:not(.player-page) {
-    transform: translateX(calc(-100% + 30px));
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .shelf-tab {
-    background: var(--dark-color-light);
-    transition: opacity 0.15s ease 0.35s;
-  }
-  .shelf-tab-right {
-    width: 2.6rem;
-    left: -1px;
-    border-top-left-radius: 1rem;
-    border-bottom-left-radius: 1rem;
-  }
-  .shelf-tab-left {
-    width: 1.7rem;
-    right: -1px;
-    border-top-right-radius: 1rem;
-    border-bottom-right-radius: 1rem;
-  }
-  .shelf-grip {
-    gap: 3px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-  .shelf-tab-visible .shelf-grip {
     opacity: 1;
-    transition: opacity 0.1s ease 0.35s;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), left 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), opacity 0.2s ease;
   }
-  .shelf-tab-visible:hover {
-    background: var(--dark-color-very-light);
+  .miniplayer-container.shelved-right:not(.player-page),
+  .miniplayer-container.shelved-left:not(.player-page) {
+    opacity: 0;
+    transition: opacity 0.25s ease;
   }
-  .shelf-grip::before,
-  .shelf-grip::after {
-    content: '';
-    display: block;
-    width: 2px;
-    border-radius: 2px;
-    background: var(--white-color);
-  }
-  .shelf-grip::before {
-    height: 14px;
-  }
-  .shelf-grip::after {
-    height: 7px;
-    opacity: 0.4;
-  }
-  .shelf-tab-ghost {
-    top: 3.5rem !important;
-    bottom: 5.5rem !important;
-    opacity: 0 !important;
-    transition: none !important;
-  }
-  .shelf-pointer-right {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cfilter id='s'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='1' flood-color='black' flood-opacity='0.7'/%3E%3C/filter%3E%3Cg filter='url(%23s)'%3E%3Cline x1='3' y1='2' x2='3' y2='18' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cline x1='7' y1='10' x2='15' y2='10' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cpolygon points='16,10 11,6 11,14' fill='white'/%3E%3C/g%3E%3C/svg%3E") 10 10, e-resize;
-  }
-  .shelf-pointer-left {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cfilter id='s'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='1' flood-color='black' flood-opacity='0.7'/%3E%3C/filter%3E%3Cg filter='url(%23s)'%3E%3Cline x1='17' y1='2' x2='17' y2='18' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cline x1='5' y1='10' x2='13' y2='10' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cpolygon points='4,10 9,6 9,14' fill='white'/%3E%3C/g%3E%3C/svg%3E") 10 10, w-resize;
-  }
-  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-    .shelf-pointer-right {
-      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 20 20'%3E%3Cfilter id='s'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='1' flood-color='black' flood-opacity='0.7'/%3E%3C/filter%3E%3Cg filter='url(%23s)'%3E%3Cline x1='3' y1='2' x2='3' y2='18' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cline x1='7' y1='10' x2='15' y2='10' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cpolygon points='16,10 11,6 11,14' fill='white'/%3E%3C/g%3E%3C/svg%3E") 5 5, e-resize;
-    }
-    .shelf-pointer-left {
-      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 20 20'%3E%3Cfilter id='s'%3E%3CfeDropShadow dx='0' dy='0' stdDeviation='1' flood-color='black' flood-opacity='0.7'/%3E%3C/filter%3E%3Cg filter='url(%23s)'%3E%3Cline x1='17' y1='2' x2='17' y2='18' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cline x1='5' y1='10' x2='13' y2='10' stroke='white' stroke-width='1.5' stroke-linecap='square'/%3E%3Cpolygon points='4,10 9,6 9,14' fill='white'/%3E%3C/g%3E%3C/svg%3E") 5 5, w-resize;
-    }
+  .miniplayer-container.shelved-right:hover:not(.player-page),
+  .miniplayer-container.shelved-left:hover:not(.player-page) {
+    opacity: 1;
   }
 </style>
