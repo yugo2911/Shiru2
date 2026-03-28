@@ -125,8 +125,10 @@
 
   const sfx = {
     nav: new Audio('/audio/カーソル移動9.mp3'),
-    section: new Audio('/audio/カーソル移動9.mp3'),
+    section: new Audio('/audio/決定ボタンを押す22.mp3'),
     play: new Audio('/audio/決定ボタンを押す33.mp3'),
+    menu: new Audio('/audio/カーソル移動6.mp3'),
+    details: new Audio('/audio/カーソル移動12.mp3'),
   }
 
   function playSfx(sound) {
@@ -324,6 +326,7 @@
 
   function handleStudioClick() {
     if (!studioNode) return
+    playSfx(sfx.nav)
     if (studioFilterId === studioNode.id) {
       studioFilterId = null
       studioFilterName = null
@@ -340,11 +343,11 @@
     if ($modal[modal.SEARCH]) return
     if (!animeList?.length) return
     switch (e.key) {
-      case 'ArrowRight':  e.preventDefault(); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
-      case 'ArrowLeft':   e.preventDefault(); selectedIndex.update(n => Math.max(n - 1, 0)); break
-      case 'ArrowUp':     e.preventDefault(); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
-      case 'ArrowDown':   e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
-      case 'r':           e.preventDefault(); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
+      case 'ArrowRight':  e.preventDefault(); playSfx(sfx.nav); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
+      case 'ArrowLeft':   e.preventDefault(); playSfx(sfx.nav); selectedIndex.update(n => Math.max(n - 1, 0)); break
+      case 'ArrowUp':     e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
+      case 'ArrowDown':   e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
+      case 'r':           e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'm':           e.preventDefault(); toggleMute(); break
       case 's':           e.preventDefault(); modal.open(modal.SEARCH); break
       case 'Enter':       e.preventDefault(); handleWatch(); break
@@ -401,16 +404,13 @@
   <div class="vignette"></div>
 
   <header class="header">
-    <button on:click={() => { sfx.nav.currentTime = 0; sfx.nav.play().catch(e => console.log('nav error:', e)) }}>TEST NAV</button>
-    <button on:click={() => { sfx.section.currentTime = 0; sfx.section.play().catch(e => console.log('section error:', e)) }}>TEST SECTION</button>
-    <button on:click={() => { sfx.play.currentTime = 0; sfx.play.play().catch(e => console.log('play error:', e)) }}>TEST PLAY</button>
     <div class="nav-cluster">
-      <button class="brand" on:click={() => { page.navigateTo(page.HOME); filterMode.set('section'); pinnedAnime = null }}>A/N</button>
+      <button class="brand" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.HOME); filterMode.set('section'); pinnedAnime = null }}>A/N</button>
       <nav class="nav-links">
-        <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => { filterMode.set('section'); pinnedAnime = null; selectedIndex.set(savedSectionIndex) }}>HOME</button>
-        <button class="nav-item" on:click={() => page.navigateTo(page.SEARCH)}>LIBRARY</button>
-        <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => enterMode('relations')}>RELATIONS</button>
-        <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => enterMode('recommendations')}>RECS</button>
+        <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => { playSfx(sfx.menu); filterMode.set('section'); pinnedAnime = null; selectedIndex.set(savedSectionIndex) }}>HOME</button>
+        <button class="nav-item" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SEARCH) }}>LIBRARY</button>
+        <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => { playSfx(sfx.menu); enterMode('relations') }}>RELATIONS</button>
+        <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => { playSfx(sfx.menu); enterMode('recommendations') }}>RECS</button>
         <button class="nav-item section-toggle" on:click={() => { playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length) }}>
           {sectionName?.toUpperCase()}
         </button>
@@ -457,7 +457,7 @@
             on:click={handleWatch}
             on:mouseenter={() => maybePrefetch(selectedAnime)}
           >{watchBtnText}</button>
-          <button class="btn-ghost" on:click={handleDetails}>DETAILS</button>
+          <button class="btn-ghost" on:click={() => { playSfx(sfx.details); handleDetails() }}>DETAILS</button>
         </div>
       </div>
       {/key}
