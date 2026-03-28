@@ -121,6 +121,20 @@
     )
   }, 1000)
 
+  // ─── Episode Air Time ───────────────────────────────────────────────────────
+
+  function getAirTime(anime) {
+    const next = anime.nextAiringEpisode
+    if (!next?.timeUntilAiring || next.timeUntilAiring <= 0) return null
+    const diff = next.timeUntilAiring * 1000
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    if (days > 0) return `EP${next.episode} IN ${days}d ${hours}h`
+    if (hours > 0) return `EP${next.episode} IN ${hours}h ${mins}m`
+    return `EP${next.episode} IN ${mins}m`
+  }
+
   // ─── SFX ────────────────────────────────────────────────────────────────────────
 
   const sfx = {
@@ -476,6 +490,7 @@
         {@const total = anime.episodes || anime.nextAiringEpisode?.episode - 1 || null}
         {@const color = anime.coverImage?.color || '#ffffff'}
         {@const isParent = pinnedAnime && i === 0 && ($filterMode === 'relations' || $filterMode === 'recommendations')}
+        {@const airTime = getAirTime(anime)}
         <button
           class="card-unit"
           class:is-active={i === $selectedIndex}
@@ -492,6 +507,9 @@
           <div class="card-info">
             {#if isParent}<p class="card-label">{$filterMode === 'relations' ? 'RELATIONS FOR' : 'RECS FOR'}</p>{/if}
             <p class="card-title">{anime.title?.userPreferred || anime.title?.romaji || ''}</p>
+            {#if airTime}
+              <p class="card-air">{airTime}</p>
+            {/if}
             {#if progress > 0}
               <div class="card-progress">
                 <div class="card-progress-bar" style="width: {total ? (progress / total) * 100 : 0}%; background: {color};"></div>
@@ -622,6 +640,7 @@
   .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
   .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
   .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
+  .card-air { font-size: 0.85rem; font-weight: 900; color: #00c3e3; margin: 0.8rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
 
   /* ── Pinned parent card ── */
   .card-pinned:not(.is-active) { opacity: 0.55; }
