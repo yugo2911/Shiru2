@@ -70,7 +70,7 @@ export default class App {
 
   discord = new Discord(this.mainWindow)
   protocol = new Protocol(this.mainWindow)
-  updater = new Updater(this.mainWindow, () => this.webtorrentWindow)
+  // updater = new Updater(this.mainWindow, () => this.webtorrentWindow)
   dialog = new Dialog()
   tray = new Tray(this.trayIcon)
   imageDir = join(app.getPath('userData'), 'Cache', 'Image_Data')
