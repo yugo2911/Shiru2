@@ -135,6 +135,24 @@
     return `EP${next.episode} IN ${mins}m`
   }
 
+  function getRecentEp(anime) {
+    const next = anime.nextAiringEpisode
+    if (!next) return null
+    if (next.timeUntilAiring <= 0 && next.timeUntilAiring >= -24 * 60 * 60) {
+      if (next.episode > (anime.mediaListEntry?.progress || 0)) {
+        return `NEW EP${next.episode}!!`
+      }
+    }
+    return null
+  }
+
+  function getUpcoming(anime) {
+    const next = anime.nextAiringEpisode
+    if (!next || next.timeUntilAiring <= 0) return null
+    if (next.timeUntilAiring > 24 * 60 * 60) return null
+    return 'UPCOMING'
+  }
+
   // ─── SFX ────────────────────────────────────────────────────────────────────────
 
   const sfx = {
@@ -491,6 +509,8 @@
         {@const color = anime.coverImage?.color || '#ffffff'}
         {@const isParent = pinnedAnime && i === 0 && ($filterMode === 'relations' || $filterMode === 'recommendations')}
         {@const airTime = getAirTime(anime)}
+        {@const recentEp = getRecentEp(anime)}
+        {@const upcoming = getUpcoming(anime)}
         <button
           class="card-unit"
           class:is-active={i === $selectedIndex}
@@ -504,6 +524,12 @@
             alt=""
             loading="lazy"
           />
+          {#if upcoming || recentEp}
+            <div class="card-badges" style="--badge-color: {color}">
+              {#if upcoming}<span class="badge badge-upcoming">{upcoming}</span>{/if}
+              {#if recentEp}<span class="badge badge-new">{recentEp}</span>{/if}
+            </div>
+          {/if}
           <div class="card-info">
             {#if isParent}<p class="card-label">{$filterMode === 'relations' ? 'RELATIONS FOR' : 'RECS FOR'}</p>{/if}
             <p class="card-title">{anime.title?.userPreferred || anime.title?.romaji || ''}</p>
@@ -641,6 +667,11 @@
   .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
   .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
   .card-air { font-size: 0.85rem; font-weight: 900; margin: 0.8rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .card-badges { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+  .badge { font-size: 0.7rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  .badge-upcoming { background: var(--badge-color); color: #000; }
+  .badge-new { background: var(--badge-color); color: #fff; }
 
   /* ── Pinned parent card ── */
   .card-pinned:not(.is-active) { opacity: 0.55; }
