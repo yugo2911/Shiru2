@@ -1,9 +1,10 @@
-recent released eps NEW text
-rightclick to go back senction
-
 homepage
     fetch torrents for selected entry
     prefetch next episode rss
+    fix arrow navigations
+    handle yt/trailers better
+    
+    how it would feel if we play ost instead of trailer
 
 torrents
     download next ep when current one is done downloading
