@@ -369,6 +369,14 @@
     selectedIndex.set(0)
   }
 
+  // ─── Right-click handler ─────────────────────────────────────────────────────
+
+  function handleRightClick(e) {
+    e.preventDefault()
+    playSfx(sfx.section)
+    currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length)
+  }
+
   // ─── Keyboard handler ────────────────────────────────────────────────────────
 
   function handleKeydown(e) {
@@ -406,7 +414,7 @@
   })
 </script>
 
-<div class="home-theater" style="--accent-dynamic: {bannerColor};">
+<div class="home-theater" style="--accent-dynamic: {bannerColor};" on:contextmenu={handleRightClick}>
 
   {#if banner}
     {#key banner}
