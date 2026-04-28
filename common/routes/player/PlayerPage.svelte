@@ -92,6 +92,9 @@
   let volumeText = ''
   let volumeVisible = false
   let volumeTimeout
+  let subText = ''
+  let subVisible = false
+  let subTimeout
   let wheelAccumulator = 0
   let boostScrollCount = 0
   let boostResetTimer = null
@@ -403,8 +406,14 @@
     if (current && subs?.headers) {
       const tracks = subs.headers.filter(header => header)
       const index = tracks.indexOf(subs.headers[subs.current]) + 1
-      subs.selectCaptions(index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index]))
+      const selectedIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
+      subs.selectCaptions(selectedIndex)
       updateSubs()
+      const selectedTrack = selectedIndex === -1 ? 'Subtitles Off' : tracks[index]?.name || tracks[index]?.language || 'Subtitle'
+      subText = selectedTrack
+      subVisible = true
+      clearTimeout(subTimeout)
+      subTimeout = setTimeout(() => subVisible = false, 1500)
     }
   }
 
@@ -1870,6 +1879,7 @@
       {/if}
     {/if}
     <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-50 pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
+    <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' style='left: 0; bottom: 6rem;' class:transparent={!subVisible}>{subText}</span>
     {#if subDelayText}
       <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
     {/if}
@@ -2405,11 +2415,11 @@
   }
 
   .bottom {
-    background: linear-gradient(to top, hsla(var(--black-color-hsl), 0.8), hsla(var(--black-color-hsl), 0.6) 25%, hsla(var(--black-color-hsl), 0.4) 50%, hsla(var(--black-color-hsl), 0.1) 75%, transparent);
+    background: linear-gradient(to top, rgba(43,43,43,0.7) 30%, transparent);
     transition: 0.2s opacity ease 0s;
   }
   .top {
-    background: linear-gradient(to bottom, hsla(var(--black-color-hsl), 0.8), hsla(var(--black-color-hsl), 0.4) 25%, hsla(var(--black-color-hsl), 0.2) 50%, hsla(var(--black-color-hsl), 0.1) 75%, transparent);
+    background: linear-gradient(to bottom, rgba(43,43,43,0.7) 30%, transparent);
     transition: 0.2s opacity ease 0s;
   }
   .mr-50 {
