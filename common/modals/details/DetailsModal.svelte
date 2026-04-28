@@ -1,3 +1,4 @@
+--- File: DetailsModal.svelte ---
 <script>
   import { onDestroy } from 'svelte'
   import { formatMap, genreIcons, getEpisodeMetadataForMedia, getKitsuMappings, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
@@ -159,13 +160,9 @@
   bind:this={_modal}
 >
   {#if staticMedia}
-
-    <!-- Close -->
     <button class='dm-close' type='button' use:click={() => close()}>&times;</button>
 
-    <!-- ════ HERO ════════════════════════════════════════════════════════ -->
     <div class='dm-hero'>
-      <!-- background banner image — same vibe as .bg-image in HomePage -->
       <SmartImage
         class='dm-hero__bg'
         images={[
@@ -183,11 +180,9 @@
           () => getEpisodeMetadataForMedia(staticMedia).then(m => m?.[1]?.image)
         ]}
       />
-      <!-- diagonal vignette — mirrors .curse-overlay + .vignette from HomePage -->
       <div class='dm-hero__vignette' />
 
       <div class='dm-hero__body'>
-        <!-- Cover art -->
         <div class='dm-cover'>
           <SmartImage
             class='dm-cover__img'
@@ -197,12 +192,9 @@
           <AudioLabel media={staticMedia} viewAnime={true} />
         </div>
 
-        <!-- Title + meta + actions -->
         <div class='dm-hero__info'>
-          <!-- hero-title style from HomePage -->
           <h1 class='dm-title select-all'>{anilistClient.title(staticMedia)}</h1>
 
-          <!-- stat-grid style from HomePage -->
           <div class='dm-stat-grid'>
             {#if staticMedia.averageScore}
               <div class='dm-stat' title='{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews'>
@@ -236,7 +228,6 @@
             {/if}
           </div>
 
-          <!-- cta-row style from HomePage -->
           <div class='dm-cta-row'>
             <button
               class='dm-btn-play'
@@ -246,7 +237,6 @@
               <Play fill='currentColor' size='1.3rem' /> {playButtonText}
             </button>
 
-            <!-- icon cluster — styled like .icon-btn from HomePage -->
             <div class='dm-icon-cluster'>
               {#if Helper.isAuthorized()}
                 <Scoring class='dm-icon-btn' {media} viewAnime={true} />
@@ -324,45 +314,11 @@
         </div>
       </div>
     </div>
-    <!-- ════ END HERO ════════════════════════════════════════════════════ -->
 
-    <!-- ════ TWO-COLUMN BODY — episodes LEFT (sticky), info RIGHT ════════ -->
     <div class='dm-body' bind:this={container}>
-
-      <!-- ══ EPISODES col ════════════════════════════════════════════════ -->
-      <aside class='dm-ep-col'>
-        <div class='dm-ep-header'>
-          <span class='dm-ep-label'>EPISODES</span>
-          {#if episodeList?.length}
-            <button
-              class='dm-icon-btn dm-ep-order'
-              title='Reverse order'
-              use:click={() => { episodeOrder = !episodeOrder }}
-            >
-              <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='1.6rem' />
-            </button>
-          {/if}
-        </div>
-
-        <div class='dm-ep-scroll'>
-          <EpisodeList
-            bind:episodeLoad={episodeLoad}
-            media={staticMedia}
-            {episodeOrder}
-            bind:userProgress
-            bind:watched
-            episodeCount={getMediaMaxEp(media)}
-            {play}
-          />
-        </div>
-      </aside>
-
-      <!-- ══ INFO col ════════════════════════════════════════════════════ -->
-      <main class='dm-info-col'>
-
+      <aside class='dm-info-col'>
         <Details media={staticMedia} alt={recommendations} />
 
-        <!-- Tags — pill style matching nav-links from HomePage -->
         <div bind:this={scrollTags} class='dm-tag-rail'>
           {#each staticMedia.tags as tag}
             <span class='dm-tag'>
@@ -373,7 +329,6 @@
           {/each}
         </div>
 
-        <!-- Genres -->
         <div bind:this={scrollGenres} class='dm-tag-rail dm-tag-rail--genre'>
           {#each staticMedia.genres as genre}
             <span class='dm-tag dm-tag--genre'>
@@ -383,13 +338,11 @@
           {/each}
         </div>
 
-        <!-- Synopsis — mirrors .synopsis from HomePage -->
         {#if staticMedia.description}
           <div class='dm-section-label'>SYNOPSIS</div>
           <div class='dm-synopsis select-all'>{@html sanitize(staticMedia.description)}</div>
         {/if}
 
-        <!-- Relations -->
         <ToggleList
           list={staticMedia.relations?.edges?.filter(({ node, relationType }) =>
             relationType !== 'CHARACTER' &&
@@ -415,7 +368,6 @@
           {/await}
         </ToggleList>
 
-        <!-- Recommendations -->
         {#await recommendations then res}
           {@const recMedia = res?.data?.Media}
           {#if recMedia}
@@ -443,38 +395,51 @@
             </ToggleList>
           {/if}
         {/await}
+      </aside>
 
+      <main class='dm-ep-col'>
+        <div class='dm-ep-header'>
+          <span class='dm-ep-label'>EPISODES</span>
+          {#if episodeList?.length}
+            <button
+              class='dm-icon-btn dm-ep-order'
+              title='Reverse order'
+              use:click={() => { episodeOrder = !episodeOrder }}
+            >
+              <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='1.6rem' />
+            </button>
+          {/if}
+        </div>
+
+        <div class='dm-ep-scroll'>
+          <EpisodeList
+            bind:episodeLoad={episodeLoad}
+            media={staticMedia}
+            {episodeOrder}
+            bind:userProgress
+            bind:watched
+            episodeCount={getMediaMaxEp(media)}
+            {play}
+          />
+        </div>
       </main>
     </div>
-    <!-- ════ END BODY ═════════════════════════════════════════════════════ -->
-
   {/if}
 </div>
 
 <style>
-  /* ─────────────────────────────────────────────────────────────────────
-     TOKEN REFERENCE  (mirrors HomePage palette exactly)
-     --bg:        #2b2b2b   main dark surface
-     --bg-raised: #3c3c3c   card / raised surface
-     --accent:    #e60012   Nintendo red
-     --cyan:      #00c3e3   focus / hover highlight
-     --text:      #ffffff
-  ───────────────────────────────────────────────────────────────────── */
-
-  /* ── Root ─────────────────────────────────────────────────────────── */
   .dm-root {
     position: fixed;
     inset: 0;
     z-index: 50;
     display: none;
-    background: #2b2b2b;        /* matches :global(body) in HomePage    */
+    background: #2b2b2b;
     color: #fff;
-    font-family: system-ui, sans-serif; /* matches HomePage global font  */
+    font-family: system-ui, sans-serif;
     overflow: hidden;
   }
   .dm-root--show { display: flex; flex-direction: column; }
 
-  /* ── Close — same visual as .brand pill ──────────────────────────── */
   .dm-close {
     position: fixed;
     top: 1rem; right: 1.2rem;
@@ -493,7 +458,6 @@
   }
   .dm-close:hover { background: #e60012; transform: scale(1.08); }
 
-  /* ── HERO ─────────────────────────────────────────────────────────── */
   .dm-hero {
     position: relative;
     flex-shrink: 0;
@@ -505,7 +469,6 @@
     background: #2b2b2b;
   }
 
-  /* bg image — grayscale + low opacity, same as .bg-image in HomePage  */
   :global(.dm-hero__bg) {
     position: absolute !important;
     inset: 0;
@@ -517,7 +480,6 @@
     pointer-events: none;
   }
 
-  /* vignette — matches .vignette + .curse-overlay from HomePage         */
   .dm-hero__vignette {
     position: absolute; inset: 0;
     background:
@@ -536,13 +498,12 @@
     width: 100%;
   }
 
-  /* Cover art */
   .dm-cover {
     flex-shrink: 0;
     position: relative;
     width: clamp(96px, 11vw, 160px);
     aspect-ratio: 2/3;
-    border-radius: 12px;          /* same as .card-unit radius           */
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.7);
   }
@@ -554,7 +515,6 @@
 
   .dm-hero__info { flex: 1; min-width: 0; }
 
-  /* Title — .hero-title from HomePage */
   .dm-title {
     font-size: clamp(1.8rem, 3.5vw, 3.2rem);
     font-weight: 900;
@@ -566,7 +526,6 @@
     text-shadow: 0 2px 16px rgba(0,0,0,0.8);
   }
 
-  /* Stat grid — .stat-grid from HomePage */
   .dm-stat-grid {
     display: flex;
     flex-wrap: wrap;
@@ -595,7 +554,6 @@
     gap: 0.35rem;
   }
 
-  /* CTA row — .cta-row from HomePage */
   .dm-cta-row {
     display: flex;
     flex-wrap: wrap;
@@ -604,7 +562,6 @@
     margin-bottom: 0.8rem;
   }
 
-  /* Play button — .btn-play from HomePage */
   .dm-btn-play {
     display: inline-flex;
     align-items: center;
@@ -625,7 +582,6 @@
   .dm-btn-play:hover:not(:disabled) { transform: scale(1.05); border-color: #fff; }
   .dm-btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
 
-  /* Icon cluster — .icon-btn from HomePage */
   .dm-icon-cluster {
     display: flex;
     align-items: center;
@@ -650,7 +606,6 @@
   .dm-icon-btn:hover { transform: scale(1.1); color: #e60012; background: rgba(255,255,255,0.18); }
   .dm-site-icon { width: 1.6rem; height: 1.6rem; border-radius: 4px; }
 
-  /* External links dropdown */
   .dm-ext-wrap { position: relative; }
   .dm-ext-menu {
     position: absolute;
@@ -658,7 +613,7 @@
     left: 0;
     z-index: 200;
     min-width: 17rem;
-    background: #3c3c3c;          /* .bg-raised surface                 */
+    background: #3c3c3c;
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
     padding: 0.5rem 0;
@@ -694,24 +649,35 @@
   .dm-ext-lang { margin-left: auto; font-size: 0.75rem; opacity: 0.45; }
 
   /* ─────────────────────────────────────────────────────────────────────
-     TWO-COLUMN BODY
+      LAYOUT SWAP: INFO LEFT, EPISODES RIGHT (EPISODES WIDE)
   ───────────────────────────────────────────────────────────────────── */
   .dm-body {
     flex: 1;
     display: grid;
-    grid-template-columns: 400px 1fr;
-    grid-template-areas: 'ep info';
+    grid-template-columns: 380px 1fr;
+    grid-template-areas: 'info ep';
     overflow: hidden;
     min-height: 0;
   }
 
-  /* ── EPISODES col ─────────────────────────────────────────────────── */
-  aside.dm-ep-col {
+  aside.dm-info-col {
+    grid-area: info;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.8rem 1.8rem 4rem;
+    background: #222;
+    border-right: 2px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  aside.dm-info-col::-webkit-scrollbar { width: 3px; }
+  aside.dm-info-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  main.dm-ep-col {
     grid-area: ep;
     display: flex;
     flex-direction: column;
-    background: #222;             /* slightly darker than #2b2b2b        */
-    border-right: 2px solid rgba(255,255,255,0.05); /* .header border    */
     overflow: hidden;
   }
 
@@ -722,21 +688,19 @@
     justify-content: space-between;
     padding: 1.1rem 1.6rem 0.9rem;
     border-bottom: 2px solid rgba(255,255,255,0.05);
-    background: #222;
   }
 
-  /* label — .nav-item active uppercase tracking style */
   .dm-ep-label {
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #e60012;               /* accent — mirrors .section-toggle    */
+    color: #e60012;
   }
 
   .dm-ep-order {
     background: rgba(255,255,255,0.07);
-    border-radius: 50px;          /* pill — matches .brand / nav-links   */
+    border-radius: 50px;
     width: auto;
     height: auto;
     padding: 6px 14px;
@@ -751,24 +715,8 @@
     padding: 0.3rem 0;
   }
   .dm-ep-scroll::-webkit-scrollbar { width: 3px; }
-  .dm-ep-scroll::-webkit-scrollbar-track { background: transparent; }
   .dm-ep-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
-  /* ── INFO col ─────────────────────────────────────────────────────── */
-  main.dm-info-col {
-    grid-area: info;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 1.8rem 3% 4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  main.dm-info-col::-webkit-scrollbar { width: 3px; }
-  main.dm-info-col::-webkit-scrollbar-track { background: transparent; }
-  main.dm-info-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-  /* Section label — same pattern as .stat .label */
   .dm-section-label {
     font-size: 0.7rem;
     font-weight: 800;
@@ -776,21 +724,18 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     margin: 1.8rem 0 0.7rem;
-    padding-left: 0.1rem;
   }
 
-  /* Synopsis — .synopsis from HomePage */
   .dm-synopsis {
-    font-size: 1.1rem;
-    line-height: 1.62;
+    font-size: 1.05rem;
+    line-height: 1.6;
     opacity: 0.92;
     background: rgba(0,0,0,0.4);
-    padding: 1.2rem 1.8rem;
+    padding: 1.2rem;
     border-radius: 12px;
     margin-bottom: 0.5rem;
   }
 
-  /* Tag / genre pills — .nav-links pill wrap from HomePage */
   .dm-tag-rail {
     display: flex;
     flex-wrap: wrap;
@@ -801,61 +746,47 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 5px 14px;
-    border-radius: 50px;          /* pill — matches nav-links            */
+    padding: 5px 12px;
+    border-radius: 50px;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.07);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #ccc;
     white-space: nowrap;
-    transition: background 0.12s, color 0.12s;
+    transition: background 0.12s;
   }
   .dm-tag:hover { background: rgba(255,255,255,0.1); color: #fff; }
-  .dm-tag b { font-weight: 900; }
-  .dm-tag__pct { opacity: 0.4; font-weight: 700; font-size: 0.7rem; }
   .dm-tag--genre {
     background: rgba(230,0,18,0.1);
     border-color: rgba(230,0,18,0.25);
     color: #ff8a91;
   }
-  .dm-tag--genre:hover { background: rgba(230,0,18,0.2); color: #fff; }
 
-  /* Small card shells (unchanged API) */
   .small-card { display: inline-block; }
 
-  /* ── Focus ring — matches :global(*:focus-visible) in HomePage ─────── */
   :global(.dm-root *:focus-visible) {
     outline: 4px solid #00c3e3;
     outline-offset: 2px;
     border-radius: 8px;
   }
-  :global(.dm-root *:focus:not(:focus-visible)) { outline: none; }
 
-  /* ── Responsive ───────────────────────────────────────────────────── */
-  @media (max-width: 860px) {
+  @media (max-width: 980px) {
     .dm-body {
       grid-template-columns: 1fr;
       grid-template-areas: 'ep' 'info';
       overflow: visible;
       flex: none;
     }
-    aside.dm-ep-col {
-      max-height: 52vh;
+    aside.dm-info-col {
       border-right: none;
+      background: transparent;
+    }
+    main.dm-ep-col {
+      max-height: 52vh;
       border-bottom: 2px solid rgba(255,255,255,0.05);
     }
-    main.dm-info-col { overflow: visible; }
     .dm-root { overflow-y: auto; }
-    .dm-hero__body { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.4rem 4% 1rem; }
-    .dm-cover { width: clamp(80px, 20vw, 120px); }
-    .dm-stat-grid { gap: 1.5rem; padding: 0.9rem 1.4rem; }
-  }
-
-  @media (max-width: 520px) {
-    .dm-title { font-size: 1.7rem; letter-spacing: -1px; }
-    main.dm-info-col { padding: 1.2rem 4% 3rem; }
   }
 </style>

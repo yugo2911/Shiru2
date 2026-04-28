@@ -369,24 +369,16 @@
     selectedIndex.set(0)
   }
 
-  // ─── Right-click handler ─────────────────────────────────────────────────────
-
-  function handleRightClick(e) {
-    e.preventDefault()
-    playSfx(sfx.section)
-    currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length)
-  }
-
   // ─── Keyboard handler ────────────────────────────────────────────────────────
 
   function handleKeydown(e) {
     if ($modal[modal.SEARCH]) return
     if (!animeList?.length) return
     switch (e.key) {
-      case 'ArrowRight':  e.preventDefault(); playSfx(sfx.nav); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
-      case 'ArrowLeft':   e.preventDefault(); playSfx(sfx.nav); selectedIndex.update(n => Math.max(n - 1, 0)); break
-      case 'ArrowUp':     e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
-      case 'ArrowDown':   e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
+      case 'ArrowRight':  e.preventDefault(); e.stopPropagation(); playSfx(sfx.nav); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
+      case 'ArrowLeft':   e.preventDefault(); e.stopPropagation(); playSfx(sfx.nav); selectedIndex.update(n => Math.max(n - 1, 0)); break
+      case 'ArrowUp':     e.preventDefault(); e.stopPropagation(); playSfx(sfx.section); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
+      case 'ArrowDown':   e.preventDefault(); e.stopPropagation(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'r':           e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'm':           e.preventDefault(); toggleMute(); break
       case 's':           e.preventDefault(); modal.open(modal.SEARCH); break
@@ -414,7 +406,7 @@
   })
 </script>
 
-<div class="home-theater" style="--accent-dynamic: {bannerColor};" on:contextmenu={handleRightClick}>
+<div class="home-theater" style="--accent-dynamic: {bannerColor};">
 
   {#if banner}
     {#key banner}
