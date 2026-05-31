@@ -312,20 +312,20 @@
                   {#if staticMedia.averageScore}
                     <div class="TelemetryItem" title="{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews">
                       <TrendingUp size="1.2rem" />
-                      <span class="TelemetryValue">RATING {staticMedia.averageScore}%</span>
+                      <span class="TelemetryValue">{staticMedia.averageScore}%</span>
                     </div>
                   {/if}
                   {#if staticMedia.format}
                     <div class="TelemetryItem">
                       <Tv size="1.2rem" />
-                      <span class="TelemetryValue text-uppercase">FORMAT {formatMap[staticMedia.format]}</span>
+                      <span class="TelemetryValue text-uppercase">{formatMap[staticMedia.format]}</span>
                     </div>
                   {/if}
                   {#if staticMedia.episodes !== 1}
                     {@const maxEp = getMediaMaxEp(staticMedia)}
                     <div class="TelemetryItem">
                       <Clapperboard size="1.2rem" />
-                      <span class="TelemetryValue">EPISODES {maxEp && maxEp !== 0 ? maxEp : '?'}</span>
+                      <span class="TelemetryValue">EPs {maxEp && maxEp !== 0 ? maxEp : '?'}</span>
                     </div>
                   {:else if staticMedia.duration}
                     <div class="TelemetryItem">
@@ -336,7 +336,7 @@
                   {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
                     <div class="TelemetryItem">
                       <Users size="1.2rem" />
-                      <span class="TelemetryValue">REVIEWS {anilistClient.reviews(staticMedia)}</span>
+                      <span class="TelemetryValue">{anilistClient.reviews(staticMedia)}</span>
                     </div>
                   {/if}
                 </div>
