@@ -337,9 +337,6 @@
                       <div class='progress-bar' style='width: {progress}%'/>
                     </div>
                   {/if}
-                  <div class='font-size-12 overflow-hidden {(!completed && !progress) || !dubAiring ? `line-3 line-sm-4` : `line-2 line-sm-3`}' class:mb-10={!largeCard} class:summary={unreleased} class:font-weight-bold={unreleased}>
-                    {summary?.replace(/\s*\(?source:\s*[\s\S]+?\)?$/i, '') || ''}
-                  </div>
                   <div class='font-size-12 mt-auto' class:mb-5={dubAiring} class:mb-10={!dubAiring}>
                     {#if dubAiring}
                       <div class='d-flex flex-row date-row'>

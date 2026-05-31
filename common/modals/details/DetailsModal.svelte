@@ -588,12 +588,25 @@
   }
 
   .GridOverlay {
-    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 1;
   }
 
   .CornerAccent {
-    display: none;
+    position: fixed; width: 10px; height: 10px;
+    border: 1.5px solid var(--accent-dynamic); z-index: 40; pointer-events: none;
+    opacity: 0.4; transition: opacity 0.3s;
   }
+  .CornerAccent.TopLeft     { top: 18px; left: 18px; border-right: 0; border-bottom: 0; }
+  .CornerAccent.TopRight    { top: 18px; right: 18px; border-left: 0; border-bottom: 0; }
+  .CornerAccent.BottomLeft  { bottom: 18px; left: 18px; border-right: 0; border-top: 0; }
+  .CornerAccent.BottomRight { bottom: 18px; right: 18px; border-left: 0; border-top: 0; }
+  :global(.BlueprintContainer:hover) .CornerAccent { opacity: 0.7; }
 
   :global(.BlueprintContainer .TechnicalControl) {
     position: fixed !important;
@@ -754,6 +767,10 @@
     border-right: 1px solid var(--home-border);
     padding: 14px 20px !important; margin: 0 !important;
     flex: 1; min-width: 140px; align-items: center;
+    transition: background 0.15s;
+  }
+  .ParameterCell:hover {
+    background: rgba(255,255,255,0.03);
   }
   .ParameterCell:last-child { border-right: none; }
   .ParameterCell :global(.CellIcon), .CustomCellSymbol {
@@ -779,6 +796,12 @@
     background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
     padding: 8px 16px !important; margin: 0 !important;
     border-radius: 50px;
+    transition: all 0.15s;
+    cursor: default;
+  }
+  .TechnicalDataTag:hover {
+    border-color: var(--accent-dynamic);
+    background: rgba(0,0,0,0.5);
   }
   .TagIcon { color: var(--accent-dynamic); }
   .TagName { font-size: 0.8rem !important; color: var(--home-text); font-weight: 700; }
@@ -796,6 +819,10 @@
     background: rgba(0,0,0,0.4);
     padding: 20px; border-radius: 12px;
     border: 1px solid var(--home-border);
+    transition: border-color 0.15s;
+  }
+  .TechnicalNarrativeText:hover {
+    border-color: var(--accent-dynamic);
   }
 
   .StructuralRightPane {
@@ -860,6 +887,56 @@
     background: var(--home-panel) !important;
     border-radius: 12px !important;
     padding: 5px; margin-bottom: 10px;
+  }
+
+  :global(.BlueprintContainer .episode-card) {
+    border-radius: 12px !important;
+    border: 1px solid var(--home-border) !important;
+    background: var(--home-panel) !important;
+    transition: all 0.15s;
+  }
+  :global(.BlueprintContainer .episode-card:hover) {
+    border-color: var(--accent-dynamic) !important;
+    background: rgba(0,0,0,0.5) !important;
+  }
+  :global(.BlueprintContainer .episode-card.bg-black) {
+    background: rgba(0,0,0,0.6) !important;
+    border-color: var(--home-border) !important;
+  }
+  :global(.BlueprintContainer .episode-card.border) {
+    border-color: var(--accent-dynamic) !important;
+    border-width: 2px !important;
+  }
+  :global(.BlueprintContainer .progress) {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  :global(.BlueprintContainer .progress-bar) {
+    background: var(--accent-dynamic) !important;
+    border-radius: 10px;
+  }
+  :global(.BlueprintContainer .bg-senary),
+  :global(.BlueprintContainer .bg-septenary) {
+    background: rgba(255,255,255,0.1) !important;
+    border-radius: 50px;
+    padding: 4px 12px !important;
+    color: var(--home-text) !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+  }
+  :global(.BlueprintContainer .bg-danger) {
+    background: rgba(255,60,60,0.3) !important;
+    border-radius: 50px;
+    padding: 4px 12px !important;
+    color: #ff6b6b !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+  }
+  :global(.BlueprintContainer .episode-card .title) {
+    color: var(--home-text) !important;
+    font-weight: 700 !important;
   }
 
   @media (max-width: 991px) {
