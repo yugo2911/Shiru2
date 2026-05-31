@@ -731,6 +731,37 @@
     color: var(--accent-dynamic) !important;
     background: rgba(0,0,0,0.5) !important;
   }
+
+  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square) {
+    width: 44px !important; height: 44px !important;
+    background: rgba(0,0,0,0.4) !important;
+    border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important;
+    border-radius: 50px !important;
+    transition: all 0.15s;
+    font-size: inherit !important;
+    padding: 0 !important;
+  }
+  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square:hover:not([disabled])) {
+    border-color: var(--accent-dynamic) !important;
+    color: var(--accent-dynamic) !important;
+    background: rgba(0,0,0,0.5) !important;
+  }
+
+  :global(.BlueprintContainer .btn.scoring-btn.btn-square) {
+    width: 44px !important; height: 44px !important;
+    background: rgba(0,0,0,0.4) !important;
+    border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important;
+    border-radius: 50px !important;
+    transition: all 0.15s;
+  }
+  :global(.BlueprintContainer .btn.scoring-btn.btn-square:hover:not([disabled])) {
+    border-color: var(--accent-dynamic) !important;
+    color: var(--accent-dynamic) !important;
+    background: rgba(0,0,0,0.5) !important;
+  }
+
   .MonochromeLogo {
     filter: grayscale(100%) brightness(130%); width: 18px; height: 18px;
   }
