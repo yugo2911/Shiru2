@@ -5,10 +5,10 @@
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { add } from '@/modules/torrent.js'
-  import { anilistClient } from '@/modules/anilist.js'
+  import { anilistClient, seasons } from '@/modules/anilist.js'
   import { isValidNumber } from '@/modules/util.js'
   import { click } from '@/modules/click.js'
-  import Details from '@/modals/details/components/Details.svelte'
+
   import EpisodeList from '@/modals/details/components/EpisodeList.svelte'
   import ToggleList from '@/modals/details/components/ToggleList.svelte'
   import Scoring from '@/components/Scoring.svelte'
@@ -24,7 +24,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { ExternalLink,Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10 } from 'lucide-svelte'
+  import { ExternalLink, Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -200,234 +200,348 @@
   }
 
   onDestroy(() => resizeObserver?.disconnect())
+
+  let scrollDetails
+  $: if (staticMedia && scrollDetails) scrollDetails.scrollLeft = 0
+
+  const countryMap = {
+    JP: 'Japan',
+    KR: 'South Korea',
+    US: 'United States',
+    CN: 'China',
+    HK: 'Hong Kong',
+    TW: 'Taiwan'
+  }
+  const detailsMap = [
+    { property: 'season', label: 'Season', icon: CalendarRange, custom: 'property' },
+    { property: 'status', label: 'Status', icon: MonitorPlay },
+    { property: 'studios', label: 'Studio', icon: Building2, custom: 'property' },
+    { property: 'source', label: 'Source', icon: FolderKanban },
+    { property: 'countryOfOrigin', label: 'Country', icon: Earth, custom: 'property' },
+    { property: 'isAdult', label: 'Adult', icon: Adult },
+    { property: 'english', label: 'English', icon: Type },
+    { property: 'romaji', label: 'Romaji', icon: Languages },
+    { property: 'native', label: 'Native', icon: '語', custom: 'icon' }
+  ]
+
+  let studio
+  let seasonal
+  function getCustomProperty (property, media) {
+    if (property === 'averageScore') {
+      return media.averageScore + '%'
+    } else if (property === 'season') {
+      return seasonal
+    } else if (property === 'countryOfOrigin') {
+      return countryMap[media.countryOfOrigin]
+    } else if (property === 'studios') {
+      return studio
+    } else {
+      return media[property]
+    }
+  }
+  async function getProperty (property, media) {
+    if (property === 'episode') {
+      return media.nextAiringEpisode?.episode
+    } else if (property === 'english' || property === 'romaji' || property === 'native') {
+      return media.title[property]
+    } else if (property === 'isAdult') {
+      return (media.isAdult === true ? 'Rated 18+' : false)
+    } else if (property === 'countryOfOrigin') {
+      return countryMap[media.countryOfOrigin]
+    } else if (property === 'studios') {
+      studio = ((await recommendations)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0]
+      return studio
+    } else if (property === 'season') {
+      const details = await (((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id))
+      const attributes = details?.included?.[0]?.attributes
+      const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())
+      const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()
+      seasonal = (season || seasonYear) ? [season, seasonYear].filter(f => f).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
+      return seasonal
+    }
+    return media[property]
+  }
 </script>
 
-<div class='modal modal-full z-50' class:show={staticMedia} on:keydown={checkClose} tabindex='-1' role='button' bind:this={_modal}>
-  <div class='h-full modal-content bg-dark p-0 overflow-y-auto position-relative' bind:this={container}>
+<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal}>
+  <div class="h-full modal-content p-0 overflow-y-auto position-relative StructuralCanvas" bind:this={container}>
     {#if staticMedia}
-      <button class='close pointer z-30 bg-dark-light top-20 right-0 position-fixed' type='button' use:click={() => close()}> &times; </button>
-      <SmartImage class='w-full cover-img anime-details position-absolute' images={[
-        staticMedia.bannerImage,
-        ...(staticMedia.trailer?.id ? [
-          `https://i.ytimg.com/vi/${staticMedia.trailer.id}/maxresdefault.jpg`,
-          `https://i.ytimg.com/vi/${staticMedia.trailer.id}/hqdefault.jpg`] : []),
-        () => getKitsuMappings(staticMedia).then(metadata =>
-          [metadata?.included?.[0]?.attributes?.coverImage?.original,
-          metadata?.included?.[0]?.attributes?.coverImage?.large,
-          metadata?.included?.[0]?.attributes?.coverImage?.small,
-          metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
-        () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
-      <div class='row px-20'>
-        <div class='col-lg-7 col-12 pb-10'>
+      <div class="GridOverlay"></div>
+      <div class="CornerAccent TopLeft"></div>
+      <div class="CornerAccent TopRight"></div>
+      <div class="CornerAccent BottomLeft"></div>
+      <div class="CornerAccent BottomRight"></div>
+
+      <button class="close TechnicalControl z-30" type="button" use:click={() => close()}>
+        <span>ESC_CLOSE ✕</span>
+      </button>
+
+      <div class="BannerSection">
+        <SmartImage class="BannerImage" images={[
+          staticMedia.bannerImage,
+          ...(staticMedia.trailer?.id ? [
+            `https://i.ytimg.com/vi/${staticMedia.trailer.id}/maxresdefault.jpg`,
+            `https://i.ytimg.com/vi/${staticMedia.trailer.id}/hqdefault.jpg`] : []),
+          () => getKitsuMappings(staticMedia).then(metadata =>
+            [metadata?.included?.[0]?.attributes?.coverImage?.original,
+            metadata?.included?.[0]?.attributes?.coverImage?.large,
+            metadata?.included?.[0]?.attributes?.coverImage?.small,
+            metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
+          () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
+        <div class="BannerTint"></div>
+      </div>
+
+      <div class="row MainGrid px-20">
+        <div class="col-lg-7 col-12 ComplexLeftPane pb-10">
           <div bind:this={leftColumn}>
-            <div class='d-flex flex-sm-row flex-column align-items-sm-end pb-20 mb-15'>
-              <div class='cover d-flex flex-row align-items-sm-end align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full' style='max-height: 50vh;'>
-                <div class='position-relative h-full'>
-                  <SmartImage class='rounded cover-img overflow-hidden h-full w-full' color={media.coverImage.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './404_cover.png']}/>
+            <div class="d-flex flex-sm-row flex-column align-items-sm-stretch pb-20 mb-15 StructuralHeader">
+              <div class="cover d-flex flex-row align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full SpecCoverFrame">
+                <div class="position-relative h-full w-full InternalImageWrapper">
+                  <SmartImage class="rounded cover-img overflow-hidden h-full w-full GraphicMatrix" color={media.coverImage.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './404_cover.png']}/>
                   <AudioLabel media={staticMedia} viewAnime={true} />
                 </div>
               </div>
-              <div class='pl-sm-20 ml-sm-20'>
-                <h1 class='font-weight-very-bold text-white select-all mb-0 font-scale-40'>{anilistClient.title(staticMedia)}</h1>
-                <div class='d-flex flex-row font-size-18 flex-wrap mt-5'>
+              
+              <div class="pl-sm-20 ml-sm-20 HeaderMetaBlock d-flex flex-column justify-content-between">
+                <div>
+                  <div class="TechnicalID">SYS_REF: #{staticMedia.id || 'NULL'}</div>
+                  <h1 class="font-weight-very-bold text-white select-all mb-0 MassiveDisplayTitle">{anilistClient.title(staticMedia)}</h1>
+                </div>
+                
+                <div class="TelemetryStrip d-flex flex-row flex-wrap mt-5">
                   {#if staticMedia.averageScore}
-                    <div class='d-flex flex-row mt-10' title='{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews'>
-                      <TrendingUp class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                        Rating: {staticMedia.averageScore + '%'}
-                      </span>
+                    <div class="TelemetryItem" title="{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews">
+                      <TrendingUp size="1.2rem" />
+                      <span class="TelemetryValue">RATING // {staticMedia.averageScore}%</span>
                     </div>
                   {/if}
                   {#if staticMedia.format}
-                    <div class='d-flex flex-row mt-10'>
-                      <Tv class='mx-10' size='2.2rem' />
-                      <span class='mr-20 text-capitalize'>
-                        Format: {formatMap[staticMedia.format]}
-                      </span>
+                    <div class="TelemetryItem">
+                      <Tv size="1.2rem" />
+                      <span class="TelemetryValue text-uppercase">FORMAT // {formatMap[staticMedia.format]}</span>
                     </div>
                   {/if}
                   {#if staticMedia.episodes !== 1}
                     {@const maxEp = getMediaMaxEp(staticMedia)}
-                    <div class='d-flex flex-row mt-10'>
-                      <Clapperboard class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                      Episodes: {maxEp && maxEp !== 0 ? maxEp : '?'}
-                      </span>
+                    <div class="TelemetryItem">
+                      <Clapperboard size="1.2rem" />
+                      <span class="TelemetryValue">EPISODES // {maxEp && maxEp !== 0 ? maxEp : '?'}</span>
                     </div>
                   {:else if staticMedia.duration}
-                    <div class='d-flex flex-row mt-10'>
-                      <Timer class='mx-10' size='2.2rem' />
-                      <span class='mr-20'>
-                        Length: {staticMedia.duration + ' min'}
-                      </span>
+                    <div class="TelemetryItem">
+                      <Timer size="1.2rem" />
+                      <span class="TelemetryValue">LENGTH // {staticMedia.duration} MIN</span>
                     </div>
                   {/if}
                   {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
-                    <div class='d-flex flex-row mt-10'>
-                      <Users class='mx-10' size='2.2rem' />
-                      <span class='mr-20' title='{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews'>
-                        Reviews: {anilistClient.reviews(staticMedia)}
-                      </span>
+                    <div class="TelemetryItem">
+                      <Users size="1.2rem" />
+                      <span class="TelemetryValue">REVIEWS // {anilistClient.reviews(staticMedia)}</span>
                     </div>
                   {/if}
                 </div>
-<div class='d-flex flex-row flex-wrap play'>
-  <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20'
-          use:click={() => play(media)}
-          disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
-    <Play class='mr-10' fill='currentColor' size='1.6rem' />
-    {playButtonText}
-  </button>
 
-  <div class='mt-20 d-flex align-items-center'>
-    {#if Helper.isAuthorized()}
-      <Scoring class='mr-10' {media} viewAnime={true} />
-    {/if}
+                <div class="d-flex flex-row flex-wrap play ActionMatrix">
+                  <button class="btn btn-lg PrimaryIndustrialButton w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20"
+                          use:click={() => play(media)}
+                          disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
+                    <Play class="mr-10 ButtonIconFill" fill="currentColor" size="1.2rem" />
+                    <span class="ButtonTextLabel">{playButtonText.toUpperCase()}</span>
+                  </button>
 
-    {#if Helper.isAniAuth()}
-      <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
-        <div class='favourite d-flex align-items-center justify-content-center' title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
-          <Heart color={media.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={media.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem' />
-        </div>
-      </button>
-    {/if}
+                  <div class="mt-20 d-flex align-items-center SubActionGroup">
+                    {#if Helper.isAuthorized()}
+                      <div class="EmbeddedScoringPanel">
+                        <Scoring class="mr-10" {media} viewAnime={true} />
+                      </div>
+                    {/if}
 
-    <TrailerModal {staticMedia} />
+                    {#if Helper.isAniAuth()}
+                      <button class="btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0 mr-10" data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
+                        <div class="favourite d-flex align-items-center justify-content-center" title={media.isFavourite ? 'Unfavourite' : 'Favourite'}>
+                          <Heart color={media.isFavourite ? '#FF3E3E' : 'currentColor'} fill={media.isFavourite ? '#FF3E3E' : 'transparent'} size="1.2rem" />
+                        </div>
+                      </button>
+                    {/if}
 
-    <AnimeThemesModal {staticMedia} />
+                    <TrailerModal {staticMedia} />
 
-    {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
-      {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
-      {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
-      {@const streamingLinks = activeLinks.filter(l => l.type === 'STREAMING')}
-      {@const infoLinks = activeLinks.filter(l => l.type === 'INFO')}
-      {@const socialLinks = activeLinks.filter(l => l.type === 'SOCIAL')}
-      {@const otherLinks = activeLinks.filter(l => !['OFFICIAL','STREAMING','INFO','SOCIAL'].includes(l.type))}
-      <div class='position-relative mr-10' use:closeOnClickOutside={() => showExternalLinks = false}>
-        <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0' data-toggle='tooltip' data-title='External Links' use:click={() => showExternalLinks = !showExternalLinks}>
-          <ExternalLink size='1.5rem' />
-        </button>
-        {#if showExternalLinks}
-          <div class='ext-dropdown position-absolute'>
-            {#if officialLinks.length}
-              <div class='ext-group-label'>Official</div>
-              {#each officialLinks as link}
-                <button class='ext-item ext-item-official d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg ext-icon-svg-official' />{/if}
-                  <span class='ext-site'>{link.site || 'Official Website'}</span>
-                </button>
-              {/each}
-            {/if}
-            {#if streamingLinks.length}
-              <div class='ext-group-label'>Streaming</div>
-              {#each streamingLinks as link}
-                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
-                  <span class='ext-site'>{link.site}</span>
-                  {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
-                </button>
-              {/each}
-            {/if}
-            {#if infoLinks.length}
-              <div class='ext-group-label'>Info</div>
-              {#each infoLinks as link}
-                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
-                  <span class='ext-site'>{link.site}</span>
-                </button>
-              {/each}
-            {/if}
-            {#if socialLinks.length}
-              <div class='ext-group-label'>Social</div>
-              {#each socialLinks as link}
-                <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                  {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
-                  <span class='ext-site'>{link.site}</span>
-                </button>
-              {/each}
-            {/if}
-            {#each otherLinks as link}
-              <button class='ext-item d-flex align-items-center' use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
-                {#if link.icon}<img class='ext-icon' src={link.icon} alt='' on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size='1.2rem' class='ext-icon-svg' />{/if}
-                <span class='ext-site'>{link.site}</span>
-                {#if link.language}<span class='ext-lang'>{link.language}</span>{/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
-    {/if}
+                    <AnimeThemesModal {staticMedia} />
 
-    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Open AniList' use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
-      <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
-    </button>
-    <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Open MyAnimeList' use:click={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
-      <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
-    </button>
-  </div>
-</div>
+                    {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
+                      {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
+                      {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
+                      {@const streamingLinks = activeLinks.filter(l => l.type === 'STREAMING')}
+                      {@const infoLinks = activeLinks.filter(l => l.type === 'INFO')}
+                      {@const socialLinks = activeLinks.filter(l => l.type === 'SOCIAL')}
+                      {@const otherLinks = activeLinks.filter(l => !['OFFICIAL','STREAMING','INFO','SOCIAL'].includes(l.type))}
+                      <div class="position-relative mr-10 DropdownAnchor" use:closeOnClickOutside={() => showExternalLinks = false}>
+                        <button class="btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0" data-toggle="tooltip" data-title="External Links" use:click={() => showExternalLinks = !showExternalLinks}>
+                          <ExternalLink size="1.2rem" />
+                        </button>
+                        {#if showExternalLinks}
+                          <div class="ext-dropdown position-absolute IndustrialDropdown">
+                            {#if officialLinks.length}
+                              <div class="ext-group-label DropdownSectionHeader">OFFICIAL</div>
+                              {#each officialLinks as link}
+                                <button class="ext-item ext-item-official d-flex align-items-center DropdownRowItem" use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                                  {#if link.icon}<img class="ext-icon BlueprintMiniIcon" src={link.icon} alt="" on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size="1rem" class="ext-icon-svg ext-icon-svg-official" />{/if}
+                                  <span class="ext-site">{link.site || 'Official Website'}</span>
+                                </button>
+                              {/each}
+                            {/if}
+                            {#if streamingLinks.length}
+                              <div class="ext-group-label DropdownSectionHeader">STREAMING</div>
+                              {#each streamingLinks as link}
+                                <button class="ext-item d-flex align-items-center DropdownRowItem" use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                                  {#if link.icon}<img class="ext-icon BlueprintMiniIcon" src={link.icon} alt="" on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size="1rem" class="ext-icon-svg" />{/if}
+                                  <span class="ext-site">{link.site}</span>
+                                  {#if link.language}<span class="ext-lang TechnicalBadge">{link.language}</span>{/if}
+                                </button>
+                              {/each}
+                            {/if}
+                            {#if infoLinks.length}
+                              <div class="ext-group-label DropdownSectionHeader">INFO</div>
+                              {#each infoLinks as link}
+                                <button class="ext-item d-flex align-items-center DropdownRowItem" use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                                  {#if link.icon}<img class="ext-icon BlueprintMiniIcon" src={link.icon} alt="" on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size="1rem" class="ext-icon-svg" />{/if}
+                                  <span class="ext-site">{link.site}</span>
+                                </button>
+                              {/each}
+                            {/if}
+                            {#if socialLinks.length}
+                              <div class="ext-group-label DropdownSectionHeader">SOCIAL</div>
+                              {#each socialLinks as link}
+                                <button class="ext-item d-flex align-items-center DropdownRowItem" use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                                  {#if link.icon}<img class="ext-icon BlueprintMiniIcon" src={link.icon} alt="" on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size="1rem" class="ext-icon-svg" />{/if}
+                                  <span class="ext-site">{link.site}</span>
+                                </button>
+                              {/each}
+                            {/if}
+                            {#each otherLinks as link}
+                              <button class="ext-item d-flex align-items-center DropdownRowItem" use:click={() => { IPC.emit('open', link.url); showExternalLinks = false }}>
+                                {#if link.icon}<img class="ext-icon BlueprintMiniIcon" src={link.icon} alt="" on:error={e => e.currentTarget.style.display='none'} />{:else}<ExternalLink size="1rem" class="ext-icon-svg" />{/if}
+                                <span class="ext-site">{link.site}</span>
+                                {#if link.language}<span class="ext-lang TechnicalBadge">{link.language}</span>{/if}
+                              </button>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
+
+                    <button class="btn TechnicalSquareButton d-none align-items-center justify-content-center shadow-none border-0 mr-10" class:d-flex={staticMedia.id} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Open AniList" use:click={() => IPC.emit('open', `https://anilist.co/anime/${staticMedia.id}`)}>
+                      <img class="rounded MonochromeLogo" src="./anilist_icon.png" alt="Anilist">
+                    </button>
+                    <button class="btn TechnicalSquareButton d-none align-items-center justify-content-center shadow-none border-0" class:d-flex={staticMedia.idMal} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Open MyAnimeList" use:click={() => IPC.emit('open', `https://myanimelist.net/anime/${staticMedia.idMal}`)}>
+                      <img class="rounded MonochromeLogo" src="./myanimelist_icon.png" alt="MyAnimeList">
+                    </button>
+                  </div>
+                </div>
                 <Following media={staticMedia} />
               </div>
             </div>
-            <Details media={staticMedia} alt={recommendations} />
-            <div bind:this={scrollTags} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
+
+            <div bind:this={scrollDetails} class="details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start ParameterGrid">
+              {#each detailsMap as detail}
+                {#await getProperty(detail.property, staticMedia)}
+                  {:then property}
+                  {#if property}
+                    <div class="ParameterCell d-flex flex-row mx-10 py-5 justify-content-center">
+                      {#if detail.custom !== 'icon'}
+                        <svelte:component size="1.2rem" this={detail.icon} class="mr-10 CellIcon" />
+                      {:else}
+                        <div class="mr-10 d-flex align-items-center text-nowrap font-size-12 font-weight-bold line-height-normal CustomCellSymbol">
+                          {detail.icon}
+                        </div>
+                      {/if}
+                      <div class="d-flex flex-column justify-content-center text-nowrap">
+                        <span class="CellLabel">{detail.label}</span>
+                        <div class="font-weight-bold select-all line-height-normal CellValue">
+                          {#if detail.custom === 'property'}
+                            {getCustomProperty(detail.property, staticMedia)}
+                          {:else}
+                            {property.toString().replace(/_/g, ' ').toLowerCase()}
+                          {/if}
+                        </div>
+                      </div>
+                    </div>
+                  {/if}
+                {/await}
+              {/each}
+            </div>
+
+            <div class="LabelContainerHeader">DATA_CLASSIFICATION_TAGS</div>
+            <div bind:this={scrollTags} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
               {#each staticMedia.tags as tag}
-                <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center'>
-                  <Hash class='mr-5' size='1.8rem' /><span class='font-weight-bolder select-all'>{tag.name}</span><span class='font-weight-light'>: {tag.rank}%</span>
+                <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center">
+                  <Hash class="mr-5 TagIcon" size="1rem" />
+                  <span class="font-weight-bolder select-all TagName">{tag.name}</span>
+                  <span class="font-weight-light TagMetrics">:{tag.rank}%</span>
                 </div>
               {/each}
             </div>
-            <div bind:this={scrollGenres} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
+
+            <div class="LabelContainerHeader">GENRE_INDEX_ARRAY</div>
+            <div bind:this={scrollGenres} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
               {#each staticMedia.genres as genre}
-                <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center select-all'><svelte:component this={genreIcons[genre]} class='mr-5' size='1.8rem' /> {genre}</div>
+                <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center select-all">
+                  <svelte:component this={genreIcons[genre]} class="mr-5 TagIcon" size="1rem" />
+                  <span class="TagName">{genre}</span>
+                </div>
               {/each}
             </div>
+
             {#if staticMedia.description}
-              <div class='w-full d-flex flex-row align-items-center pt-20 mt-10'>
-                <hr class='w-full' />
-                <div class='font-size-18 font-weight-semi-bold px-20 text-white'>Synopsis</div>
-                <hr class='w-full' />
+              <div class="w-full d-flex flex-row align-items-center pt-20 mt-10 SegmentDividerBlock">
+                <div class="TechnicalDividerLine"></div>
+                <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">ANIME_SYNOPSIS_STREAM</div>
+                <div class="TechnicalDividerLine"></div>
               </div>
-              <div class='font-size-16 pt-20 select-all'>
+              <div class="font-size-16 pt-20 select-all TechnicalNarrativeText">
                 {@html sanitize(staticMedia.description)}
               </div>
             {/if}
+
             {#if episodeList?.length}
-              <div class='w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer' aria-hidden='true' use:click={() => { episodeOrder = !episodeOrder }}>
-                <hr class='w-full' />
-                <div class='position-absolute font-size-18 font-weight-semi-bold px-20 text-white' style='left: 50%; transform: translateX(-50%);'>Episodes</div>
-                <hr class='w-full' />
-                <div class='ml-auto pl-20 font-size-12 more text-muted text-nowrap pr-20' use:click={() => { episodeOrder = !episodeOrder }}>Reverse</div>
+              <div class="w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer MobileSectionToggle" aria-hidden="true" use:click={() => { episodeOrder = !episodeOrder }}>
+                <div class="TechnicalDividerLine"></div>
+                <div class="position-absolute font-size-18 font-weight-semi-bold px-20 SegmentTitleText" style="left: 50%; transform: translateX(-50%);">EPISODES_INDEX</div>
+                <div class="TechnicalDividerLine"></div>
+                <div class="ml-auto pl-20 font-size-12 more text-nowrap pr-20 ReverseToggleLabel" use:click={() => { episodeOrder = !episodeOrder }}>INVERT_ORDER</div>
               </div>
             {/if}
-            <div class='col-lg-5 col-12 d-lg-none flex-column mt-20'>
-              <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} class='h-600' />
+
+            <div class="col-lg-5 col-12 d-lg-none flex-column mt-20 StructuralMobileEpisodeList">
+              <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} class="h-600" />
             </div>
-            <div class='d-lg-block'>
-              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title='Relations'>
+
+            <div class="d-lg-block LinkedRelationsPanel">
+              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="Structural Relations">
                 {#await promise}
-                  <div class='small-card'>
+                  <div class="small-card TechnicalCardShell">
                     <SmallCardSk />
                   </div>
                 {:then res}
                   {#if res}
-                    <div class='small-card'>
+                    <div class="small-card TechnicalCardShell">
                       <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
                     </div>
                   {/if}
                 {/await}
               </ToggleList>
+
               {#await recommendations then res}
                 {@const media = res?.data?.Media}
                 {#if media}
-                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title='Recommendations'>
+                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="System Recommendations">
                     {#await promise}
-                      <div class='small-card'>
+                      <div class="small-card TechnicalCardShell">
                         <SmallCardSk />
                       </div>
                     {:then res}
                       {#if res}
-                        <div class='small-card'>
+                        <div class="small-card TechnicalCardShell">
                           <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
                         </div>
                       {/if}
@@ -438,11 +552,17 @@
             </div>
           </div>
         </div>
-        <div class='col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20' bind:this={rightColumn}>
-          <button class='close order pointer z-30 bg-dark-light position-absolute' class:d-none={!episodeList?.length} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Reverse Episodes' use:click={()=> {episodeOrder = !episodeOrder}}>
-            <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='2rem' />
-          </button>
-          <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+
+        <div class="col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20 StructuralRightPane" bind:this={rightColumn}>
+          <div class="ControlTowerHeader">
+            <span class="TowerTitle">EPISODE_MATRIX_SCHEMATIC</span>
+            <button class="close order pointer z-30 TowerOrderToggle" class:d-none={!episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
+              <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
+            </button>
+          </div>
+          <div class="TowerListBody">
+            <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+          </div>
         </div>
       </div>
     {/if}
@@ -450,246 +570,311 @@
 </div>
 
 <style>
-  
-
-  /* ── Modal shell ─────────────────────────────── */
-  :global(.modal-full .modal-content) {
-    background: var(--card-bg) !important;
-    font-family: var(--font-mono);
-    color: var(--card-fg);
+  /* ── CSS Architecture Token Definitions ── */
+  :global(.BlueprintContainer) {
+    --b-bg: #0b0d13;
+    --b-panel: #111420;
+    --b-panel-accent: #171b2b;
+    --b-border: #242c45;
+    --b-border-focus: #414f7a;
+    --b-text: #bdc5e1;
+    --b-text-dim: #626e94;
+    --b-neon: #00f0ff;
+    --b-neon-dim: rgba(0, 240, 255, 0.15);
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    --font-display: 'Oswald', 'Syncopate', sans-serif;
   }
 
-  /* ── Close button ────────────────────────────── */
-  .close {
-    top: 5rem !important;
-    left: unset !important;
-    right: 3rem !important;
-    background: rgba(13,13,16,0.75) !important;
-    border: 1px solid var(--card-line) !important;
-    color: var(--card-dim) !important;
-    border-radius: 3px !important;
+  /* ── Shell Framework Canvas ── */
+  :global(.modal-full .StructuralCanvas) {
+    background-color: var(--b-bg) !important;
     font-family: var(--font-mono) !important;
-    font-size: 2rem !important;
-    line-height: 1 !important;
+    color: var(--b-text) !important;
+    position: relative;
+    overflow-x: hidden !important;
+  }
+
+  /* Structural Grid Background Overlay pattern */
+  .GridOverlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      linear-gradient(rgba(36, 44, 69, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(36, 44, 69, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Blueprint Tech Outlines & Decorative Nodes */
+  .CornerAccent {
+    position: fixed; width: 12px; height: 12px;
+    border: 2px solid var(--b-neon); z-index: 40; pointer-events: none;
+  }
+  .CornerAccent.TopLeft     { top: 15px; left: 15px; border-right: 0; border-bottom: 0; }
+  .CornerAccent.TopRight    { top: 15px; right: 15px; border-left: 0; border-bottom: 0; }
+  .CornerAccent.BottomLeft  { bottom: 15px; left: 15px; border-right: 0; border-top: 0; }
+  .CornerAccent.BottomRight { bottom: 15px; right: 15px; border-left: 0; border-top: 0; }
+
+  /* ── Master System Control Interfaces ── */
+  .TechnicalControl {
+    position: fixed !important;
+    top: 25px !important; right: 25px !important; left: unset !important;
+    background: var(--b-panel) !important;
+    border: 1px solid var(--b-border) !important;
+    color: var(--b-neon) !important;
+    border-radius: 0px !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.75rem !important;
+    font-weight: 700;
+    padding: 8px 14px !important;
+    letter-spacing: 0.1em;
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .TechnicalControl:hover {
+    background: var(--b-neon) !important;
+    color: var(--b-bg) !important;
+    border-color: var(--b-neon) !important;
+    box-shadow: 0 0 12px var(--b-neon-dim);
+  }
+
+  /* ── Banner Canvas Layer ── */
+  .BannerSection {
+    position: absolute; top: 0; left: 0; width: 100%; height: 380px;
+    z-index: 0; overflow: hidden;
+    border-bottom: 1px solid var(--b-border);
+  }
+  :global(.BannerImage) {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(40%) contrast(110%) brightness(40%);
+  }
+  .BannerTint {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to bottom, transparent, var(--b-bg));
+  }
+
+  /* ── Layout Structural Configuration ── */
+  .MainGrid {
+    position: relative; z-index: 2;
+    padding-top: 180px !important;
+    max-width: 1600px; margin: 0 auto;
+  }
+
+  .StructuralHeader {
+    border: 1px solid var(--b-border);
+    background: rgba(17, 20, 32, 0.85);
     backdrop-filter: blur(8px);
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-  }
-  .close:hover {
-    background: var(--card-faint) !important;
-    border-color: rgba(255,255,255,0.22) !important;
-    color: var(--card-fg) !important;
+    padding: 20px; position: relative;
   }
 
-  /* ── Episode order toggle button ─────────────── */
-  .order {
-    top: 7rem !important;
-    left: -5rem !important;
-    background: rgba(13,13,16,0.75) !important;
-    border: 1px solid var(--card-line) !important;
-    color: var(--card-dim) !important;
-    border-radius: 3px !important;
-    backdrop-filter: blur(8px);
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-  }
-  .order:hover {
-    background: var(--card-accent-dim) !important;
-    border-color: var(--card-accent) !important;
-    color: var(--card-accent) !important;
-  }
-
-  /* ── Layout ──────────────────────────────────── */
-  .row {
-    padding-top: 12rem !important;
-  }
-  @media (min-width: 769px) {
-    .row { padding: 0 10rem; }
-  }
-
-  .cover {
-    aspect-ratio: 7/10;
+  .SpecCoverFrame {
+    aspect-ratio: 7/10; border: 1px solid var(--b-border);
+    background: var(--b-bg); padding: 5px;
   }
   @media (min-width: 577px) {
-    .cover { max-width: 35% !important; }
-    .play  { justify-content: left; }
+    .SpecCoverFrame { max-width: 240px !important; }
+  }
+  .InternalImageWrapper {
+    border: 1px solid var(--b-border); overflow: hidden;
+  }
+  :global(.GraphicMatrix) {
+    object-fit: cover; filter: saturate(85%); transition: transform 0.4s;
+  }
+  .SpecCoverFrame:hover :global(.GraphicMatrix) {
+    transform: scale(1.03);
   }
 
-  .play { justify-content: center; }
+  .HeaderMetaBlock {
+    flex: 1; min-width: 0;
+  }
+  .TechnicalID {
+    font-size: 0.7rem; color: var(--b-neon); letter-spacing: 0.15em;
+    margin-bottom: 4px; font-weight: bold;
+  }
 
-  /* ── Anime title ─────────────────────────────── */
-  :global(.font-scale-40) {
+  /* Asymmetric Structural Display Typography */
+  :global(.MassiveDisplayTitle) {
     font-family: var(--font-display) !important;
-    font-size: clamp(2.4rem, 4vw, 4rem) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.03em !important;
-    color: var(--card-fg) !important;
-    line-height: 1.1 !important;
+    font-size: clamp(2rem, 3.5vw, 3.2rem) !important;
+    text-transform: uppercase;
+    letter-spacing: -0.02em !important;
+    line-height: 1.05 !important;
+    color: #ffffff !important;
+    margin-bottom: 15px !important;
   }
 
-  /* ── Meta stat row (rating, format, episodes…) ── */
-  :global(.font-size-18) {
+  /* ── Telemetry Matrix Systems ── */
+  .TelemetryStrip { gap: 10px; margin-bottom: 15px; }
+  .TelemetryItem {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--b-panel-accent);
+    border: 1px solid var(--b-border);
+    padding: 6px 12px; font-size: 0.75rem;
+  }
+  .TelemetryItem :global(svg) { color: var(--b-neon); }
+  .TelemetryValue { color: var(--b-text); font-weight: 500; letter-spacing: 0.05em; }
+
+  /* ── Industrial Action System Triggers ── */
+  .ActionMatrix { gap: 10px; align-items: center; }
+  :global(.PrimaryIndustrialButton) {
+    background: var(--b-neon) !important;
+    color: var(--b-bg) !important;
     font-family: var(--font-mono) !important;
-    font-size: 1.15rem !important;
-    color: var(--card-dim) !important;
-    letter-spacing: 0.04em;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.1em !important;
+    border-radius: 0px !important;
+    padding: 12px 24px !important;
+    border: 1px solid var(--b-neon) !important;
+    transition: all 0.15s !important;
   }
-  /* Icon tint in stat row */
-  :global(.font-size-18 svg) {
-    color: var(--card-accent) !important;
-    filter: drop-shadow(0 0 6px rgba(126,126,130,0.35));
+  :global(.PrimaryIndustrialButton:hover:not(:disabled)) {
+    background: transparent !important;
+    color: var(--b-neon) !important;
+    box-shadow: 0 0 15px var(--b-neon-dim);
   }
-
-  /* ── Primary watch button ────────────────────── */
-  :global(.btn-secondary) {
-    font-family: var(--font-mono) !important;
-    font-size: 1.15rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em !important;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border: none !important;
-    border-radius: 3px !important;
-    box-shadow: none !important;
-    transition: opacity 0.12s;
-  }
-  :global(.btn-secondary:hover:not(:disabled)) { opacity: 0.85; }
-  :global(.btn-secondary:disabled)             { opacity: 0.3; cursor: not-allowed; }
-
-  /* ── Square icon buttons (fav, trailer, share…) ─ */
-  :global(.btn.bg-dark-light) {
-    font-family: var(--font-mono) !important;
-    background: rgba(13,13,16,0.65) !important;
-    border: 1px solid var(--card-line) !important;
-    color: var(--card-dim) !important;
-    border-radius: 3px !important;
-    box-shadow: none !important;
-    backdrop-filter: blur(6px);
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
-  }
-  :global(.btn.bg-dark-light:hover) {
-    background: var(--card-faint) !important;
-    border-color: rgba(255,255,255,0.22) !important;
-    color: var(--card-fg) !important;
+  :global(.PrimaryIndustrialButton:disabled) {
+    background: var(--b-border) !important;
+    color: var(--b-text-dim) !important;
+    border-color: var(--b-border) !important;
+    opacity: 0.5;
   }
 
-  /* ── Tags strip ──────────────────────────────── */
-  :global(.px-20.py-10.mr-10.rounded.text-nowrap) {
-    font-family: var(--font-mono) !important;
-    background: var(--card-faint) !important;
-    border: 1px solid var(--card-line) !important;
-    border-radius: 3px !important;
-    font-size: 1.05rem !important;
-    color: var(--card-dim) !important;
-    transition: background 0.1s;
+  :global(.TechnicalSquareButton) {
+    width: 44px !important; height: 44px !important;
+    background: var(--b-panel-accent) !important;
+    border: 1px solid var(--b-border) !important;
+    color: var(--b-text) !important;
+    border-radius: 0px !important;
+    transition: all 0.15s;
   }
-  :global(.px-20.py-10.mr-10.rounded.text-nowrap:hover) {
-    background: rgba(237,237,234,0.09) !important;
+  :global(.TechnicalSquareButton:hover) {
+    border-color: var(--b-neon) !important;
+    color: var(--b-neon) !important;
+    background: var(--b-panel) !important;
   }
-  /* Tag rank % dimmer */
-  :global(.font-weight-light) {
-    color: rgba(237,237,234,0.28) !important;
-  }
-  /* Tag / genre icons — accent with subtle glow */
-  :global(.px-20.py-10.mr-10.rounded svg) {
-    color: var(--card-accent) !important;
-    filter: drop-shadow(0 0 4px var(--card-acc-dim));
+  .MonochromeLogo {
+    filter: grayscale(100%) brightness(130%); width: 18px; height: 18px;
   }
 
-  /* ── Synopsis section header ─────────────────── */
-  :global(.font-weight-semi-bold) {
-    font-family: var(--font-mono) !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.22em !important;
-    text-transform: uppercase !important;
-    color: var(--card-dim) !important;
-    white-space: nowrap;
-    background: var(--card-bg);
-    padding: 0 1.4rem !important;
+  /* ── Parameter Specs Grid Layout ── */
+  .ParameterGrid {
+    background: var(--b-panel) !important;
+    border: 1px solid var(--b-border) !important;
+    border-radius: 0 !important; gap: 0px;
+    padding: 0 !important; margin-top: 20px !important;
+  }
+  .ParameterCell {
+    border-right: 1px solid var(--b-border);
+    padding: 12px 20px !important; margin: 0 !important;
+    flex: 1; min-width: 140px; align-items: center;
+  }
+  .ParameterCell :global(.CellIcon), .CustomCellSymbol {
+    color: var(--b-text-dim); margin-right: 12px !important;
+  }
+  .CustomCellSymbol { font-family: var(--font-mono); font-size: 1.1rem; }
+  .CellLabel {
+    display: block; font-size: 0.65rem; color: var(--b-text-dim);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .CellValue {
+    font-size: 0.8rem !important; color: var(--b-text) !important;
+    margin-top: 2px;
   }
 
-  /* ── Dividers ────────────────────────────────── */
-  hr {
-    border-color: var(--card-line) !important;
-    opacity: 1;
+  /* ── Technical Taxonomy Categorization Layout ── */
+  .LabelContainerHeader {
+    font-size: 0.7rem; color: var(--b-text-dim); font-weight: 700;
+    letter-spacing: 0.15em; margin: 25px 0 5px 5px;
+  }
+  .StructuralTagStrip { gap: 6px; padding: 0 !important; }
+  .TechnicalDataTag {
+    background: var(--b-bg); border: 1px solid var(--b-border);
+    padding: 6px 12px !important; margin: 0 !important; border-radius: 0;
+  }
+  .TagIcon { color: var(--b-neon); }
+  .TagName { font-size: 0.75rem !important; color: var(--b-text); }
+  .TagMetrics { font-size: 0.75rem; color: var(--b-text-dim); margin-left: 2px; }
+
+  /* ── Informational Narrative Layout ── */
+  .SegmentDividerBlock { position: relative; margin-top: 30px !important; }
+  .TechnicalDividerLine { height: 1px; background: var(--b-border); flex: 1; }
+  .SegmentTitleText {
+    color: var(--b-neon) !important; font-size: 0.75rem !important;
+    letter-spacing: 0.15em; font-weight: 700 !important;
+  }
+  .TechnicalNarrativeText {
+    font-size: 0.9rem !important; line-height: 1.7 !important;
+    color: var(--b-text) !important; background: var(--b-panel);
+    padding: 25px; border-left: 3px solid var(--b-border-focus);
+    border-right: 1px solid var(--b-border);
+    border-top: 1px solid var(--b-border);
+    border-bottom: 1px solid var(--b-border);
   }
 
-  /* ── Synopsis body text ──────────────────────── */
-  :global(.font-size-16) {
-    font-family: var(--font-mono) !important;
-    font-size: 1.15rem !important;
-    font-weight: 300 !important;
-    color: rgba(237,237,234,0.45) !important;
-    line-height: 1.75 !important;
+  /* ── Right Column Control Tower (Desktop Episode Frame) ── */
+  .StructuralRightPane {
+    border-left: 1px dashed var(--b-border);
+    display: flex; flex-direction: column; height: auto;
   }
-  /* rendered markdown links in synopsis */
-  :global(.font-size-16 a) {
-    color: var(--card-accent) !important;
-    text-decoration: none;
+  .ControlTowerHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--b-panel-accent); border: 1px solid var(--b-border);
+    padding: 12px 16px; margin-bottom: 15px;
   }
-  :global(.font-size-16 a:hover) { text-decoration: underline; }
+  .TowerTitle {
+    font-size: 0.75rem; font-weight: 700; color: var(--b-neon); letter-spacing: 0.1em;
+  }
+  .TowerOrderToggle {
+    position: relative !important; top: unset !important; right: unset !important;
+    background: var(--b-bg) !important; border: 1px solid var(--b-border) !important;
+    color: var(--b-text) !important; padding: 6px !important; border-radius: 0 !important;
+  }
+  .TowerOrderToggle:hover {
+    border-color: var(--b-neon) !important; color: var(--b-neon) !important;
+  }
+  .TowerListBody {
+    flex: 1; background: var(--b-panel);
+    border: 1px solid var(--b-border); padding: 15px;
+    overflow-y: auto;
+  }
 
-  /* ── Episode section reverse label ──────────── */
-  :global(.more.text-muted) {
-    font-family: var(--font-mono) !important;
-    font-size: 0.9rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    color: rgba(126,126,130,0.55) !important;
-    transition: color 0.1s;
+  /* ── Technical Inline Framework Drops ── */
+  .IndustrialDropdown {
+    background: var(--b-panel) !important;
+    border: 1px solid var(--b-border-focus) !important;
+    border-radius: 0 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 50; padding: 10px 0; width: 220px;
   }
-  :global(.more.text-muted:hover) { color: var(--card-fg) !important; }
+  .DropdownSectionHeader {
+    font-size: 0.6rem !important; color: var(--b-neon) !important;
+    padding: 6px 15px !important; letter-spacing: 0.15em; font-weight: 700;
+  }
+  .DropdownRowItem {
+    background: transparent !important; color: var(--b-text) !important;
+    padding: 8px 15px !important; font-size: 0.75rem !important;
+    width: 100%; border: none !important; border-bottom: 1px solid rgba(255,255,255,0.02) !important;
+    text-align: left; transition: background 0.12s;
+  }
+  .DropdownRowItem:hover {
+    background: var(--b-panel-accent) !important; color: #ffffff !important;
+  }
+  .BlueprintMiniIcon { width: 14px; height: 14px; margin-right: 8px; }
+  .TechnicalBadge {
+    font-size: 0.6rem; background: var(--b-border); color: var(--b-text-dim);
+    padding: 1px 4px; margin-left: auto;
+  }
 
-  /* ── Banner fade overlay ─────────────────────── */
-  :global(.anime-details) {
-    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
+  .TechnicalCardShell {
+    border: 1px solid var(--b-border) !important; background: var(--b-bg) !important;
+    border-radius: 0 !important; padding: 5px; margin-bottom: 10px;
   }
-  /* ── External links dropdown ─────────────────── */
-.ext-dropdown {
-  position: absolute;
-  bottom: calc(100% + 0.8rem);
-  right: 0;
-  min-width: 20rem;
-  max-width: 28rem;
-  background: #111116;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 5px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-  backdrop-filter: blur(14px);
-  z-index: 200;
-  padding: 0.5rem 0;
-}
-.ext-group-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.70rem;
-  font-weight: 600;
-  letter-spacing: 0.20em;
-  text-transform: uppercase;
-  color: rgba(237,237,234,0.25);
-  padding: 0.65rem 1.1rem 0.25rem;
-}
-.ext-item {
-  display: flex;
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: rgba(237,237,234,0.65);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.98rem;
-  padding: 0.6rem 1.1rem;
-  text-align: left;
-  cursor: pointer;
-  gap: 0.8rem;
-  align-items: center;
-  transition: background .1s, color .1s;
-}
-.ext-item:hover { background: rgba(237,237,234,0.07); color: #ededea; }
-.ext-item-official { color: #7e7e82; }
-.ext-item-official:hover { background: rgba(126,126,130,0.12) !important; }
-.ext-icon { width: 1.4rem; height: 1.4rem; object-fit: contain; border-radius: 3px; flex-shrink: 0; }
-:global(.ext-icon-svg) { flex-shrink: 0; color: rgba(237,237,234,0.3); }
-:global(.ext-icon-svg-official) { color: #7e7e82 !important; }
-.ext-site { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ext-lang { font-size: 0.73rem; color: rgba(237,237,234,0.25); text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
+
+  /* ── Mobile Layout Adjustments ── */
+  @media (max-width: 991px) {
+    .MainGrid { padding-top: 100px !important; }
+    .StructuralRightPane { border-left: none; margin-top: 30px; }
+    .ParameterCell { border-right: 1px solid var(--b-border); border-bottom: 1px solid var(--b-border); }
+  }
 </style>
