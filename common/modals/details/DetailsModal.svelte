@@ -595,7 +595,7 @@
     display: none;
   }
 
-  .TechnicalControl {
+  :global(.BlueprintContainer .TechnicalControl) {
     position: fixed !important;
     top: 20px !important; right: 20px !important; left: unset !important;
     background: var(--home-panel) !important;
@@ -611,7 +611,7 @@
     z-index: 100;
     transition: all 0.15s;
   }
-  .TechnicalControl:hover {
+  :global(.BlueprintContainer .TechnicalControl:hover) {
     background: var(--accent-dynamic) !important;
     border-color: var(--accent-dynamic) !important;
     color: #fff !important;
@@ -710,7 +710,7 @@
   }
   :global(.PrimaryIndustrialButton:hover:not(:disabled)) {
     transform: scale(1.05);
-    border-color: #fff !important;
+    border-color: var(--accent-dynamic) !important;
   }
   :global(.PrimaryIndustrialButton:disabled) {
     background: var(--home-panel-solid) !important;
@@ -718,21 +718,9 @@
     opacity: 0.5;
   }
 
-  :global(.TechnicalSquareButton) {
-    width: 44px !important; height: 44px !important;
-    background: rgba(0,0,0,0.4) !important;
-    border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important;
-    border-radius: 50px !important;
-    transition: all 0.15s;
-  }
-  :global(.TechnicalSquareButton:hover) {
-    border-color: var(--accent-dynamic) !important;
-    color: var(--accent-dynamic) !important;
-    background: rgba(0,0,0,0.5) !important;
-  }
-
-  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square) {
+  :global(.BlueprintContainer .TechnicalSquareButton),
+  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square),
+  :global(.BlueprintContainer .btn.scoring-btn.btn-square) {
     width: 44px !important; height: 44px !important;
     background: rgba(0,0,0,0.4) !important;
     border: 1px solid var(--home-border) !important;
@@ -742,20 +730,8 @@
     font-size: inherit !important;
     padding: 0 !important;
   }
-  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square:hover:not([disabled])) {
-    border-color: var(--accent-dynamic) !important;
-    color: var(--accent-dynamic) !important;
-    background: rgba(0,0,0,0.5) !important;
-  }
-
-  :global(.BlueprintContainer .btn.scoring-btn.btn-square) {
-    width: 44px !important; height: 44px !important;
-    background: rgba(0,0,0,0.4) !important;
-    border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important;
-    border-radius: 50px !important;
-    transition: all 0.15s;
-  }
+  :global(.BlueprintContainer .TechnicalSquareButton:hover),
+  :global(.BlueprintContainer .btn.bg-dark-light.btn-lg.btn-square:hover:not([disabled])),
   :global(.BlueprintContainer .btn.scoring-btn.btn-square:hover:not([disabled])) {
     border-color: var(--accent-dynamic) !important;
     color: var(--accent-dynamic) !important;
@@ -836,13 +812,13 @@
     font-size: 0.8rem; font-weight: 900; color: var(--home-text);
     letter-spacing: 0.1em;
   }
-  .TowerOrderToggle {
+  :global(.BlueprintContainer .TowerOrderToggle) {
     position: relative !important; top: unset !important; right: unset !important;
     background: rgba(0,0,0,0.4) !important; border: 1px solid var(--home-border) !important;
     color: var(--home-text) !important; padding: 8px !important;
     border-radius: 50px !important;
   }
-  .TowerOrderToggle:hover {
+  :global(.BlueprintContainer .TowerOrderToggle:hover) {
     border-color: var(--accent-dynamic) !important; color: var(--accent-dynamic) !important;
   }
   .TowerListBody {
