@@ -17,6 +17,7 @@
   import { VolumeX, Volume2 } from 'lucide-svelte'
 
   export const filterMode = writable('section')
+  export const refreshTrigger = writable(0)
 
   // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@
       ...media,
       ...cachedMedia,
       id: media.id || item.id,
-      mediaListEntry: resolved?.media ? resolved.mediaListEntry : media.mediaListEntry,
+      mediaListEntry: cachedMedia.mediaListEntry || (resolved?.media ? resolved.mediaListEntry : media.mediaListEntry),
     }
   }
 
@@ -103,9 +104,9 @@
       for (const section of manager.sections) {
         if (sectionTitles.includes(section.title) && !section.hide) {
           section.preview.value = section.load(1, 50, section.variables)
-          currentSectionIndex.update(n => n)
         }
       }
+      refreshTrigger.update(n => n + 1)
     })
     return unsubscribe
   }
@@ -321,6 +322,10 @@
     filterMode.set('section')
     pinnedAnime = null
     loadSectionData($currentSectionIndex).then(() => selectedIndex.set(0))
+  }
+
+  $: if ($refreshTrigger && $currentSectionIndex !== undefined) {
+    loadSectionData($currentSectionIndex)
   }
 
   // ─── Mode switching ──────────────────────────────────────────────────────────
