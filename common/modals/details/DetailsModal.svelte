@@ -263,7 +263,7 @@
   }
 </script>
 
-<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal}>
+<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style="--accent-dynamic: {media?.coverImage?.color || '#e60012'}">
   <div class="h-full modal-content p-0 overflow-y-auto position-relative StructuralCanvas" bind:this={container}>
     {#if staticMedia}
       <div class="GridOverlay"></div>
@@ -273,7 +273,7 @@
       <div class="CornerAccent BottomRight"></div>
 
       <button class="close TechnicalControl z-30" type="button" use:click={() => close()}>
-        <span>ESC_CLOSE ✕</span>
+        <span>✕</span>
       </button>
 
       <div class="BannerSection">
@@ -304,7 +304,7 @@
               
               <div class="pl-sm-20 ml-sm-20 HeaderMetaBlock d-flex flex-column justify-content-between">
                 <div>
-                  <div class="TechnicalID">SYS_REF: #{staticMedia.id || 'NULL'}</div>
+                  <div class="TechnicalID">ID: #{staticMedia.id || 'NULL'}</div>
                   <h1 class="font-weight-very-bold text-white select-all mb-0 MassiveDisplayTitle">{anilistClient.title(staticMedia)}</h1>
                 </div>
                 
@@ -312,31 +312,31 @@
                   {#if staticMedia.averageScore}
                     <div class="TelemetryItem" title="{staticMedia.averageScore / 10} by {anilistClient.reviews(staticMedia)} reviews">
                       <TrendingUp size="1.2rem" />
-                      <span class="TelemetryValue">RATING // {staticMedia.averageScore}%</span>
+                      <span class="TelemetryValue">RATING {staticMedia.averageScore}%</span>
                     </div>
                   {/if}
                   {#if staticMedia.format}
                     <div class="TelemetryItem">
                       <Tv size="1.2rem" />
-                      <span class="TelemetryValue text-uppercase">FORMAT // {formatMap[staticMedia.format]}</span>
+                      <span class="TelemetryValue text-uppercase">FORMAT {formatMap[staticMedia.format]}</span>
                     </div>
                   {/if}
                   {#if staticMedia.episodes !== 1}
                     {@const maxEp = getMediaMaxEp(staticMedia)}
                     <div class="TelemetryItem">
                       <Clapperboard size="1.2rem" />
-                      <span class="TelemetryValue">EPISODES // {maxEp && maxEp !== 0 ? maxEp : '?'}</span>
+                      <span class="TelemetryValue">EPISODES {maxEp && maxEp !== 0 ? maxEp : '?'}</span>
                     </div>
                   {:else if staticMedia.duration}
                     <div class="TelemetryItem">
                       <Timer size="1.2rem" />
-                      <span class="TelemetryValue">LENGTH // {staticMedia.duration} MIN</span>
+                      <span class="TelemetryValue">LENGTH {staticMedia.duration} MIN</span>
                     </div>
                   {/if}
                   {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution}
                     <div class="TelemetryItem">
                       <Users size="1.2rem" />
-                      <span class="TelemetryValue">REVIEWS // {anilistClient.reviews(staticMedia)}</span>
+                      <span class="TelemetryValue">REVIEWS {anilistClient.reviews(staticMedia)}</span>
                     </div>
                   {/if}
                 </div>
@@ -471,7 +471,7 @@
               {/each}
             </div>
 
-            <div class="LabelContainerHeader">DATA_CLASSIFICATION_TAGS</div>
+            <div class="LabelContainerHeader">TAGS</div>
             <div bind:this={scrollTags} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
               {#each staticMedia.tags as tag}
                 <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center">
@@ -482,7 +482,7 @@
               {/each}
             </div>
 
-            <div class="LabelContainerHeader">GENRE_INDEX_ARRAY</div>
+            <div class="LabelContainerHeader">GENRES</div>
             <div bind:this={scrollGenres} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
               {#each staticMedia.genres as genre}
                 <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center select-all">
@@ -495,7 +495,7 @@
             {#if staticMedia.description}
               <div class="w-full d-flex flex-row align-items-center pt-20 mt-10 SegmentDividerBlock">
                 <div class="TechnicalDividerLine"></div>
-                <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">ANIME_SYNOPSIS_STREAM</div>
+                <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">SYNOPSIS</div>
                 <div class="TechnicalDividerLine"></div>
               </div>
               <div class="font-size-16 pt-20 select-all TechnicalNarrativeText">
@@ -506,9 +506,9 @@
             {#if episodeList?.length}
               <div class="w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer MobileSectionToggle" aria-hidden="true" use:click={() => { episodeOrder = !episodeOrder }}>
                 <div class="TechnicalDividerLine"></div>
-                <div class="position-absolute font-size-18 font-weight-semi-bold px-20 SegmentTitleText" style="left: 50%; transform: translateX(-50%);">EPISODES_INDEX</div>
+                <div class="position-absolute font-size-18 font-weight-semi-bold px-20 SegmentTitleText" style="left: 50%; transform: translateX(-50%);">EPISODES</div>
                 <div class="TechnicalDividerLine"></div>
-                <div class="ml-auto pl-20 font-size-12 more text-nowrap pr-20 ReverseToggleLabel" use:click={() => { episodeOrder = !episodeOrder }}>INVERT_ORDER</div>
+                <div class="ml-auto pl-20 font-size-12 more text-nowrap pr-20 ReverseToggleLabel" use:click={() => { episodeOrder = !episodeOrder }}>INVERT</div>
               </div>
             {/if}
 
@@ -517,7 +517,7 @@
             </div>
 
             <div class="d-lg-block LinkedRelationsPanel">
-              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="Structural Relations">
+              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
                 {#await promise}
                   <div class="small-card TechnicalCardShell">
                     <SmallCardSk />
@@ -534,7 +534,7 @@
               {#await recommendations then res}
                 {@const media = res?.data?.Media}
                 {#if media}
-                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="System Recommendations">
+                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
                     {#await promise}
                       <div class="small-card TechnicalCardShell">
                         <SmallCardSk />
@@ -555,7 +555,7 @@
 
         <div class="col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20 StructuralRightPane" bind:this={rightColumn}>
           <div class="ControlTowerHeader">
-            <span class="TowerTitle">EPISODE_MATRIX_SCHEMATIC</span>
+            <span class="TowerTitle">EPISODES</span>
             <button class="close order pointer z-30 TowerOrderToggle" class:d-none={!episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
               <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
             </button>
@@ -570,92 +570,67 @@
 </div>
 
 <style>
-  /* ── CSS Architecture Token Definitions ── */
   :global(.BlueprintContainer) {
-    --b-bg: #0b0d13;
-    --b-panel: #111420;
-    --b-panel-accent: #171b2b;
-    --b-border: #242c45;
-    --b-border-focus: #414f7a;
-    --b-text: #bdc5e1;
-    --b-text-dim: #626e94;
-    --b-neon: #00f0ff;
-    --b-neon-dim: rgba(0, 240, 255, 0.15);
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    --font-display: 'Oswald', 'Syncopate', sans-serif;
+    --home-bg: #2b2b2b;
+    --home-panel: rgba(0,0,0,0.4);
+    --home-panel-solid: #3c3c3c;
+    --home-border: rgba(255,255,255,0.08);
+    --home-text: #ffffff;
+    --home-text-dim: rgba(255,255,255,0.6);
   }
 
-  /* ── Shell Framework Canvas ── */
   :global(.modal-full .StructuralCanvas) {
-    background-color: var(--b-bg) !important;
-    font-family: var(--font-mono) !important;
-    color: var(--b-text) !important;
+    background-color: var(--home-bg) !important;
+    font-family: system-ui, sans-serif !important;
+    color: var(--home-text) !important;
     position: relative;
     overflow-x: hidden !important;
   }
 
-  /* Structural Grid Background Overlay pattern */
   .GridOverlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: 
-      linear-gradient(rgba(36, 44, 69, 0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(36, 44, 69, 0.15) 1px, transparent 1px);
-    background-size: 20px 20px;
-    pointer-events: none;
-    z-index: 1;
+    display: none;
   }
 
-  /* Blueprint Tech Outlines & Decorative Nodes */
   .CornerAccent {
-    position: fixed; width: 12px; height: 12px;
-    border: 2px solid var(--b-neon); z-index: 40; pointer-events: none;
+    display: none;
   }
-  .CornerAccent.TopLeft     { top: 15px; left: 15px; border-right: 0; border-bottom: 0; }
-  .CornerAccent.TopRight    { top: 15px; right: 15px; border-left: 0; border-bottom: 0; }
-  .CornerAccent.BottomLeft  { bottom: 15px; left: 15px; border-right: 0; border-top: 0; }
-  .CornerAccent.BottomRight { bottom: 15px; right: 15px; border-left: 0; border-top: 0; }
 
-  /* ── Master System Control Interfaces ── */
   .TechnicalControl {
     position: fixed !important;
-    top: 25px !important; right: 25px !important; left: unset !important;
-    background: var(--b-panel) !important;
-    border: 1px solid var(--b-border) !important;
-    color: var(--b-neon) !important;
-    border-radius: 0px !important;
-    font-family: var(--font-mono) !important;
-    font-size: 0.75rem !important;
+    top: 20px !important; right: 20px !important; left: unset !important;
+    background: var(--home-panel) !important;
+    border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important;
+    border-radius: 50px !important;
+    font-family: system-ui, sans-serif !important;
+    font-size: 0.85rem !important;
     font-weight: 700;
-    padding: 8px 14px !important;
-    letter-spacing: 0.1em;
+    padding: 8px 18px !important;
+    letter-spacing: 0.05em;
     backdrop-filter: blur(10px);
     z-index: 100;
-    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.15s;
   }
   .TechnicalControl:hover {
-    background: var(--b-neon) !important;
-    color: var(--b-bg) !important;
-    border-color: var(--b-neon) !important;
-    box-shadow: 0 0 12px var(--b-neon-dim);
+    background: var(--accent-dynamic) !important;
+    border-color: var(--accent-dynamic) !important;
+    color: #fff !important;
   }
 
-  /* ── Banner Canvas Layer ── */
   .BannerSection {
     position: absolute; top: 0; left: 0; width: 100%; height: 380px;
     z-index: 0; overflow: hidden;
-    border-bottom: 1px solid var(--b-border);
+    border-bottom: 1px solid var(--home-border);
   }
   :global(.BannerImage) {
     width: 100%; height: 100%; object-fit: cover;
-    filter: grayscale(40%) contrast(110%) brightness(40%);
+    filter: grayscale(20%) opacity(0.3);
   }
   .BannerTint {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to bottom, transparent, var(--b-bg));
+    background: linear-gradient(to bottom, transparent 50%, var(--home-bg));
   }
 
-  /* ── Layout Structural Configuration ── */
   .MainGrid {
     position: relative; z-index: 2;
     padding-top: 180px !important;
@@ -663,218 +638,227 @@
   }
 
   .StructuralHeader {
-    border: 1px solid var(--b-border);
-    background: rgba(17, 20, 32, 0.85);
+    border: 1px solid var(--home-border);
+    background: var(--home-panel);
     backdrop-filter: blur(8px);
+    border-radius: 16px;
     padding: 20px; position: relative;
   }
 
   .SpecCoverFrame {
-    aspect-ratio: 7/10; border: 1px solid var(--b-border);
-    background: var(--b-bg); padding: 5px;
+    aspect-ratio: 7/10; border: none;
+    background: transparent; padding: 0;
+    border-radius: 12px; overflow: hidden;
   }
   @media (min-width: 577px) {
-    .SpecCoverFrame { max-width: 240px !important; }
+    .SpecCoverFrame { max-width: 220px !important; }
   }
   .InternalImageWrapper {
-    border: 1px solid var(--b-border); overflow: hidden;
+    border: none; overflow: hidden;
+    border-radius: 12px;
   }
   :global(.GraphicMatrix) {
-    object-fit: cover; filter: saturate(85%); transition: transform 0.4s;
+    object-fit: cover; border-radius: 12px;
+    transition: transform 0.3s;
   }
   .SpecCoverFrame:hover :global(.GraphicMatrix) {
-    transform: scale(1.03);
+    transform: scale(1.05);
   }
 
   .HeaderMetaBlock {
     flex: 1; min-width: 0;
   }
   .TechnicalID {
-    font-size: 0.7rem; color: var(--b-neon); letter-spacing: 0.15em;
-    margin-bottom: 4px; font-weight: bold;
+    font-size: 0.75rem; color: var(--home-text-dim); letter-spacing: 0.1em;
+    margin-bottom: 4px; font-weight: 700;
   }
 
-  /* Asymmetric Structural Display Typography */
   :global(.MassiveDisplayTitle) {
-    font-family: var(--font-display) !important;
+    font-family: system-ui, sans-serif !important;
     font-size: clamp(2rem, 3.5vw, 3.2rem) !important;
     text-transform: uppercase;
     letter-spacing: -0.02em !important;
     line-height: 1.05 !important;
     color: #ffffff !important;
     margin-bottom: 15px !important;
+    font-weight: 900 !important;
   }
 
-  /* ── Telemetry Matrix Systems ── */
   .TelemetryStrip { gap: 10px; margin-bottom: 15px; }
   .TelemetryItem {
     display: flex; align-items: center; gap: 6px;
-    background: var(--b-panel-accent);
-    border: 1px solid var(--b-border);
-    padding: 6px 12px; font-size: 0.75rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--home-border);
+    border-radius: 50px;
+    padding: 6px 16px; font-size: 0.75rem;
   }
-  .TelemetryItem :global(svg) { color: var(--b-neon); }
-  .TelemetryValue { color: var(--b-text); font-weight: 500; letter-spacing: 0.05em; }
+  .TelemetryItem :global(svg) { color: var(--accent-dynamic); }
+  .TelemetryValue { color: var(--home-text); font-weight: 700; letter-spacing: 0.05em; }
 
-  /* ── Industrial Action System Triggers ── */
   .ActionMatrix { gap: 10px; align-items: center; }
   :global(.PrimaryIndustrialButton) {
-    background: var(--b-neon) !important;
-    color: var(--b-bg) !important;
-    font-family: var(--font-mono) !important;
-    font-size: 0.85rem !important;
-    letter-spacing: 0.1em !important;
-    border-radius: 0px !important;
-    padding: 12px 24px !important;
-    border: 1px solid var(--b-neon) !important;
+    background: var(--accent-dynamic) !important;
+    color: #fff !important;
+    font-family: system-ui, sans-serif !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.05em !important;
+    border-radius: 50px !important;
+    padding: 12px 28px !important;
+    border: 3px solid transparent !important;
+    font-weight: 900 !important;
     transition: all 0.15s !important;
   }
   :global(.PrimaryIndustrialButton:hover:not(:disabled)) {
-    background: transparent !important;
-    color: var(--b-neon) !important;
-    box-shadow: 0 0 15px var(--b-neon-dim);
+    transform: scale(1.05);
+    border-color: #fff !important;
   }
   :global(.PrimaryIndustrialButton:disabled) {
-    background: var(--b-border) !important;
-    color: var(--b-text-dim) !important;
-    border-color: var(--b-border) !important;
+    background: var(--home-panel-solid) !important;
+    color: var(--home-text-dim) !important;
     opacity: 0.5;
   }
 
   :global(.TechnicalSquareButton) {
     width: 44px !important; height: 44px !important;
-    background: var(--b-panel-accent) !important;
-    border: 1px solid var(--b-border) !important;
-    color: var(--b-text) !important;
-    border-radius: 0px !important;
+    background: rgba(0,0,0,0.4) !important;
+    border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important;
+    border-radius: 50px !important;
     transition: all 0.15s;
   }
   :global(.TechnicalSquareButton:hover) {
-    border-color: var(--b-neon) !important;
-    color: var(--b-neon) !important;
-    background: var(--b-panel) !important;
+    border-color: var(--accent-dynamic) !important;
+    color: var(--accent-dynamic) !important;
+    background: rgba(0,0,0,0.5) !important;
   }
   .MonochromeLogo {
     filter: grayscale(100%) brightness(130%); width: 18px; height: 18px;
   }
 
-  /* ── Parameter Specs Grid Layout ── */
   .ParameterGrid {
-    background: var(--b-panel) !important;
-    border: 1px solid var(--b-border) !important;
-    border-radius: 0 !important; gap: 0px;
+    background: var(--home-panel) !important;
+    border: 1px solid var(--home-border) !important;
+    border-radius: 12px !important;
+    gap: 0px;
     padding: 0 !important; margin-top: 20px !important;
+    overflow: hidden;
   }
   .ParameterCell {
-    border-right: 1px solid var(--b-border);
-    padding: 12px 20px !important; margin: 0 !important;
+    border-right: 1px solid var(--home-border);
+    padding: 14px 20px !important; margin: 0 !important;
     flex: 1; min-width: 140px; align-items: center;
   }
+  .ParameterCell:last-child { border-right: none; }
   .ParameterCell :global(.CellIcon), .CustomCellSymbol {
-    color: var(--b-text-dim); margin-right: 12px !important;
+    color: var(--accent-dynamic); margin-right: 12px !important;
   }
-  .CustomCellSymbol { font-family: var(--font-mono); font-size: 1.1rem; }
+  .CustomCellSymbol { font-family: system-ui, sans-serif; font-size: 1.1rem; }
   .CellLabel {
-    display: block; font-size: 0.65rem; color: var(--b-text-dim);
-    letter-spacing: 0.05em; text-transform: uppercase;
+    display: block; font-size: 0.65rem; color: var(--home-text-dim);
+    letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
   }
   .CellValue {
-    font-size: 0.8rem !important; color: var(--b-text) !important;
-    margin-top: 2px;
+    font-size: 0.85rem !important; color: var(--home-text) !important;
+    margin-top: 2px; font-weight: 700;
   }
 
-  /* ── Technical Taxonomy Categorization Layout ── */
   .LabelContainerHeader {
-    font-size: 0.7rem; color: var(--b-text-dim); font-weight: 700;
-    letter-spacing: 0.15em; margin: 25px 0 5px 5px;
+    font-size: 0.7rem; color: var(--home-text-dim); font-weight: 700;
+    letter-spacing: 0.1em; margin: 25px 0 10px 5px;
+    text-transform: uppercase;
   }
-  .StructuralTagStrip { gap: 6px; padding: 0 !important; }
+  .StructuralTagStrip { gap: 8px; padding: 0 !important; }
   .TechnicalDataTag {
-    background: var(--b-bg); border: 1px solid var(--b-border);
-    padding: 6px 12px !important; margin: 0 !important; border-radius: 0;
+    background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
+    padding: 8px 16px !important; margin: 0 !important;
+    border-radius: 50px;
   }
-  .TagIcon { color: var(--b-neon); }
-  .TagName { font-size: 0.75rem !important; color: var(--b-text); }
-  .TagMetrics { font-size: 0.75rem; color: var(--b-text-dim); margin-left: 2px; }
+  .TagIcon { color: var(--accent-dynamic); }
+  .TagName { font-size: 0.8rem !important; color: var(--home-text); font-weight: 700; }
+  .TagMetrics { font-size: 0.8rem; color: var(--home-text-dim); margin-left: 4px; }
 
-  /* ── Informational Narrative Layout ── */
   .SegmentDividerBlock { position: relative; margin-top: 30px !important; }
-  .TechnicalDividerLine { height: 1px; background: var(--b-border); flex: 1; }
+  .TechnicalDividerLine { height: 1px; background: var(--home-border); flex: 1; }
   .SegmentTitleText {
-    color: var(--b-neon) !important; font-size: 0.75rem !important;
-    letter-spacing: 0.15em; font-weight: 700 !important;
+    color: var(--accent-dynamic) !important; font-size: 0.8rem !important;
+    letter-spacing: 0.1em; font-weight: 900 !important;
   }
   .TechnicalNarrativeText {
-    font-size: 0.9rem !important; line-height: 1.7 !important;
-    color: var(--b-text) !important; background: var(--b-panel);
-    padding: 25px; border-left: 3px solid var(--b-border-focus);
-    border-right: 1px solid var(--b-border);
-    border-top: 1px solid var(--b-border);
-    border-bottom: 1px solid var(--b-border);
+    font-size: 1rem !important; line-height: 1.7 !important;
+    color: var(--home-text) !important;
+    background: rgba(0,0,0,0.4);
+    padding: 20px; border-radius: 12px;
+    border: 1px solid var(--home-border);
   }
 
-  /* ── Right Column Control Tower (Desktop Episode Frame) ── */
   .StructuralRightPane {
-    border-left: 1px dashed var(--b-border);
+    border-left: 1px solid var(--home-border);
     display: flex; flex-direction: column; height: auto;
   }
   .ControlTowerHeader {
     display: flex; align-items: center; justify-content: space-between;
-    background: var(--b-panel-accent); border: 1px solid var(--b-border);
+    background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
+    border-radius: 12px;
     padding: 12px 16px; margin-bottom: 15px;
   }
   .TowerTitle {
-    font-size: 0.75rem; font-weight: 700; color: var(--b-neon); letter-spacing: 0.1em;
+    font-size: 0.8rem; font-weight: 900; color: var(--home-text);
+    letter-spacing: 0.1em;
   }
   .TowerOrderToggle {
     position: relative !important; top: unset !important; right: unset !important;
-    background: var(--b-bg) !important; border: 1px solid var(--b-border) !important;
-    color: var(--b-text) !important; padding: 6px !important; border-radius: 0 !important;
+    background: rgba(0,0,0,0.4) !important; border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important; padding: 8px !important;
+    border-radius: 50px !important;
   }
   .TowerOrderToggle:hover {
-    border-color: var(--b-neon) !important; color: var(--b-neon) !important;
+    border-color: var(--accent-dynamic) !important; color: var(--accent-dynamic) !important;
   }
   .TowerListBody {
-    flex: 1; background: var(--b-panel);
-    border: 1px solid var(--b-border); padding: 15px;
+    flex: 1; background: rgba(0,0,0,0.4);
+    border: 1px solid var(--home-border); border-radius: 12px;
+    padding: 15px;
     overflow-y: auto;
   }
 
-  /* ── Technical Inline Framework Drops ── */
   .IndustrialDropdown {
-    background: var(--b-panel) !important;
-    border: 1px solid var(--b-border-focus) !important;
-    border-radius: 0 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    background: var(--home-panel-solid) !important;
+    border: 1px solid var(--home-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     z-index: 50; padding: 10px 0; width: 220px;
   }
   .DropdownSectionHeader {
-    font-size: 0.6rem !important; color: var(--b-neon) !important;
-    padding: 6px 15px !important; letter-spacing: 0.15em; font-weight: 700;
+    font-size: 0.65rem !important; color: var(--accent-dynamic) !important;
+    padding: 6px 15px !important; letter-spacing: 0.1em; font-weight: 900;
   }
   .DropdownRowItem {
-    background: transparent !important; color: var(--b-text) !important;
+    background: transparent !important; color: var(--home-text) !important;
     padding: 8px 15px !important; font-size: 0.75rem !important;
-    width: 100%; border: none !important; border-bottom: 1px solid rgba(255,255,255,0.02) !important;
+    width: 100%; border: none !important;
     text-align: left; transition: background 0.12s;
   }
   .DropdownRowItem:hover {
-    background: var(--b-panel-accent) !important; color: #ffffff !important;
+    background: rgba(255,255,255,0.05) !important;
   }
   .BlueprintMiniIcon { width: 14px; height: 14px; margin-right: 8px; }
   .TechnicalBadge {
-    font-size: 0.6rem; background: var(--b-border); color: var(--b-text-dim);
-    padding: 1px 4px; margin-left: auto;
+    font-size: 0.6rem; background: rgba(255,255,255,0.1);
+    color: var(--home-text-dim);
+    padding: 2px 6px; margin-left: auto; border-radius: 4px;
   }
 
   .TechnicalCardShell {
-    border: 1px solid var(--b-border) !important; background: var(--b-bg) !important;
-    border-radius: 0 !important; padding: 5px; margin-bottom: 10px;
+    border: 1px solid var(--home-border) !important;
+    background: var(--home-panel) !important;
+    border-radius: 12px !important;
+    padding: 5px; margin-bottom: 10px;
   }
 
-  /* ── Mobile Layout Adjustments ── */
   @media (max-width: 991px) {
     .MainGrid { padding-top: 100px !important; }
     .StructuralRightPane { border-left: none; margin-top: 30px; }
-    .ParameterCell { border-right: 1px solid var(--b-border); border-bottom: 1px solid var(--b-border); }
+    .ParameterCell { border-right: none; border-bottom: 1px solid var(--home-border); }
+    .ParameterCell:last-child { border-bottom: none; }
   }
 </style>
