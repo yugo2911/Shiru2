@@ -2415,11 +2415,9 @@
   }
 
   .bottom {
-    background: linear-gradient(to top, rgba(43,43,43,0.7) 30%, transparent);
     transition: 0.2s opacity ease 0s;
   }
   .top {
-    background: linear-gradient(to bottom, rgba(43,43,43,0.7) 30%, transparent);
     transition: 0.2s opacity ease 0s;
   }
   .mr-50 {
