@@ -24,7 +24,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { ExternalLink, Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type } from 'lucide-svelte'
+  import { ExternalLink, Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type, ChevronDown, ChevronUp } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -173,6 +173,7 @@
 
   let showExternalLinks = false
   let showAnimeThemes = false
+  let showMoreInfo = false // Collapsible details
 
   function closeOnClickOutside(node, onClose) {
     function handle(e) { if (!node.contains(e.target)) onClose() }
@@ -276,6 +277,7 @@
         <span>✕</span>
       </button>
 
+      <!-- Banner (subtle) -->
       <div class="BannerSection">
         <SmartImage class="BannerImage" images={[
           staticMedia.bannerImage,
@@ -292,8 +294,9 @@
       </div>
 
       <div class="row MainGrid px-20">
-        <div class="col-lg-7 col-12 ComplexLeftPane pb-10">
+        <div class="col-12 pb-10">
           <div bind:this={leftColumn}>
+            <!-- Compact header: cover + title + stats + play button -->
             <div class="d-flex flex-sm-row flex-column align-items-sm-stretch pb-20 mb-15 StructuralHeader">
               <div class="cover d-flex flex-row align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full SpecCoverFrame">
                 <div class="position-relative h-full w-full InternalImageWrapper">
@@ -442,99 +445,95 @@
               </div>
             </div>
 
-            <div bind:this={scrollDetails} class="details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start ParameterGrid">
-              {#each detailsMap as detail}
-                {#await getProperty(detail.property, staticMedia)}
-                  {:then property}
-                  {#if property}
-                    <div class="ParameterCell d-flex flex-row mx-10 py-5 justify-content-center">
-                      {#if detail.custom !== 'icon'}
-                        <svelte:component size="1.2rem" this={detail.icon} class="mr-10 CellIcon" />
-                      {:else}
-                        <div class="mr-10 d-flex align-items-center text-nowrap font-size-12 font-weight-bold line-height-normal CustomCellSymbol">
-                          {detail.icon}
+            <!-- EPISODE LIST - Main focus -->
+            <div class="EpisodeFocusArea">
+              <div class="ControlTowerHeader">
+                <span class="TowerTitle">EPISODES</span>
+                <button class="close order pointer z-30 TowerOrderToggle" class:d-none={!episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
+                  <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
+                </button>
+              </div>
+              <div class="TowerListBody">
+                <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+              </div>
+            </div>
+
+            <!-- Collapsible "More Info" -->
+            <div class="MoreInfoToggle" use:click={() => showMoreInfo = !showMoreInfo}>
+              <span class="MoreInfoLabel">{showMoreInfo ? 'Hide' : 'Show'} Details</span>
+              <svelte:component this={showMoreInfo ? ChevronUp : ChevronDown} size="1.2rem" />
+            </div>
+
+            {#if showMoreInfo}
+              <div class="MoreInfoContent">
+                <!-- Details strip (metadata) -->
+                <div bind:this={scrollDetails} class="details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start ParameterGrid">
+                  {#each detailsMap as detail}
+                    {#await getProperty(detail.property, staticMedia)}
+                      {:then property}
+                      {#if property}
+                        <div class="ParameterCell d-flex flex-row mx-10 py-5 justify-content-center">
+                          {#if detail.custom !== 'icon'}
+                            <svelte:component size="1.2rem" this={detail.icon} class="mr-10 CellIcon" />
+                          {:else}
+                            <div class="mr-10 d-flex align-items-center text-nowrap font-size-12 font-weight-bold line-height-normal CustomCellSymbol">
+                              {detail.icon}
+                            </div>
+                          {/if}
+                          <div class="d-flex flex-column justify-content-center text-nowrap">
+                            <span class="CellLabel">{detail.label}</span>
+                            <div class="font-weight-bold select-all line-height-normal CellValue">
+                              {#if detail.custom === 'property'}
+                                {getCustomProperty(detail.property, staticMedia)}
+                              {:else}
+                                {property.toString().replace(/_/g, ' ').toLowerCase()}
+                              {/if}
+                            </div>
+                          </div>
                         </div>
                       {/if}
-                      <div class="d-flex flex-column justify-content-center text-nowrap">
-                        <span class="CellLabel">{detail.label}</span>
-                        <div class="font-weight-bold select-all line-height-normal CellValue">
-                          {#if detail.custom === 'property'}
-                            {getCustomProperty(detail.property, staticMedia)}
-                          {:else}
-                            {property.toString().replace(/_/g, ' ').toLowerCase()}
-                          {/if}
-                        </div>
-                      </div>
+                    {/await}
+                  {/each}
+                </div>
+
+                <!-- Tags -->
+                <div class="LabelContainerHeader">TAGS</div>
+                <div bind:this={scrollTags} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
+                  {#each staticMedia.tags as tag}
+                    <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center">
+                      <Hash class="mr-5 TagIcon" size="1rem" />
+                      <span class="font-weight-bolder select-all TagName">{tag.name}</span>
+                      <span class="font-weight-light TagMetrics">:{tag.rank}%</span>
                     </div>
-                  {/if}
-                {/await}
-              {/each}
-            </div>
-
-            <div class="LabelContainerHeader">TAGS</div>
-            <div bind:this={scrollTags} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
-              {#each staticMedia.tags as tag}
-                <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center">
-                  <Hash class="mr-5 TagIcon" size="1rem" />
-                  <span class="font-weight-bolder select-all TagName">{tag.name}</span>
-                  <span class="font-weight-light TagMetrics">:{tag.rank}%</span>
+                  {/each}
                 </div>
-              {/each}
-            </div>
 
-            <div class="LabelContainerHeader">GENRES</div>
-            <div bind:this={scrollGenres} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
-              {#each staticMedia.genres as genre}
-                <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center select-all">
-                  <svelte:component this={genreIcons[genre]} class="mr-5 TagIcon" size="1rem" />
-                  <span class="TagName">{genre}</span>
+                <!-- Genres -->
+                <div class="LabelContainerHeader">GENRES</div>
+                <div bind:this={scrollGenres} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
+                  {#each staticMedia.genres as genre}
+                    <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center select-all">
+                      <svelte:component this={genreIcons[genre]} class="mr-5 TagIcon" size="1rem" />
+                      <span class="TagName">{genre}</span>
+                    </div>
+                  {/each}
                 </div>
-              {/each}
-            </div>
 
-            {#if staticMedia.description}
-              <div class="w-full d-flex flex-row align-items-center pt-20 mt-10 SegmentDividerBlock">
-                <div class="TechnicalDividerLine"></div>
-                <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">SYNOPSIS</div>
-                <div class="TechnicalDividerLine"></div>
-              </div>
-              <div class="font-size-16 pt-20 select-all TechnicalNarrativeText">
-                {@html sanitize(staticMedia.description)}
-              </div>
-            {/if}
-
-            {#if episodeList?.length}
-              <div class="w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer MobileSectionToggle" aria-hidden="true" use:click={() => { episodeOrder = !episodeOrder }}>
-                <div class="TechnicalDividerLine"></div>
-                <div class="position-absolute font-size-18 font-weight-semi-bold px-20 SegmentTitleText" style="left: 50%; transform: translateX(-50%);">EPISODES</div>
-                <div class="TechnicalDividerLine"></div>
-                <div class="ml-auto pl-20 font-size-12 more text-nowrap pr-20 ReverseToggleLabel" use:click={() => { episodeOrder = !episodeOrder }}>INVERT</div>
-              </div>
-            {/if}
-
-            <div class="col-lg-5 col-12 d-lg-none flex-column mt-20 StructuralMobileEpisodeList">
-              <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} class="h-600" />
-            </div>
-
-            <div class="d-lg-block LinkedRelationsPanel">
-              <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
-                {#await promise}
-                  <div class="small-card TechnicalCardShell">
-                    <SmallCardSk />
+                <!-- Synopsis -->
+                {#if staticMedia.description}
+                  <div class="w-full d-flex flex-row align-items-center pt-20 mt-10 SegmentDividerBlock">
+                    <div class="TechnicalDividerLine"></div>
+                    <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">SYNOPSIS</div>
+                    <div class="TechnicalDividerLine"></div>
                   </div>
-                {:then res}
-                  {#if res}
-                    <div class="small-card TechnicalCardShell">
-                      <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
-                    </div>
-                  {/if}
-                {/await}
-              </ToggleList>
+                  <div class="font-size-16 pt-20 select-all TechnicalNarrativeText">
+                    {@html sanitize(staticMedia.description)}
+                  </div>
+                {/if}
 
-              {#await recommendations then res}
-                {@const media = res?.data?.Media}
-                {#if media}
-                  <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
+                <!-- Relations & Recommendations -->
+                <div class="d-lg-block LinkedRelationsPanel">
+                  <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
                     {#await promise}
                       <div class="small-card TechnicalCardShell">
                         <SmallCardSk />
@@ -542,26 +541,33 @@
                     {:then res}
                       {#if res}
                         <div class="small-card TechnicalCardShell">
-                          <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
+                          <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
                         </div>
                       {/if}
                     {/await}
                   </ToggleList>
-                {/if}
-              {/await}
-            </div>
-          </div>
-        </div>
 
-        <div class="col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20 StructuralRightPane" bind:this={rightColumn}>
-          <div class="ControlTowerHeader">
-            <span class="TowerTitle">EPISODES</span>
-            <button class="close order pointer z-30 TowerOrderToggle" class:d-none={!episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
-              <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
-            </button>
-          </div>
-          <div class="TowerListBody">
-            <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+                  {#await recommendations then res}
+                    {@const media = res?.data?.Media}
+                    {#if media}
+                      <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
+                        {#await promise}
+                          <div class="small-card TechnicalCardShell">
+                            <SmallCardSk />
+                          </div>
+                        {:then res}
+                          {#if res}
+                            <div class="small-card TechnicalCardShell">
+                              <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
+                            </div>
+                          {/if}
+                        {/await}
+                      </ToggleList>
+                    {/if}
+                  {/await}
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
       </div>
@@ -587,13 +593,8 @@
     overflow-x: hidden !important;
   }
 
-  .GridOverlay {
-    display: none;
-  }
-
-  .CornerAccent {
-    display: none;
-  }
+  .GridOverlay { display: none; }
+  .CornerAccent { display: none; }
 
   .TechnicalControl {
     position: fixed !important;
@@ -618,13 +619,13 @@
   }
 
   .BannerSection {
-    position: absolute; top: 0; left: 0; width: 100%; height: 380px;
+    position: absolute; top: 0; left: 0; width: 100%; height: 300px; /* Reduced height */
     z-index: 0; overflow: hidden;
     border-bottom: 1px solid var(--home-border);
   }
   :global(.BannerImage) {
     width: 100%; height: 100%; object-fit: cover;
-    filter: grayscale(20%) opacity(0.3);
+    filter: grayscale(20%) opacity(0.2);
   }
   .BannerTint {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -633,7 +634,7 @@
 
   .MainGrid {
     position: relative; z-index: 2;
-    padding-top: 180px !important;
+    padding-top: 120px !important;
     max-width: 1600px; margin: 0 auto;
   }
 
@@ -651,7 +652,7 @@
     border-radius: 12px; overflow: hidden;
   }
   @media (min-width: 577px) {
-    .SpecCoverFrame { max-width: 220px !important; }
+    .SpecCoverFrame { max-width: 180px !important; } /* Smaller cover */
   }
   .InternalImageWrapper {
     border: none; overflow: hidden;
@@ -675,35 +676,35 @@
 
   :global(.MassiveDisplayTitle) {
     font-family: system-ui, sans-serif !important;
-    font-size: clamp(2rem, 3.5vw, 3.2rem) !important;
+    font-size: clamp(1.8rem, 2.5vw, 2.5rem) !important; /* Slightly smaller */
     text-transform: uppercase;
     letter-spacing: -0.02em !important;
     line-height: 1.05 !important;
     color: #ffffff !important;
-    margin-bottom: 15px !important;
+    margin-bottom: 10px !important;
     font-weight: 900 !important;
   }
 
-  .TelemetryStrip { gap: 10px; margin-bottom: 15px; }
+  .TelemetryStrip { gap: 8px; margin-bottom: 12px; }
   .TelemetryItem {
     display: flex; align-items: center; gap: 6px;
     background: rgba(0,0,0,0.4);
     border: 1px solid var(--home-border);
     border-radius: 50px;
-    padding: 6px 16px; font-size: 0.75rem;
+    padding: 4px 12px; font-size: 0.7rem;
   }
   .TelemetryItem :global(svg) { color: var(--accent-dynamic); }
   .TelemetryValue { color: var(--home-text); font-weight: 700; letter-spacing: 0.05em; }
 
-  .ActionMatrix { gap: 10px; align-items: center; }
+  .ActionMatrix { gap: 8px; align-items: center; }
   :global(.PrimaryIndustrialButton) {
     background: var(--accent-dynamic) !important;
     color: #fff !important;
     font-family: system-ui, sans-serif !important;
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     letter-spacing: 0.05em !important;
     border-radius: 50px !important;
-    padding: 12px 28px !important;
+    padding: 10px 22px !important;
     border: 3px solid transparent !important;
     font-weight: 900 !important;
     transition: all 0.15s !important;
@@ -719,7 +720,7 @@
   }
 
   :global(.TechnicalSquareButton) {
-    width: 44px !important; height: 44px !important;
+    width: 38px !important; height: 38px !important;
     background: rgba(0,0,0,0.4) !important;
     border: 1px solid var(--home-border) !important;
     color: var(--home-text) !important;
@@ -732,9 +733,75 @@
     background: rgba(0,0,0,0.5) !important;
   }
   .MonochromeLogo {
-    filter: grayscale(100%) brightness(130%); width: 18px; height: 18px;
+    filter: grayscale(100%) brightness(130%); width: 16px; height: 16px;
   }
 
+  /* Episode Focus Area */
+  .EpisodeFocusArea {
+    margin-top: 25px;
+    background: var(--home-panel);
+    border: 1px solid var(--home-border);
+    border-radius: 16px;
+    padding: 15px;
+  }
+  .ControlTowerHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .TowerTitle {
+    font-size: 0.8rem; font-weight: 900; color: var(--home-text);
+    letter-spacing: 0.1em;
+  }
+  .TowerOrderToggle {
+    position: relative !important; top: unset !important; right: unset !important;
+    background: rgba(0,0,0,0.4) !important; border: 1px solid var(--home-border) !important;
+    color: var(--home-text) !important; padding: 6px !important;
+    border-radius: 50px !important;
+    width: 32px; height: 32px;
+  }
+  .TowerOrderToggle:hover {
+    border-color: var(--accent-dynamic) !important; color: var(--accent-dynamic) !important;
+  }
+  .TowerListBody {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  /* More Info toggle */
+  .MoreInfoToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0 10px;
+    padding: 8px 16px;
+    border: 1px solid var(--home-border);
+    border-radius: 50px;
+    background: var(--home-panel);
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--home-text-dim);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .MoreInfoToggle:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--home-text);
+  }
+  .MoreInfoLabel {
+    text-transform: uppercase;
+  }
+  .MoreInfoContent {
+    margin-top: 15px;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Existing styles for details, tags, etc. */
   .ParameterGrid {
     background: var(--home-panel) !important;
     border: 1px solid var(--home-border) !important;
@@ -745,80 +812,50 @@
   }
   .ParameterCell {
     border-right: 1px solid var(--home-border);
-    padding: 14px 20px !important; margin: 0 !important;
-    flex: 1; min-width: 140px; align-items: center;
+    padding: 10px 16px !important; margin: 0 !important;
+    flex: 1; min-width: 120px; align-items: center;
   }
   .ParameterCell:last-child { border-right: none; }
   .ParameterCell :global(.CellIcon), .CustomCellSymbol {
-    color: var(--accent-dynamic); margin-right: 12px !important;
+    color: var(--accent-dynamic); margin-right: 10px !important;
   }
-  .CustomCellSymbol { font-family: system-ui, sans-serif; font-size: 1.1rem; }
+  .CustomCellSymbol { font-family: system-ui, sans-serif; font-size: 1rem; }
   .CellLabel {
-    display: block; font-size: 0.65rem; color: var(--home-text-dim);
+    display: block; font-size: 0.6rem; color: var(--home-text-dim);
     letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
   }
   .CellValue {
-    font-size: 0.85rem !important; color: var(--home-text) !important;
+    font-size: 0.8rem !important; color: var(--home-text) !important;
     margin-top: 2px; font-weight: 700;
   }
 
   .LabelContainerHeader {
     font-size: 0.7rem; color: var(--home-text-dim); font-weight: 700;
-    letter-spacing: 0.1em; margin: 25px 0 10px 5px;
+    letter-spacing: 0.1em; margin: 20px 0 10px 5px;
     text-transform: uppercase;
   }
   .StructuralTagStrip { gap: 8px; padding: 0 !important; }
   .TechnicalDataTag {
     background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
-    padding: 8px 16px !important; margin: 0 !important;
+    padding: 6px 14px !important; margin: 0 !important;
     border-radius: 50px;
   }
   .TagIcon { color: var(--accent-dynamic); }
-  .TagName { font-size: 0.8rem !important; color: var(--home-text); font-weight: 700; }
-  .TagMetrics { font-size: 0.8rem; color: var(--home-text-dim); margin-left: 4px; }
+  .TagName { font-size: 0.75rem !important; color: var(--home-text); font-weight: 700; }
+  .TagMetrics { font-size: 0.75rem; color: var(--home-text-dim); margin-left: 4px; }
 
-  .SegmentDividerBlock { position: relative; margin-top: 30px !important; }
+  .SegmentDividerBlock { position: relative; margin-top: 25px !important; }
   .TechnicalDividerLine { height: 1px; background: var(--home-border); flex: 1; }
   .SegmentTitleText {
     color: var(--accent-dynamic) !important; font-size: 0.8rem !important;
     letter-spacing: 0.1em; font-weight: 900 !important;
   }
   .TechnicalNarrativeText {
-    font-size: 1rem !important; line-height: 1.7 !important;
+    font-size: 0.95rem !important; line-height: 1.6 !important;
     color: var(--home-text) !important;
     background: rgba(0,0,0,0.4);
     padding: 20px; border-radius: 12px;
     border: 1px solid var(--home-border);
-  }
-
-  .StructuralRightPane {
-    border-left: 1px solid var(--home-border);
-    display: flex; flex-direction: column; height: auto;
-  }
-  .ControlTowerHeader {
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
-    border-radius: 12px;
-    padding: 12px 16px; margin-bottom: 15px;
-  }
-  .TowerTitle {
-    font-size: 0.8rem; font-weight: 900; color: var(--home-text);
-    letter-spacing: 0.1em;
-  }
-  .TowerOrderToggle {
-    position: relative !important; top: unset !important; right: unset !important;
-    background: rgba(0,0,0,0.4) !important; border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important; padding: 8px !important;
-    border-radius: 50px !important;
-  }
-  .TowerOrderToggle:hover {
-    border-color: var(--accent-dynamic) !important; color: var(--accent-dynamic) !important;
-  }
-  .TowerListBody {
-    flex: 1; background: rgba(0,0,0,0.4);
-    border: 1px solid var(--home-border); border-radius: 12px;
-    padding: 15px;
-    overflow-y: auto;
   }
 
   .IndustrialDropdown {
@@ -856,9 +893,10 @@
   }
 
   @media (max-width: 991px) {
-    .MainGrid { padding-top: 100px !important; }
-    .StructuralRightPane { border-left: none; margin-top: 30px; }
+    .MainGrid { padding-top: 80px !important; }
     .ParameterCell { border-right: none; border-bottom: 1px solid var(--home-border); }
     .ParameterCell:last-child { border-bottom: none; }
+    .EpisodeFocusArea { padding: 10px; }
+    .TowerListBody { max-height: 400px; }
   }
 </style>
