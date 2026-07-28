@@ -264,7 +264,7 @@
   }
 </script>
 
-<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style="--accent-dynamic: {media?.coverImage?.color || '#e60012'}">
+<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal}>
   <div class="h-full modal-content p-0 overflow-y-auto position-relative StructuralCanvas" bind:this={container}>
     {#if staticMedia}
       <div class="GridOverlay"></div>
@@ -576,19 +576,13 @@
 </div>
 
 <style>
-  :global(.BlueprintContainer) {
-    --home-bg: #2b2b2b;
-    --home-panel: rgba(0,0,0,0.4);
-    --home-panel-solid: #3c3c3c;
-    --home-border: rgba(255,255,255,0.08);
-    --home-text: #ffffff;
-    --home-text-dim: rgba(255,255,255,0.6);
-  }
+  /* Colors and type now come from the shared theme tokens (see themes.css /
+     css.css --card-* variables) instead of a locally-invented palette, so
+     this modal matches EpisodeList, TrailerModal, and the rest of the app. */
 
   :global(.modal-full .StructuralCanvas) {
-    background-color: var(--home-bg) !important;
-    font-family: system-ui, sans-serif !important;
-    color: var(--home-text) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--card-fg) !important;
     position: relative;
     overflow-x: hidden !important;
   }
@@ -599,11 +593,10 @@
   .TechnicalControl {
     position: fixed !important;
     top: 20px !important; right: 20px !important; left: unset !important;
-    background: var(--home-panel) !important;
-    border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important;
+    background: var(--card-bg2) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-fg) !important;
     border-radius: 50px !important;
-    font-family: system-ui, sans-serif !important;
     font-size: 0.85rem !important;
     font-weight: 700;
     padding: 8px 18px !important;
@@ -613,15 +606,15 @@
     transition: all 0.15s;
   }
   .TechnicalControl:hover {
-    background: var(--accent-dynamic) !important;
-    border-color: var(--accent-dynamic) !important;
-    color: #fff !important;
+    background: var(--card-accent) !important;
+    border-color: var(--card-accent) !important;
+    color: var(--card-bg) !important;
   }
 
   .BannerSection {
     position: absolute; top: 0; left: 0; width: 100%; height: 300px; /* Reduced height */
     z-index: 0; overflow: hidden;
-    border-bottom: 1px solid var(--home-border);
+    border-bottom: 1px solid var(--card-line);
   }
   :global(.BannerImage) {
     width: 100%; height: 100%; object-fit: cover;
@@ -629,7 +622,7 @@
   }
   .BannerTint {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to bottom, transparent 50%, var(--home-bg));
+    background: linear-gradient(to bottom, transparent 50%, var(--card-bg));
   }
 
   .MainGrid {
@@ -639,8 +632,8 @@
   }
 
   .StructuralHeader {
-    border: 1px solid var(--home-border);
-    background: var(--home-panel);
+    border: 1px solid var(--card-line);
+    background: var(--card-bg2);
     backdrop-filter: blur(8px);
     border-radius: 16px;
     padding: 20px; position: relative;
@@ -670,17 +663,16 @@
     flex: 1; min-width: 0;
   }
   .TechnicalID {
-    font-size: 0.75rem; color: var(--home-text-dim); letter-spacing: 0.1em;
+    font-size: 0.75rem; color: var(--card-dim); letter-spacing: 0.1em;
     margin-bottom: 4px; font-weight: 700;
   }
 
   :global(.MassiveDisplayTitle) {
-    font-family: system-ui, sans-serif !important;
     font-size: clamp(1.8rem, 2.5vw, 2.5rem) !important; /* Slightly smaller */
     text-transform: uppercase;
     letter-spacing: -0.02em !important;
     line-height: 1.05 !important;
-    color: #ffffff !important;
+    color: var(--card-fg) !important;
     margin-bottom: 10px !important;
     font-weight: 900 !important;
   }
@@ -688,19 +680,18 @@
   .TelemetryStrip { gap: 8px; margin-bottom: 12px; }
   .TelemetryItem {
     display: flex; align-items: center; gap: 6px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--home-border);
+    background: var(--card-bg2);
+    border: 1px solid var(--card-line);
     border-radius: 50px;
     padding: 4px 12px; font-size: 0.7rem;
   }
-  .TelemetryItem :global(svg) { color: var(--accent-dynamic); }
-  .TelemetryValue { color: var(--home-text); font-weight: 700; letter-spacing: 0.05em; }
+  .TelemetryItem :global(svg) { color: var(--card-accent); }
+  .TelemetryValue { color: var(--card-fg); font-weight: 700; letter-spacing: 0.05em; }
 
   .ActionMatrix { gap: 8px; align-items: center; }
   :global(.PrimaryIndustrialButton) {
-    background: var(--accent-dynamic) !important;
-    color: #fff !important;
-    font-family: system-ui, sans-serif !important;
+    background: var(--card-accent) !important;
+    color: var(--card-bg) !important;
     font-size: 0.85rem !important;
     letter-spacing: 0.05em !important;
     border-radius: 50px !important;
@@ -711,26 +702,26 @@
   }
   :global(.PrimaryIndustrialButton:hover:not(:disabled)) {
     transform: scale(1.05);
-    border-color: #fff !important;
+    border-color: var(--card-fg) !important;
   }
   :global(.PrimaryIndustrialButton:disabled) {
-    background: var(--home-panel-solid) !important;
-    color: var(--home-text-dim) !important;
+    background: var(--card-bg2) !important;
+    color: var(--card-dim) !important;
     opacity: 0.5;
   }
 
   :global(.TechnicalSquareButton) {
     width: 38px !important; height: 38px !important;
-    background: rgba(0,0,0,0.4) !important;
-    border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important;
+    background: var(--card-bg2) !important;
+    border: 1px solid var(--card-line) !important;
+    color: var(--card-fg) !important;
     border-radius: 50px !important;
     transition: all 0.15s;
   }
   :global(.TechnicalSquareButton:hover) {
-    border-color: var(--accent-dynamic) !important;
-    color: var(--accent-dynamic) !important;
-    background: rgba(0,0,0,0.5) !important;
+    border-color: var(--card-accent) !important;
+    color: var(--card-accent) !important;
+    background: var(--card-bg) !important;
   }
   .MonochromeLogo {
     filter: grayscale(100%) brightness(130%); width: 16px; height: 16px;
@@ -739,8 +730,8 @@
   /* Episode Focus Area */
   .EpisodeFocusArea {
     margin-top: 25px;
-    background: var(--home-panel);
-    border: 1px solid var(--home-border);
+    background: var(--card-bg2);
+    border: 1px solid var(--card-line);
     border-radius: 16px;
     padding: 15px;
   }
@@ -749,18 +740,18 @@
     margin-bottom: 12px;
   }
   .TowerTitle {
-    font-size: 0.8rem; font-weight: 900; color: var(--home-text);
+    font-size: 0.8rem; font-weight: 900; color: var(--card-fg);
     letter-spacing: 0.1em;
   }
   .TowerOrderToggle {
     position: relative !important; top: unset !important; right: unset !important;
-    background: rgba(0,0,0,0.4) !important; border: 1px solid var(--home-border) !important;
-    color: var(--home-text) !important; padding: 6px !important;
+    background: var(--card-bg) !important; border: 1px solid var(--card-line) !important;
+    color: var(--card-fg) !important; padding: 6px !important;
     border-radius: 50px !important;
     width: 32px; height: 32px;
   }
   .TowerOrderToggle:hover {
-    border-color: var(--accent-dynamic) !important; color: var(--accent-dynamic) !important;
+    border-color: var(--card-accent) !important; color: var(--card-accent) !important;
   }
   .TowerListBody {
     max-height: 600px;
@@ -775,19 +766,19 @@
     gap: 8px;
     margin: 20px 0 10px;
     padding: 8px 16px;
-    border: 1px solid var(--home-border);
+    border: 1px solid var(--card-line);
     border-radius: 50px;
-    background: var(--home-panel);
+    background: var(--card-bg2);
     cursor: pointer;
     transition: background 0.2s;
-    color: var(--home-text-dim);
+    color: var(--card-dim);
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.05em;
   }
   .MoreInfoToggle:hover {
-    background: rgba(255,255,255,0.05);
-    color: var(--home-text);
+    background: var(--card-faint);
+    color: var(--card-fg);
   }
   .MoreInfoLabel {
     text-transform: uppercase;
@@ -803,98 +794,98 @@
 
   /* Existing styles for details, tags, etc. */
   .ParameterGrid {
-    background: var(--home-panel) !important;
-    border: 1px solid var(--home-border) !important;
+    background: var(--card-bg2) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 12px !important;
     gap: 0px;
     padding: 0 !important; margin-top: 20px !important;
     overflow: hidden;
   }
   .ParameterCell {
-    border-right: 1px solid var(--home-border);
+    border-right: 1px solid var(--card-line);
     padding: 10px 16px !important; margin: 0 !important;
     flex: 1; min-width: 120px; align-items: center;
   }
   .ParameterCell:last-child { border-right: none; }
   .ParameterCell :global(.CellIcon), .CustomCellSymbol {
-    color: var(--accent-dynamic); margin-right: 10px !important;
+    color: var(--card-accent); margin-right: 10px !important;
   }
-  .CustomCellSymbol { font-family: system-ui, sans-serif; font-size: 1rem; }
+  .CustomCellSymbol { font-size: 1rem; }
   .CellLabel {
-    display: block; font-size: 0.6rem; color: var(--home-text-dim);
+    display: block; font-size: 0.6rem; color: var(--card-dim);
     letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
   }
   .CellValue {
-    font-size: 0.8rem !important; color: var(--home-text) !important;
+    font-size: 0.8rem !important; color: var(--card-fg) !important;
     margin-top: 2px; font-weight: 700;
   }
 
   .LabelContainerHeader {
-    font-size: 0.7rem; color: var(--home-text-dim); font-weight: 700;
+    font-size: 0.7rem; color: var(--card-dim); font-weight: 700;
     letter-spacing: 0.1em; margin: 20px 0 10px 5px;
     text-transform: uppercase;
   }
   .StructuralTagStrip { gap: 8px; padding: 0 !important; }
   .TechnicalDataTag {
-    background: rgba(0,0,0,0.4); border: 1px solid var(--home-border);
+    background: var(--card-bg2); border: 1px solid var(--card-line);
     padding: 6px 14px !important; margin: 0 !important;
     border-radius: 50px;
   }
-  .TagIcon { color: var(--accent-dynamic); }
-  .TagName { font-size: 0.75rem !important; color: var(--home-text); font-weight: 700; }
-  .TagMetrics { font-size: 0.75rem; color: var(--home-text-dim); margin-left: 4px; }
+  .TagIcon { color: var(--card-accent); }
+  .TagName { font-size: 0.75rem !important; color: var(--card-fg); font-weight: 700; }
+  .TagMetrics { font-size: 0.75rem; color: var(--card-dim); margin-left: 4px; }
 
   .SegmentDividerBlock { position: relative; margin-top: 25px !important; }
-  .TechnicalDividerLine { height: 1px; background: var(--home-border); flex: 1; }
+  .TechnicalDividerLine { height: 1px; background: var(--card-line); flex: 1; }
   .SegmentTitleText {
-    color: var(--accent-dynamic) !important; font-size: 0.8rem !important;
+    color: var(--card-accent) !important; font-size: 0.8rem !important;
     letter-spacing: 0.1em; font-weight: 900 !important;
   }
   .TechnicalNarrativeText {
     font-size: 0.95rem !important; line-height: 1.6 !important;
-    color: var(--home-text) !important;
-    background: rgba(0,0,0,0.4);
+    color: var(--card-fg) !important;
+    background: var(--card-bg2);
     padding: 20px; border-radius: 12px;
-    border: 1px solid var(--home-border);
+    border: 1px solid var(--card-line);
   }
 
   .IndustrialDropdown {
-    background: var(--home-panel-solid) !important;
-    border: 1px solid var(--home-border) !important;
+    background: var(--card-bg2) !important;
+    border: 1px solid var(--card-line) !important;
     border-radius: 12px !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     z-index: 50; padding: 10px 0; width: 220px;
   }
   .DropdownSectionHeader {
-    font-size: 0.65rem !important; color: var(--accent-dynamic) !important;
+    font-size: 0.65rem !important; color: var(--card-accent) !important;
     padding: 6px 15px !important; letter-spacing: 0.1em; font-weight: 900;
   }
   .DropdownRowItem {
-    background: transparent !important; color: var(--home-text) !important;
+    background: transparent !important; color: var(--card-fg) !important;
     padding: 8px 15px !important; font-size: 0.75rem !important;
     width: 100%; border: none !important;
     text-align: left; transition: background 0.12s;
   }
   .DropdownRowItem:hover {
-    background: rgba(255,255,255,0.05) !important;
+    background: var(--card-faint) !important;
   }
   .BlueprintMiniIcon { width: 14px; height: 14px; margin-right: 8px; }
   .TechnicalBadge {
-    font-size: 0.6rem; background: rgba(255,255,255,0.1);
-    color: var(--home-text-dim);
+    font-size: 0.6rem; background: var(--card-faint);
+    color: var(--card-dim);
     padding: 2px 6px; margin-left: auto; border-radius: 4px;
   }
 
   .TechnicalCardShell {
-    border: 1px solid var(--home-border) !important;
-    background: var(--home-panel) !important;
+    border: 1px solid var(--card-line) !important;
+    background: var(--card-bg2) !important;
     border-radius: 12px !important;
     padding: 5px; margin-bottom: 10px;
   }
 
   @media (max-width: 991px) {
     .MainGrid { padding-top: 80px !important; }
-    .ParameterCell { border-right: none; border-bottom: 1px solid var(--home-border); }
+    .ParameterCell { border-right: none; border-bottom: 1px solid var(--card-line); }
     .ParameterCell:last-child { border-bottom: none; }
     .EpisodeFocusArea { padding: 10px; }
     .TowerListBody { max-height: 400px; }

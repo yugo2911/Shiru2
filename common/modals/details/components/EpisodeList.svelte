@@ -291,7 +291,7 @@
               <div role='button' tabindex='0' class='episode-card rounded-2 w-full h-full overflow-hidden d-flex flex-xsm-column flex-row position-relative {unreleased ? `unreleased not-allowed` : `pointer`}' class:not-reactive={!$reactive} class:smallCard={!largeCard} class:android={SUPPORTS.isAndroid}  class:border={target || hasFiller} class:bg-black={completed} class:border-secondary={hasFiller} class:bg-dark-light={!completed} use:click={() => play(media, episode)} on:contextmenu|preventDefault={() => play(media, episode, true)}>
                 <div class='unreleased-overlay position-absolute top-0 left-0 right-0 h-full pointer-events-none rounded-2' class:d-none={!unreleased}/>
                 {#if image}
-                  <div class='d-flex'>
+                  <div class='d-flex episode-thumb'>
                     <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `h-150` : `h-165`} w-full w-sm-265' images={[image, './404_episode.png']}/>
                     {#if resolvedHash}
                       <div class='position-relative torrent-button-container'>
@@ -390,3 +390,76 @@
     {/if}
   {/await}
 </div>
+
+<style>
+  .episode-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .episode-list > :global(*) {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 0.25rem !important;
+  }
+
+  @media (max-width: 768px) {
+    .episode-list {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  }
+
+  /* Card surface: match the panels used in DetailsModal/EpisodeFocusArea
+     (--card-bg2 surface, --card-line border, 12px radius) instead of the
+     plain bg-dark-light/bg-black flat rectangles. */
+  :global(.episode-card) {
+    background: var(--card-bg2) !important;
+    border: 1px solid var(--card-line) !important;
+    border-radius: 12px !important;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  :global(.episode-card.pointer:hover) {
+    border-color: var(--card-accent) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
+  }
+  :global(.episode-card.unreleased) {
+    border-style: dashed;
+  }
+
+  /* Gradient scrim behind the thumbnail so the image blends into the card
+     instead of cutting off sharply. --episode-card-gradient is already
+     defined in themes.css for exactly this purpose. */
+  .episode-thumb {
+    position: relative;
+  }
+  .episode-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--episode-card-gradient);
+  }
+  @media (max-width: 768px) {
+    .episode-thumb::after {
+      background: var(--episode-preview-card-gradient);
+    }
+  }
+
+  /* Progress bar: use the shared accent instead of a default browser blue,
+     so "in progress" matches the accent color used on Continue Now etc. */
+  :global(.episode-card .progress) {
+    background: var(--card-line);
+    border-radius: 50px;
+    overflow: hidden;
+    height: 4px;
+  }
+  :global(.episode-card .progress-bar) {
+    background: var(--card-accent);
+    height: 100%;
+    border-radius: 50px;
+  }
+</style>
