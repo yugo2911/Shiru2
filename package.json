@@ -44,14 +44,16 @@
   "overrides": {
     "node-abi": "3.77.0",
     "node-datachannel": "0.30.0",
-    "bittorrent-tracker": "^11.2.2"
+    "bittorrent-tracker": "^11.2.2",
+    "uint8-util": "2.2.6"
   },
   "patchedDependencies": {
     "@capacitor/local-notifications": "patches/@capacitor__local-notifications.patch",
     "@capacitor/android": "patches/@capacitor__android.patch",
     "rfdc": "patches/rfdc.patch",
     "capacitor-plugin-safe-area": "patches/capacitor-plugin-safe-area.patch",
-    "svelte-keybinds": "patches/svelte-keybinds.patch"
+    "svelte-keybinds": "patches/svelte-keybinds.patch",
+    "webtorrent": "patches/webtorrent@2.8.5.patch"
   },
   "trustedDependencies": [
     "@paymoapp/electron-shutdown-handler",

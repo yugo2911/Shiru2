@@ -1,0 +1,13 @@
+diff --git a/lib/torrent.js b/lib/torrent.js
+index 80a6f7289ea6d51d4ad6ac85b28b598e9cc5f369..af75904f321e86df2f3c2b649649a42e6e70a485 100644
+--- a/lib/torrent.js
++++ b/lib/torrent.js
+@@ -278,7 +278,7 @@ export default class Torrent extends EventEmitter {
+     if (parsedTorrent) {
+       // Attempt to set infoHash property synchronously
+       this.infoHash = parsedTorrent.infoHash
+-      this._debugId = arr2hex(parsedTorrent.infoHash).substring(0, 7)
++      this._debugId = parsedTorrent.infoHash.substring(0, 7)
+       queueMicrotask(() => {
+         if (this.destroyed) return
+         this._onParsedTorrent(parsedTorrent)
