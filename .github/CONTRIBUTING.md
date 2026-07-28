@@ -67,7 +67,7 @@ Want to contribute code? Great! Here's how:
 
 ### 📋 Prerequisites
 
-- **PNPM** (or any package manager)
+- **Bun** (or any package manager)
 - **Node.js 22.21.1**
 - **Visual Studio 2022** (if on Windows)
 - **Docker** (with WSL if on Windows)
@@ -91,7 +91,7 @@ cd electron
 
 3. Install dependencies:
 ```bash
-pnpm install --frozen-lockfile
+bun install --frozen-lockfile
 ```
 
 4. Start development mode:
@@ -119,42 +119,42 @@ cd capacitor
 
 3. Install dependencies:
 ```bash
-pnpm install --frozen-lockfile
+bun install --frozen-lockfile
 ```
 
 4. Check for missing dependencies:
 ```bash
-pnpm exec cap doctor
+bunx cap doctor
 ```
 
 5. **First time only** - Build native code:
     - Windows:
       ```bash
-      pnpm build:native-win
+      bun run build:native-win
       ```
     - Linux:
       ```bash
-      pnpm build:native
+      bun run build:native
       ```
 
 6. **(Optional)** Generate assets:
 ```bash
-pnpm build:assets
+bun run build:assets
 ```
 
 7. Open the Android project in Android Studio:
 ```bash
-pnpm exec cap open android
+bunx cap open android
 ```
 
 8. Connect your device with ADB and start development:
 ```bash
-pnpm dev:start
+bun run dev:start
 ```
 
 9. Build the app for release (APK will not be [signed](https://github.com/NoCrypt/sign-android)):
 ```bash
-pnpm build:app
+bun run build:app
 ```
 
 ### 📝 Platform-Specific Notes

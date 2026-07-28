@@ -24,6 +24,16 @@ module.exports = [
     resolve: {
       aliasFields: [],
       mainFields: ['module', 'main', 'node'],
+      modules: [
+        'node_modules',
+        resolve(__dirname, '..', 'node_modules'),
+        resolve(__dirname, '..', 'common', 'node_modules'),
+        resolve(__dirname, '..', 'client', 'node_modules'),
+        resolve(__dirname, '..', 'electron', 'node_modules')
+      ],
+      fallback: {
+        events: resolve(__dirname, 'node_modules/events/events.js')
+      },
       alias: {
         '@': resolve(__dirname, '..', 'common'),
         '@client': resolve(__dirname, '..', 'client'),
@@ -32,8 +42,8 @@ module.exports = [
         ws: false,
         wrtc: false,
         debug: resolve(__dirname, '../common/modules/debug.js'),
-        'webrtc-polyfill': resolve('../node_modules/webrtc-polyfill/browser.js'),
-        'http-tracker': resolve('../node_modules/bittorrent-tracker/lib/client/http-tracker.js')
+        'webrtc-polyfill': resolve(__dirname, 'node_modules/webrtc-polyfill/browser.js'),
+        'http-tracker': resolve(__dirname, '../client/node_modules/bittorrent-tracker/lib/client/http-tracker.js')
       }
     },
     plugins: [new HtmlWebpackPlugin({ filename: 'background.html' })],

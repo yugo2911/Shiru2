@@ -189,15 +189,15 @@ Credit to [NoCrypt](https://github.com/NoCrypt) for doing the legwork on this.
    ```
 2. Install dependencies:
    ```bash
-   pnpm install
+    bun install
    ```
 3. Start development:
    ```bash
-   pnpm start
+    bun run start
    ```
 4. Build for release:
    ```bash
-   pnpm build
+   bun run build
    ```
 
 ---
@@ -209,36 +209,36 @@ Credit to [NoCrypt](https://github.com/NoCrypt) for doing the legwork on this.
    ```
 2. Install dependencies:
    ```bash
-   pnpm install
+    bun install
    ```
 3. Run the doctor to check for missing dependencies:
    ```bash
-   pnpm exec cap doctor
+    bunx cap doctor
    ```
 4. (First time only) Build native code:
    - Windows:
      ```bash
-     pnpm build:native-win
+     bun run build:native-win
      ```
    - Linux:
      ```bash
-     pnpm build:native
+     bun run build:native
      ```
 5. (Optional) Generate assets:
    ```bash
-   pnpm build:assets
+    bun run build:assets
    ```
 6. Open the Android project:
    ```bash
-   pnpm exec cap open android
+    bunx cap open android
    ```
 7. Connect your device with ADB and start development:
    ```bash
-   pnpm dev:start
+    bun run dev:start
    ```
 8. Build the app for release (APK will not be [signed](https://github.com/NoCrypt/sign-android)):
    ```bash
-   pnpm build:app
+    bun run build:app
    ```
 
 ---

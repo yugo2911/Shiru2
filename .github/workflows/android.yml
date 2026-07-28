@@ -20,16 +20,16 @@ jobs:
         with:
           fetch-tags: true
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: 10.15.1
+          bun-version: latest
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22.21.1'
-          cache: 'pnpm'
+          cache: 'bun'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -39,10 +39,10 @@ jobs:
           check-latest: true
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Install node-pre-gyp
-        run: pnpm install -g node-pre-gyp
+        run: bun add -g node-pre-gyp
 
       - name: Remove Cached Build
         run: rm -rf ./build && mkdir ./build
@@ -53,10 +53,10 @@ jobs:
           echo "Forcefully removed developer mode"
 
       - name: Build Native + Web
-        run: pnpm run build:app
+        run: bun run build:app
 
       - name: Sync 
-        run: pnpm exec cap sync android
+        run: bunx cap sync android
 
       - uses: actions/cache@v3
         with:

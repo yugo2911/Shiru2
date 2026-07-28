@@ -1,8 +1,8 @@
-Run via pnpm,
-    pnpm electron-builder --dir
+Run via bun,
+    bunx electron-builder --dir
 
 Specific Platform,
-    pnpm electron-builder --linux --dir
+    bunx electron-builder --linux --dir
 
 Specific Arch,
-    pnpm electron-builder --dir --x64
+    bunx electron-builder --dir --x64

@@ -54,15 +54,32 @@ module.exports = (parentDir, alias = {}, aliasFields = 'browser', filename = 'ap
   },
   resolve: {
     aliasFields: [aliasFields],
+    modules: [
+      'node_modules',
+      resolve(__dirname, '..', 'node_modules'),
+      resolve(__dirname, 'node_modules'),
+      resolve(__dirname, '..', 'client', 'node_modules'),
+      resolve(__dirname, '..', 'electron', 'node_modules')
+    ],
+    fallback: {
+      events: resolve(__dirname, '..', 'electron/node_modules/events/events.js')
+    },
     alias: {
       ...alias,
       '@': __dirname,
       module: false,
       url: false,
       debug: resolve(__dirname, './modules/debug.js'),
-      'bittorrent-tracker/lib/client/websocket-tracker.js': resolve('../node_modules/bittorrent-tracker/lib/client/websocket-tracker.js')
+      'bittorrent-tracker/lib/client/websocket-tracker.js': resolve(__dirname, '..', 'client/node_modules/bittorrent-tracker/lib/client/websocket-tracker.js')
     },
     extensions: ['.mjs', '.js', '.svelte']
+  },
+  resolveLoader: {
+    modules: [
+      'node_modules',
+      resolve(__dirname, '..', 'node_modules'),
+      resolve(__dirname, 'node_modules')
+    ]
   },
   plugins: [
     new MiniCssExtractPlugin({
