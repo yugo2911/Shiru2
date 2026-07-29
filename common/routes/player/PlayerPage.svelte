@@ -8,7 +8,6 @@
   import { episodesList } from '@/modules/episodes.js'
   import AnimeResolver from '@/modules/anime/animeresolver.js'
   import { durationMap, getMediaMaxEp } from '@/modules/anime/anime.js'
-  import { writable } from 'simple-store-svelte'
   import { createEventDispatcher } from 'svelte'
   import Subtitles from '@/modules/subtitles.js'
   import { toTS, fastPrettyBytes, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
@@ -1507,7 +1506,14 @@
   //   }
   // }
 
-  const showOptions = writable(false)
+  function openContextMenuFromButton(e) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    contextMenu = true
+    const w = 260
+    const h = 380
+    contextMenuX = Math.min(rect.left, window.innerWidth - w)
+    contextMenuY = Math.min(rect.bottom, window.innerHeight - h)
+  }
   function toggleDropdown ({ target }) {
     target.classList.toggle('active')
     target.closest('.dropdown').classList.toggle('show')
@@ -1955,37 +1961,9 @@
         <div class='ts mr-auto font-scale-20'>x{playbackRate.toFixed(1)}</div>
       {/if}
       <input type='file' class='d-none' id='search-subtitle' accept='.srt,.vtt,.ass,.ssa,.sub,.txt' on:input|preventDefault|stopPropagation={handleFile} bind:this={fileInput}/>
-      <div class='dropdown dropleft with-arrow' use:click={() => { showOptions.set(!$showOptions) }}>
-        <span class='icon text-white ctrl d-flex align-items-center h-full' title='More'><EllipsisVertical size='2.5rem' strokeWidth={2.5} /></span>
-        <div class='position-absolute hm-40 text-capitalize text-nowrap bg-dark rounded dr-arrow' style='margin-top: {launchedExternal ? -14 : externalPlayback ? -10.3 : SUPPORTS.isAndroid || $settings.playerPath ? -21 : -17.5}rem !important; margin-left: {launchedExternal ? -11.1 : externalPlayback ? -9.8 : -11.4}rem !important; transition: opacity 0.1s ease-in;' class:hidden={!$showOptions} use:closeOnClickOutside={() => showOptions.set(false)}>
-          <div role='button' aria-label='Volume Limit' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' title='Volume Limit: {(volumeLimit * 100).toFixed(0)}%' use:click={() => { volumeLimit = volumeLimit >= 3 ? 1 : volumeLimit + 0.5 }}>
-            <Volume2 size='2rem' strokeWidth={2.5} /><span class='ml-10'>Volume Limit: {(volumeLimit * 100).toFixed(0)}%</span>
-          </div>
-          <div role='button' aria-label='Add External Subtitles' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' class:d-flex={!externalPlayback} title='Add External Subtitles' use:click={() => { fileInput.click(); showOptions.set(false) }}>
-            <FilePlus2 size='2rem' strokeWidth={2.5} /> <div class='ml-10'>Add Subtitles</div>
-          </div>
-          <div class='dropdown dropleft with-arrow pointer bg-dark option font-size-16 bd-highlight' class:d-none={externalPlayback}>
-            <div role='button' class='d-flex align-items-center justify-content-start py-5 px-10' aria-label='Change the Source of the Video Chapters' title='Change the Source of the Video Chapters' use:click={toggleDropdown}><Milestone size='2rem' strokeWidth={2.5}  /><span class='ml-10'>Chapter Source</span></div>
-            <div class='dropdown-menu dropdown-menu-right text-capitalize text-nowrap rounded'>
-              <div class='custom-radio overflow-hidden pt-5 pl-5'>
-                <input name='chapter-embed-set' type='radio' id='chapter-embed-radio' tabindex='-1' value='embedded' checked={$settings.playerChapterSkip === 'embedded'} />
-                <label for='chapter-embed-radio' use:click={(target) => { $settings.playerChapterSkip = 'embedded'; chapters = embeddedChapters; setTimeout(() => { toggleDropdown(target); showOptions.set(false); }) }} class='pb-5'>Embedded</label>
-                <input name='chapter-aniskip-set' type='radio' id='chapter-aniskip-radio' tabindex='-1' value='aniskip' checked={$settings.playerChapterSkip === 'aniskip'} />
-                <label for='chapter-aniskip-radio' use:click={(target) => { $settings.playerChapterSkip = 'aniskip'; findChapters(); setTimeout(() => { toggleDropdown(target); showOptions.set(false); }) }} class='pb-5'>Aniskip</label>
-              </div>
-            </div>
-          </div>
-          <div role='button' aria-label='Play the Current Video in an External Player' class='pointer d-none align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 option' class:d-flex={(!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath)} title='Play the Current Video in an External Player' use:click={() => { setCurrent(current, true); showOptions.set(false) }}>
-            <SquareArrowOutUpRight size='2rem' strokeWidth={2.5} /> <div class='ml-10'>External Player</div>
-          </div>
-          <div role='button' aria-label='Modify Existing Files or Change to a New File' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Modify Existing Files or Change to a New File' use:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); showOptions.set(false) }}>
-            <SquarePen size='2rem' strokeWidth={2.5} /> <div class='ml-10'>File Manager</div>
-          </div>
-          <div role='button' aria-label='Toggle Stats' class='pointer d-flex align-items-center justify-content-start font-size-16 bd-highlight py-5 px-10 rounded-bottom option' class:rounded-top={externalPlayback && !launchedExternal} title='Toggle Stats' use:click={() => { showTorrentStats = !showTorrentStats; showOptions.set(false) }}>
-            {#if showTorrentStats}<EyeOff size='2rem' strokeWidth={2.5} />{:else}<Eye size='2rem' strokeWidth={2.5} />{/if}<div class='ml-10'>{showTorrentStats ? 'Hide' : 'Show'} Stats</div>
-          </div>
-        </div>
-      </div>
+      <span class='icon text-white ctrl d-flex align-items-center h-full' title='More' use:click={openContextMenuFromButton}>
+        <EllipsisVertical size='2.5rem' strokeWidth={2.5} />
+      </span>
       <span class='icon text-white ctrl mr-5 d-flex align-items-center keybinds' title='Keybinds [`]' use:click={() => (showKeybinds = true)}>
         <Keyboard size='2.5rem' strokeWidth={2.5} />
       </span>
@@ -2170,9 +2148,24 @@
         <span class="ctx-hint">N</span>
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">More Options</span>
-        <span class="ctx-arrow">›</span>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { volumeLimit = volumeLimit >= 3 ? 1 : volumeLimit + 0.5; contextMenu = false }}>
+        <span class="ctx-label">Volume Limit: {(volumeLimit * 100).toFixed(0)}%</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" class:d-none={externalPlayback} on:click={() => { fileInput.click(); contextMenu = false }}>
+        <span class="ctx-label">Add Subtitles</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" class:d-none={externalPlayback} on:click={() => { if ($settings.playerChapterSkip === 'embedded') { $settings.playerChapterSkip = 'aniskip'; findChapters() } else { $settings.playerChapterSkip = 'embedded'; chapters = embeddedChapters }; contextMenu = false }}>
+        <span class="ctx-label">Chapter Source</span>
+        <span class="ctx-hint">{$settings.playerChapterSkip === 'embedded' ? 'Embedded' : 'Aniskip'}</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" class:d-none={!((!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath))} on:click={() => { setCurrent(current, true); contextMenu = false }}>
+        <span class="ctx-label">External Player</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); contextMenu = false }}>
+        <span class="ctx-label">File Manager</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { showTorrentStats = !showTorrentStats; contextMenu = false }}>
+        <span class="ctx-label">{showTorrentStats ? 'Hide' : 'Show'} Stats</span>
       </div>
     </div>
   </div>
