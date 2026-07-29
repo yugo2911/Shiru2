@@ -277,7 +277,7 @@ export default class App {
     })
 
     ipcMain.on('quit-and-install', () => {
-      if (this.updater.hasUpdate) this.destroy(true)
+      if (this.updater?.hasUpdate) this.destroy(true)
     })
   }
 
@@ -328,7 +328,6 @@ export default class App {
   async destroy(forceRunAfter = false) {
     if (this.destroyed) return
     this.destroyed = true
-    this.updater.destroyed = true
     this.close = true
     this.mainWindow.hide()
     this.mainWindow.webContents?.closeDevTools?.()
@@ -351,7 +350,7 @@ export default class App {
         clearTimeout(resolveTimeout)
       }
     } catch {} // WebTorrent crashed... prevents hanging infinitely.
-    if (!this.updater.install(forceRunAfter)) app.quit()
+    if (!this.updater?.install(forceRunAfter)) app.quit()
   }
 
   imageCache = new Map()
