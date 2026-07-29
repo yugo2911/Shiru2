@@ -265,7 +265,7 @@
   }
 </script>
 
-<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style={accentColor ? `--modal-accent: ${accentColor}; --card-accent: ${accentColor};` : ''}>
+<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style={accentColor ? `--card-accent: ${accentColor}` : ''}>
   <div class="h-full modal-content p-0 overflow-y-auto position-relative StructuralCanvas" bind:this={container}>
     {#if staticMedia}
       <div class="GridOverlay"></div>
@@ -607,8 +607,8 @@
     transition: all 0.15s;
   }
   .TechnicalControl:hover {
-    background: var(--modal-accent, var(--card-accent)) !important;
-    border-color: var(--modal-accent, var(--card-accent)) !important;
+    background: var(--card-accent) !important;
+    border-color: var(--card-accent) !important;
     color: var(--card-bg) !important;
   }
 
@@ -686,12 +686,12 @@
     border-radius: 50px;
     padding: 4px 12px; font-size: 0.7rem;
   }
-  .TelemetryItem :global(svg) { color: var(--modal-accent, var(--card-accent)); }
+  .TelemetryItem :global(svg) { color: var(--card-accent); }
   .TelemetryValue { color: var(--card-fg); font-weight: 700; letter-spacing: 0.05em; }
 
   .ActionMatrix { gap: 8px; align-items: center; }
   :global(.PrimaryIndustrialButton) {
-    background: var(--modal-accent, var(--card-accent)) !important;
+    background: var(--card-accent) !important;
     color: var(--card-bg) !important;
     font-size: 0.85rem !important;
     letter-spacing: 0.05em !important;
@@ -720,8 +720,8 @@
     transition: all 0.15s;
   }
   :global(.TechnicalSquareButton:hover) {
-    border-color: var(--modal-accent, var(--card-accent)) !important;
-    color: var(--modal-accent, var(--card-accent)) !important;
+    border-color: var(--card-accent) !important;
+    color: var(--card-accent) !important;
     background: var(--card-bg) !important;
   }
   .MonochromeLogo {
@@ -752,7 +752,7 @@
     width: 32px; height: 32px;
   }
   .TowerOrderToggle:hover {
-    border-color: var(--modal-accent, var(--card-accent)) !important; color: var(--modal-accent, var(--card-accent)) !important;
+    border-color: var(--card-accent) !important; color: var(--card-accent) !important;
   }
   .TowerListBody {
     max-height: 600px;
@@ -809,7 +809,7 @@
   }
   .ParameterCell:last-child { border-right: none; }
   .ParameterCell :global(.CellIcon), .CustomCellSymbol {
-    color: var(--modal-accent, var(--card-accent)); margin-right: 10px !important;
+    color: var(--card-accent); margin-right: 10px !important;
   }
   .CustomCellSymbol { font-size: 1rem; }
   .CellLabel {
@@ -832,14 +832,14 @@
     padding: 6px 14px !important; margin: 0 !important;
     border-radius: 50px;
   }
-  .TagIcon { color: var(--modal-accent, var(--card-accent)); }
+  .TagIcon { color: var(--card-accent); }
   .TagName { font-size: 0.75rem !important; color: var(--card-fg); font-weight: 700; }
   .TagMetrics { font-size: 0.75rem; color: var(--card-dim); margin-left: 4px; }
 
   .SegmentDividerBlock { position: relative; margin-top: 25px !important; }
   .TechnicalDividerLine { height: 1px; background: var(--card-line); flex: 1; }
   .SegmentTitleText {
-    color: var(--modal-accent, var(--card-accent)) !important; font-size: 0.8rem !important;
+    color: var(--card-accent) !important; font-size: 0.8rem !important;
     letter-spacing: 0.1em; font-weight: 900 !important;
   }
   .TechnicalNarrativeText {
@@ -858,7 +858,7 @@
     z-index: 50; padding: 10px 0; width: 220px;
   }
   .DropdownSectionHeader {
-    font-size: 0.65rem !important; color: var(--modal-accent, var(--card-accent)) !important;
+    font-size: 0.65rem !important; color: var(--card-accent) !important;
     padding: 6px 15px !important; letter-spacing: 0.1em; font-weight: 900;
   }
   .DropdownRowItem {
