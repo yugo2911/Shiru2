@@ -1850,7 +1850,7 @@
       <div class='d-flex align-items-center position-relative' class:mb-50={!miniplayer} style='width: 100%;' title='Play/Pause'>
         {#if hasLast}
           <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `left: 5%` : `left: 15%`} title='Last' data-name='playPause' use:click={playLast}>
-            <SkipBack size='3rem' fill='currentColor' />
+            <SkipBack size='3rem' />
           </span>
         {/if}
           <span class='icon ctrl position-absolute rounded-10 text-white' data-name='playPause' style='left: 50%; margin-left: -3rem;' use:click={playPause}>
@@ -1858,15 +1858,15 @@
               <RotateCw size='3rem' />
             {:else}
               {#if paused}
-                <Play size='3rem' fill='currentColor' />
+                <Play size='3rem' />
               {:else}
-                <Pause size='3rem' fill='currentColor' />
+                <Pause size='3rem' />
               {/if}
             {/if}
           </span>
         {#if hasNext}
           <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `right: 5%` : `right: 15%`} title='Next' data-name='playPause' use:click={playNext}>
-            <SkipForward size='3rem' fill='currentColor' />
+            <SkipForward size='3rem' />
           </span>
         {/if}
       </div>
@@ -1874,7 +1874,7 @@
       <div class='position-absolute bufferingDisplay' class:bufferingPos={SUPPORTS.isAndroid && !miniplayer}/>
       {#if currentSkippable}
         <button class='skip btn text-dark position-absolute bottom-0 right-0 mr-20 mb-5 font-weight-bold z-30 d-flex align-items-center justify-content-center' use:click={skip}>
-          <FastForward size='1.8rem' fill='currentColor' /><span class='ml-5'>Skip {currentSkippable}</span>
+          <FastForward size='1.8rem' /><span class='ml-5'>Skip {currentSkippable}</span>
         </button>
       {/if}
     {/if}
@@ -1904,28 +1904,28 @@
           <RotateCw size='2rem' />
         {:else}
           {#if paused}
-            <Play size='2rem' fill='currentColor' />
+            <Play size='2rem' />
           {:else}
-            <Pause size='2rem' fill='currentColor' />
+            <Pause size='2rem' />
           {/if}
         {/if}
       </span>
       {#if hasLast}
         <span class='icon ctrl m-5 d-btn text-white' title='Last [B]' use:click={playLast}>
-          <SkipBack size='2rem' fill='currentColor' />
+          <SkipBack size='2rem' />
         </span>
       {/if}
       {#if hasNext}
         <span class='icon ctrl m-5 d-btn text-white' title='Next [N]' use:click={playNext}>
-          <SkipForward size='2rem' fill='currentColor' />
+          <SkipForward size='2rem' />
         </span>
       {/if}
       <div class='d-none w-auto volume' class:d-flex={!externalPlayback}>
         <span class='icon ctrl m-5 text-white' title='Mute [M]' data-name='toggleMute' use:click={toggleMute}>
           {#if muted}
-            <VolumeX size='2rem' fill='currentColor' />
+            <VolumeX size='2rem' />
           {:else}
-            <Volume2 size='2rem' fill='currentColor' />
+            <Volume2 size='2rem' />
           {/if}
         </span>
         {#if !volumeBoosted}
@@ -1935,7 +1935,7 @@
         {/if}
         {#if (volume === 1) || volumeBoosted}
           <span class='icon ctrl boost p-0 mt-15 d-flex align-items-center justify-content-center text-white' class:boost-color={volumeBoosted} title='Increase Volume Limit [V]' data-name='toggleGain' use:click={toggleGain}>
-            <SlidersVertical size='1.4rem' fill='currentColor' />
+            <SlidersVertical size='1.4rem' />
           </span>
         {/if}
       </div>
