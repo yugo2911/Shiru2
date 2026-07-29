@@ -5,7 +5,7 @@
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { add } from '@/modules/torrent.js'
-  import { anilistClient, seasons } from '@/modules/anilist.js'
+  import { anilistClient } from '@/modules/anilist.js'
   import { isValidNumber } from '@/modules/util.js'
   import { click } from '@/modules/click.js'
 
@@ -24,7 +24,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { ExternalLink, Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type, ChevronDown, ChevronUp } from 'lucide-svelte'
+  import { ExternalLink, Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, ArrowDown01, ArrowUp10, Building2, FolderKanban, CalendarRange, MonitorPlay } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -33,8 +33,6 @@
 
   let _modal
   let container = null
-  let scrollTags = null
-  let scrollGenres = null
   let staticMedia
   $: media = mediaCache.value[view?.id] || view
   $: {
@@ -68,12 +66,6 @@
   })()
   $: staticMedia && (_modal?.focus(), (container && container.scrollTo({top: 0, behavior: 'smooth'})))
   $: staticMedia && (modal.length === 1 && $modal[modal.ANIME_DETAILS] && _modal?.focus())
-  $: {
-    if (staticMedia) {
-      if (scrollTags) scrollTags.scrollLeft = 0
-      if (scrollGenres) scrollGenres.scrollLeft = 0
-    }
-  }
   function checkClose ({ keyCode }) {
     if (keyCode === 27) close()
   }
@@ -174,7 +166,8 @@
   $: accentColor = media?.coverImage?.color
   let showExternalLinks = false
   let showAnimeThemes = false
-  let showMoreInfo = false // Collapsible details
+  let activeTab = 'relations'
+  let showSynopsis = false
 
   function closeOnClickOutside(node, onClose) {
     function handle(e) { if (!node.contains(e.target)) onClose() }
@@ -203,66 +196,6 @@
 
   onDestroy(() => resizeObserver?.disconnect())
 
-  let scrollDetails
-  $: if (staticMedia && scrollDetails) scrollDetails.scrollLeft = 0
-
-  const countryMap = {
-    JP: 'Japan',
-    KR: 'South Korea',
-    US: 'United States',
-    CN: 'China',
-    HK: 'Hong Kong',
-    TW: 'Taiwan'
-  }
-  const detailsMap = [
-    { property: 'season', label: 'Season', icon: CalendarRange, custom: 'property' },
-    { property: 'status', label: 'Status', icon: MonitorPlay },
-    { property: 'studios', label: 'Studio', icon: Building2, custom: 'property' },
-    { property: 'source', label: 'Source', icon: FolderKanban },
-    { property: 'countryOfOrigin', label: 'Country', icon: Earth, custom: 'property' },
-    { property: 'isAdult', label: 'Adult', icon: Adult },
-    { property: 'english', label: 'English', icon: Type },
-    { property: 'romaji', label: 'Romaji', icon: Languages },
-    { property: 'native', label: 'Native', icon: '語', custom: 'icon' }
-  ]
-
-  let studio
-  let seasonal
-  function getCustomProperty (property, media) {
-    if (property === 'averageScore') {
-      return media.averageScore + '%'
-    } else if (property === 'season') {
-      return seasonal
-    } else if (property === 'countryOfOrigin') {
-      return countryMap[media.countryOfOrigin]
-    } else if (property === 'studios') {
-      return studio
-    } else {
-      return media[property]
-    }
-  }
-  async function getProperty (property, media) {
-    if (property === 'episode') {
-      return media.nextAiringEpisode?.episode
-    } else if (property === 'english' || property === 'romaji' || property === 'native') {
-      return media.title[property]
-    } else if (property === 'isAdult') {
-      return (media.isAdult === true ? 'Rated 18+' : false)
-    } else if (property === 'countryOfOrigin') {
-      return countryMap[media.countryOfOrigin]
-    } else if (property === 'studios') {
-      studio = ((await recommendations)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0]
-      return studio
-    } else if (property === 'season') {
-      const details = await (((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id))
-      const attributes = details?.included?.[0]?.attributes
-      const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())
-      const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()
-      seasonal = (season || seasonYear) ? [season, seasonYear].filter(f => f).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
-      return seasonal
-    }
-    return media[property]
-  }
 </script>
 
 <div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style={accentColor ? `--card-accent: ${accentColor}` : ''}>
@@ -306,11 +239,17 @@
                 </div>
               </div>
               
-              <div class="pl-sm-20 ml-sm-20 HeaderMetaBlock d-flex flex-column justify-content-between">
-                <div>
-                  <div class="TechnicalID">ID: #{staticMedia.id || 'NULL'}</div>
-                  <h1 class="font-weight-very-bold text-white select-all mb-0 MassiveDisplayTitle">{anilistClient.title(staticMedia)}</h1>
-                </div>
+              <div class="pl-sm-20 ml-sm-20 HeaderMetaBlock d-flex flex-column">
+                  <h1 class="font-weight-very-bold text-white select-all MassiveDisplayTitle">{anilistClient.title(staticMedia)}</h1>
+
+                {#if staticMedia.description}
+                  <div class="SynopsisStrip mb-10" class:expanded={showSynopsis} role="button" tabindex="0" use:click={() => showSynopsis = !showSynopsis} on:keydown={(e) => e.key === 'Enter' && (showSynopsis = !showSynopsis)}>
+                    <div class="SynopsisText">
+                      {@html sanitize(staticMedia.description)}
+                    </div>
+                    <span class="SynopsisToggle">{showSynopsis ? 'HIDE' : 'READ MORE'}</span>
+                  </div>
+                {/if}
                 
                 <div class="TelemetryStrip d-flex flex-row flex-wrap mt-5">
                   {#if staticMedia.averageScore}
@@ -323,6 +262,24 @@
                     <div class="TelemetryItem">
                       <Tv size="1.2rem" />
                       <span class="TelemetryValue text-uppercase">{formatMap[staticMedia.format]}</span>
+                    </div>
+                  {/if}
+                  {#if staticMedia.status}
+                    <div class="TelemetryItem">
+                      <MonitorPlay size="1.2rem" />
+                      <span class="TelemetryValue text-capitalize">{staticMedia.status.replace(/_/g, ' ').toLowerCase()}</span>
+                    </div>
+                  {/if}
+                  {#if staticMedia.season}
+                    <div class="TelemetryItem">
+                      <CalendarRange size="1.2rem" />
+                      <span class="TelemetryValue">{staticMedia.season} {staticMedia.seasonYear || ''}</span>
+                    </div>
+                  {/if}
+                  {#if staticMedia.source}
+                    <div class="TelemetryItem">
+                      <FolderKanban size="1.2rem" />
+                      <span class="TelemetryValue text-capitalize">{staticMedia.source.replace(/_/g, ' ').toLowerCase()}</span>
                     </div>
                   {/if}
                   {#if staticMedia.episodes !== 1}
@@ -344,6 +301,23 @@
                     </div>
                   {/if}
                 </div>
+
+                {#if staticMedia.genres?.length || staticMedia.studios?.nodes?.[0]?.name}
+                  <div class="GenreTagStrip d-flex flex-row flex-wrap align-items-center mt-10 mb-5">
+                    {#each staticMedia.genres.slice(0, 3) as genre}
+                      <div class="GenrePill">
+                        <svelte:component this={genreIcons[genre]} size="0.9rem" />
+                        <span>{genre}</span>
+                      </div>
+                    {/each}
+                    {#if staticMedia.studios?.nodes?.[0]?.name}
+                      <div class="GenrePill">
+                        <Building2 size="0.9rem" />
+                        <span>{staticMedia.studios.nodes[0].name}</span>
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
 
                 <div class="d-flex flex-row flex-wrap play ActionMatrix">
                   <button class="btn btn-lg PrimaryIndustrialButton w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20"
@@ -459,114 +433,48 @@
               </div>
             </div>
 
-            <!-- Collapsible "More Info" -->
-            <div class="MoreInfoToggle" use:click={() => showMoreInfo = !showMoreInfo}>
-              <span class="MoreInfoLabel">{showMoreInfo ? 'Hide' : 'Show'} Details</span>
-              <svelte:component this={showMoreInfo ? ChevronUp : ChevronDown} size="1.2rem" />
+            <!-- Relations & Recommendations tabs -->
+            <div class="TabBar">
+              <button class="TabButton" class:active={activeTab === 'relations'} use:click={() => activeTab = 'relations'}>RELATIONS</button>
+              <button class="TabButton" class:active={activeTab === 'recommendations'} use:click={() => activeTab = 'recommendations'}>RECOMMENDATIONS</button>
             </div>
 
-            {#if showMoreInfo}
-              <div class="MoreInfoContent">
-                <!-- Details strip (metadata) -->
-                <div bind:this={scrollDetails} class="details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start ParameterGrid">
-                  {#each detailsMap as detail}
-                    {#await getProperty(detail.property, staticMedia)}
-                      {:then property}
-                      {#if property}
-                        <div class="ParameterCell d-flex flex-row mx-10 py-5 justify-content-center">
-                          {#if detail.custom !== 'icon'}
-                            <svelte:component size="1.2rem" this={detail.icon} class="mr-10 CellIcon" />
-                          {:else}
-                            <div class="mr-10 d-flex align-items-center text-nowrap font-size-12 font-weight-bold line-height-normal CustomCellSymbol">
-                              {detail.icon}
-                            </div>
-                          {/if}
-                          <div class="d-flex flex-column justify-content-center text-nowrap">
-                            <span class="CellLabel">{detail.label}</span>
-                            <div class="font-weight-bold select-all line-height-normal CellValue">
-                              {#if detail.custom === 'property'}
-                                {getCustomProperty(detail.property, staticMedia)}
-                              {:else}
-                                {property.toString().replace(/_/g, ' ').toLowerCase()}
-                              {/if}
-                            </div>
-                          </div>
-                        </div>
-                      {/if}
-                    {/await}
-                  {/each}
-                </div>
-
-                <!-- Tags -->
-                <div class="LabelContainerHeader">TAGS</div>
-                <div bind:this={scrollTags} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
-                  {#each staticMedia.tags as tag}
-                    <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center">
-                      <Hash class="mr-5 TagIcon" size="1rem" />
-                      <span class="font-weight-bolder select-all TagName">{tag.name}</span>
-                      <span class="font-weight-light TagMetrics">:{tag.rank}%</span>
+            {#if activeTab === 'relations'}
+              <div class="d-lg-block LinkedRelationsPanel">
+                <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
+                  {#await promise}
+                    <div class="small-card TechnicalCardShell">
+                      <SmallCardSk />
                     </div>
-                  {/each}
-                </div>
-
-                <!-- Genres -->
-                <div class="LabelContainerHeader">GENRES</div>
-                <div bind:this={scrollGenres} class="m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start StructuralTagStrip">
-                  {#each staticMedia.genres as genre}
-                    <div class="TechnicalDataTag px-20 py-10 mr-10 d-flex align-items-center select-all">
-                      <svelte:component this={genreIcons[genre]} class="mr-5 TagIcon" size="1rem" />
-                      <span class="TagName">{genre}</span>
-                    </div>
-                  {/each}
-                </div>
-
-                <!-- Synopsis -->
-                {#if staticMedia.description}
-                  <div class="w-full d-flex flex-row align-items-center pt-20 mt-10 SegmentDividerBlock">
-                    <div class="TechnicalDividerLine"></div>
-                    <div class="font-size-18 font-weight-semi-bold px-20 SegmentTitleText">SYNOPSIS</div>
-                    <div class="TechnicalDividerLine"></div>
-                  </div>
-                  <div class="font-size-16 pt-20 select-all TechnicalNarrativeText">
-                    {@html sanitize(staticMedia.description)}
-                  </div>
-                {/if}
-
-                <!-- Relations & Recommendations -->
-                <div class="d-lg-block LinkedRelationsPanel">
-                  <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
-                    {#await promise}
+                  {:then res}
+                    {#if res}
                       <div class="small-card TechnicalCardShell">
-                        <SmallCardSk />
+                        <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
                       </div>
-                    {:then res}
-                      {#if res}
-                        <div class="small-card TechnicalCardShell">
-                          <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
-                        </div>
-                      {/if}
-                    {/await}
-                  </ToggleList>
-
-                  {#await recommendations then res}
-                    {@const media = res?.data?.Media}
-                    {#if media}
-                      <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
-                        {#await promise}
-                          <div class="small-card TechnicalCardShell">
-                            <SmallCardSk />
-                          </div>
-                        {:then res}
-                          {#if res}
-                            <div class="small-card TechnicalCardShell">
-                              <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
-                            </div>
-                          {/if}
-                        {/await}
-                      </ToggleList>
                     {/if}
                   {/await}
-                </div>
+                </ToggleList>
+              </div>
+            {:else}
+              <div class="d-lg-block LinkedRelationsPanel">
+                {#await recommendations then res}
+                  {@const media = res?.data?.Media}
+                  {#if media}
+                    <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
+                      {#await promise}
+                        <div class="small-card TechnicalCardShell">
+                          <SmallCardSk />
+                        </div>
+                      {:then res}
+                        {#if res}
+                          <div class="small-card TechnicalCardShell">
+                            <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
+                          </div>
+                        {/if}
+                      {/await}
+                    </ToggleList>
+                  {/if}
+                {/await}
               </div>
             {/if}
           </div>
@@ -641,12 +549,12 @@
   }
 
   .SpecCoverFrame {
-    aspect-ratio: 7/10; border: none;
+    aspect-ratio: 3/4; border: none;
     background: transparent; padding: 0;
     border-radius: 12px; overflow: hidden;
   }
   @media (min-width: 577px) {
-    .SpecCoverFrame { max-width: 180px !important; } /* Smaller cover */
+    .SpecCoverFrame { max-width: 300px !important; }
   }
   .InternalImageWrapper {
     border: none; overflow: hidden;
@@ -663,18 +571,15 @@
   .HeaderMetaBlock {
     flex: 1; min-width: 0;
   }
-  .TechnicalID {
-    font-size: 0.75rem; color: var(--card-dim); letter-spacing: 0.1em;
-    margin-bottom: 4px; font-weight: 700;
-  }
+
 
   :global(.MassiveDisplayTitle) {
-    font-size: clamp(1.8rem, 2.5vw, 2.5rem) !important; /* Slightly smaller */
+    font-size: clamp(1.8rem, 2.5vw, 2.5rem) !important;
     text-transform: uppercase;
     letter-spacing: -0.02em !important;
     line-height: 1.05 !important;
     color: var(--card-fg) !important;
-    margin-bottom: 10px !important;
+    margin: 0 0 10px 0 !important;
     font-weight: 900 !important;
   }
 
@@ -684,7 +589,7 @@
     background: var(--card-bg2);
     border: 1px solid var(--card-line);
     border-radius: 50px;
-    padding: 4px 12px; font-size: 0.7rem;
+    padding: 5px 14px; font-size: 0.8rem;
   }
   .TelemetryItem :global(svg) { color: var(--card-accent); }
   .TelemetryValue { color: var(--card-fg); font-weight: 700; letter-spacing: 0.05em; }
@@ -759,95 +664,84 @@
     overflow-y: auto;
   }
 
-  /* More Info toggle */
-  .MoreInfoToggle {
+  /* Tab bar for Relations & Recommendations */
+  .TabBar {
     display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 8px;
-    margin: 20px 0 10px;
-    padding: 8px 16px;
-    border: 1px solid var(--card-line);
-    border-radius: 50px;
+    margin: 20px 0 15px;
+  }
+  .TabButton {
     background: var(--card-bg2);
-    cursor: pointer;
-    transition: background 0.2s;
+    border: 1px solid var(--card-line);
     color: var(--card-dim);
-    font-size: 0.8rem;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
   }
-  .MoreInfoToggle:hover {
-    background: var(--card-faint);
+  .TabButton:hover {
     color: var(--card-fg);
+    border-color: var(--card-accent);
   }
-  .MoreInfoLabel {
-    text-transform: uppercase;
-  }
-  .MoreInfoContent {
-    margin-top: 15px;
-    animation: fadeIn 0.25s ease;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+  .TabButton.active {
+    background: var(--card-accent);
+    color: var(--card-bg);
+    border-color: var(--card-accent);
   }
 
-  /* Existing styles for details, tags, etc. */
-  .ParameterGrid {
-    background: var(--card-bg2) !important;
-    border: 1px solid var(--card-line) !important;
-    border-radius: 12px !important;
-    gap: 0px;
-    padding: 0 !important; margin-top: 20px !important;
-    overflow: hidden;
+  .GenreTagStrip {
+    gap: 6px; padding: 0;
   }
-  .ParameterCell {
-    border-right: 1px solid var(--card-line);
-    padding: 10px 16px !important; margin: 0 !important;
-    flex: 1; min-width: 120px; align-items: center;
-  }
-  .ParameterCell:last-child { border-right: none; }
-  .ParameterCell :global(.CellIcon), .CustomCellSymbol {
-    color: var(--card-accent); margin-right: 10px !important;
-  }
-  .CustomCellSymbol { font-size: 1rem; }
-  .CellLabel {
-    display: block; font-size: 0.6rem; color: var(--card-dim);
-    letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
-  }
-  .CellValue {
-    font-size: 0.8rem !important; color: var(--card-fg) !important;
-    margin-top: 2px; font-weight: 700;
-  }
-
-  .LabelContainerHeader {
-    font-size: 0.7rem; color: var(--card-dim); font-weight: 700;
-    letter-spacing: 0.1em; margin: 20px 0 10px 5px;
-    text-transform: uppercase;
-  }
-  .StructuralTagStrip { gap: 8px; padding: 0 !important; }
-  .TechnicalDataTag {
+  .GenrePill {
+    display: inline-flex; align-items: center; gap: 4px;
     background: var(--card-bg2); border: 1px solid var(--card-line);
-    padding: 6px 14px !important; margin: 0 !important;
-    border-radius: 50px;
+    padding: 4px 12px; border-radius: 50px;
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--card-fg); white-space: nowrap;
   }
-  .TagIcon { color: var(--card-accent); }
-  .TagName { font-size: 0.75rem !important; color: var(--card-fg); font-weight: 700; }
-  .TagMetrics { font-size: 0.75rem; color: var(--card-dim); margin-left: 4px; }
+  .GenrePill :global(svg) { color: var(--card-accent); }
 
-  .SegmentDividerBlock { position: relative; margin-top: 25px !important; }
-  .TechnicalDividerLine { height: 1px; background: var(--card-line); flex: 1; }
-  .SegmentTitleText {
-    color: var(--card-accent) !important; font-size: 0.8rem !important;
-    letter-spacing: 0.1em; font-weight: 900 !important;
-  }
-  .TechnicalNarrativeText {
-    font-size: 0.95rem !important; line-height: 1.6 !important;
-    color: var(--card-fg) !important;
+  .SynopsisStrip {
+    max-height: 6em;
+    max-width: 65ch;
+    overflow: hidden;
+    overflow-wrap: break-word;
     background: var(--card-bg2);
-    padding: 20px; border-radius: 12px;
-    border: 1px solid var(--card-line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: max-height 0.3s ease;
+    position: relative;
+  }
+  .SynopsisStrip.expanded {
+    max-height: none;
+  }
+  .SynopsisText {
+    font-size: 0.85rem !important;
+    line-height: 1.6 !important;
+    color: var(--card-fg) !important;
+    overflow-wrap: break-word;
+  }
+  .SynopsisText :global(p) { margin: 0 0 0.5em; }
+  .SynopsisText :global(p:last-child) { margin-bottom: 0; }
+  .SynopsisToggle {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--card-accent);
+    text-transform: uppercase;
+  }
+  .SynopsisStrip:not(.expanded) .SynopsisText {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .IndustrialDropdown {
@@ -886,8 +780,6 @@
 
   @media (max-width: 991px) {
     .MainGrid { padding-top: 80px !important; }
-    .ParameterCell { border-right: none; border-bottom: 1px solid var(--card-line); }
-    .ParameterCell:last-child { border-bottom: none; }
     .EpisodeFocusArea { padding: 10px; }
     .TowerListBody { max-height: 400px; }
   }
