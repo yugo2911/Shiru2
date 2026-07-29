@@ -817,6 +817,16 @@
   let fitWidth = cache.getEntry(caches.GENERAL, 'fitWidth') === 'true'
   let showKeybinds = false
   let showTorrentStats = false
+  let contextMenu = false
+  let contextMenuX = 0
+  let contextMenuY = 0
+  function handleContextMenu(e) {
+    contextMenu = true
+    const w = 260
+    const h = 380
+    contextMenuX = Math.min(e.clientX, window.innerWidth - w)
+    contextMenuY = Math.min(e.clientY, window.innerHeight - h)
+  }
 
   function closeOnClickOutside(node, onClose) {
     function handle(e) { if (!node.contains(e.target)) onClose() }
@@ -1690,7 +1700,8 @@
   on:keypress={resetImmerse}
   on:keydown={resetImmerse}
   on:mouseleave={immersePlayer}
-  on:wheel={handleWheel}>
+  on:wheel={handleWheel}
+  on:contextmenu|preventDefault={handleContextMenu}>
   {#if showKeybinds && !miniplayer}
     <div class='position-absolute bg-tp w-full h-full z-10 font-size-12 p-20 d-flex align-items-center justify-content-center' on:pointerup|self={() => (showKeybinds = false)} tabindex='-1' role='button'>
       <Keybinds let:prop={item} autosave={true} clickable={true}>
@@ -2110,6 +2121,62 @@
     <div class='jimaku-empty'>No subtitles found for this series</div>
   {/if}
 </SoftModal>
+{#if contextMenu}
+  <div
+    class="ctx-overlay"
+    on:click={() => contextMenu = false}
+    on:contextmenu|preventDefault={() => contextMenu = false}
+  >
+    <div
+      class="ctx-menu"
+      style="left: {contextMenuX}px; top: {contextMenuY}px;"
+      on:click|stopPropagation
+      on:contextmenu|stopPropagation
+    >
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Play</span>
+        <span class="ctx-hint">Space</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Pause</span>
+        <span class="ctx-hint">Space</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Mute</span>
+        <span class="ctx-hint">M</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Subtitles</span>
+        <span class="ctx-arrow">›</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Fullscreen</span>
+        <span class="ctx-hint">F</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Picture in Picture</span>
+        <span class="ctx-hint">P</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Previous Episode</span>
+        <span class="ctx-hint">B</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">Next Episode</span>
+        <span class="ctx-hint">N</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+        <span class="ctx-label">More Options</span>
+        <span class="ctx-arrow">›</span>
+      </div>
+    </div>
+  </div>
+{/if}
 </div>
 <style>
   :global(.deband-canvas) {
@@ -2777,5 +2844,67 @@
     font-family: var(--font-mono);
   }
 
+  /* ══ Context Menu (Windows-style) ════════════════════════════ */
+  .ctx-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99999;
+  }
+  .ctx-menu {
+    position: fixed;
+    min-width: 240px;
+    padding: 4px 0;
+    background: var(--card-surface);
+    border: 1px solid var(--card-line);
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--card-fg);
+    user-select: none;
+    z-index: 100000;
+  }
+  .ctx-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 28px 5px 16px;
+    cursor: default;
+    color: var(--card-dim);
+    transition: background 0.08s, color 0.08s;
+    white-space: nowrap;
+    gap: 24px;
+  }
+  .ctx-item:hover {
+    background: var(--card-accent-dim);
+    color: var(--card-fg);
+  }
+  .ctx-item .ctx-label {
+    flex: 1;
+  }
+  .ctx-item .ctx-hint {
+    font-size: 1rem;
+    color: var(--card-faint);
+    font-family: var(--font-mono);
+    text-align: right;
+  }
+  .ctx-item:hover .ctx-hint {
+    color: var(--card-dim);
+  }
+  .ctx-item .ctx-arrow {
+    font-size: 1.4rem;
+    color: var(--card-faint);
+    line-height: 1;
+  }
+  .ctx-item:hover .ctx-arrow {
+    color: var(--card-dim);
+  }
+  .ctx-sep {
+    height: 1px;
+    margin: 4px 8px;
+    background: var(--card-line);
+  }
 
 </style>
