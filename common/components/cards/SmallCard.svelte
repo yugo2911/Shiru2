@@ -10,7 +10,7 @@
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
-  import { CalendarDays, Tv, ThumbsUp, ThumbsDown } from 'lucide-svelte'
+  import { ThumbsUp, ThumbsDown } from 'lucide-svelte'
 
   /** @type {import('@/modules/al.d.ts').Media} */
   export let data
@@ -100,7 +100,7 @@
   $: if (preview) clearTimeout(focusTimeout)
 </script>
 
-<div bind:this={container} class='d-flex p-md-20 p-15 position-relative small-card-ct {$reactive ? `` : `not-reactive`}' use:hoverClick={[viewMedia, setHoverState, viewMedia]} on:focus={handleFocus}>
+<div bind:this={container} class='d-flex p-0 position-relative small-card-ct {$reactive ? `` : `not-reactive`}' use:hoverClick={[viewMedia, setHoverState, viewMedia]} on:focus={handleFocus}>
   {#if preview}
     <PreviewCard {media} {type} {_variables} bind:element={previewCard}/>
   {/if}
@@ -132,13 +132,12 @@
     {/if}
     <div class='text-white font-weight-very-bold font-size-16 title overflow-hidden' class:mb-10={type || type === 0}>
       {#if media.mediaListEntry?.status}
-        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-circle d-inline-flex overflow-hidden mr-5' title={media.mediaListEntry.status} />
+        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-dot d-inline-flex' title={media.mediaListEntry.status} />
       {/if}
       {anilistClient.title(media)}
     </div>
     <div class='d-flex flex-row mt-auto font-weight-medium justify-content-between w-full text-muted'>
       <div class='d-flex align-items-center pr-5'>
-        <CalendarDays class='pr-5' size='2.6rem' />
         {#await ((media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
           {@const attributes = details?.included?.[0]?.attributes}
           <span class='line-height-1'>{details.seasonYear || ((media.status === 'NOT_YET_RELEASED') && 'TBA') || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear()) || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
@@ -146,7 +145,6 @@
       </div>
       <div class='d-flex align-items-center text-nowrap text-right'>
         <span class='line-height-1'>{formatMap[media.format]}</span>
-        <Tv class='pl-5' size='2.6rem' />
       </div>
     </div>
   </div>
@@ -161,45 +159,48 @@
     min-height: 280px; 
     background: var(--secondary-color-dark); 
     border-radius: 8px;
-    padding: 10px;
+    padding: 4px;
   }
 
   .cover-img { 
     aspect-ratio: 2 / 3; 
     object-fit: cover; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 2px;
   }
 
   .airing-badge {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    padding: 2px 8px;
-    font-size: 1rem;
+    top: 4px;
+    left: 4px;
+    padding: 2px 6px;
+    font-size: 0.9rem;
     z-index: 2;
   }
 
   .title {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 1.2;
-    margin-top: 8px;
-    height: 38px;
+    margin-top: 4px;
+    height: 34px;
   }
 
-  .list-status-circle {
+  .list-status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background-color: var(--statusColor, #eee);
     flex-shrink: 0;
+    margin-right: 4px;
+    margin-bottom: 1px;
   }
 
   .context-type { 
     font-size: 1.2rem; 
     color: var(--text-muted); 
-    margin: 4px 0; 
+    margin: 2px 0; 
   }
 
   :global(.small-card-ct .cover-color) { background-color: var(--color); }

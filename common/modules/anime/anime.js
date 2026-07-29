@@ -264,7 +264,7 @@ export const durationMap = { // guesstimate durations based off format type.
 }
 
 export const formatMap = {
-  TV: 'TV Series',
+  TV: 'TV',
   TV_SHORT: 'TV Short',
   MOVIE: 'Movie',
   SPECIAL: 'Special',
