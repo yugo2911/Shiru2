@@ -221,6 +221,11 @@
   }
   .progress-bar {
     background-color: var(--accent);
+    opacity: 0.6;
+  }
+  .seekbar:hover .progress-bar,
+  .seekbar:focus-visible .progress-bar {
+    opacity: 0.85;
   }
 
   .chapter {

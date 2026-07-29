@@ -827,6 +827,8 @@
     contextMenuY = Math.min(e.clientY, window.innerHeight - h)
   }
 
+  $: animeAccent = media?.media?.coverImage?.color || '#888888'
+
   function closeOnClickOutside(node, onClose) {
     function handle(e) { if (!node.contains(e.target)) onClose() }
     document.addEventListener('mousedown', handle, true)
@@ -1707,7 +1709,8 @@
   on:keydown={resetImmerse}
   on:mouseleave={immersePlayer}
   on:wheel={handleWheel}
-  on:contextmenu|preventDefault={handleContextMenu}>
+  on:contextmenu|preventDefault={handleContextMenu}
+  style:--player-accent={animeAccent}>
   {#if showKeybinds && !miniplayer}
     <div class='position-absolute bg-tp w-full h-full z-10 font-size-12 p-20 d-flex align-items-center justify-content-center' on:pointerup|self={() => (showKeybinds = false)} tabindex='-1' role='button'>
       <Keybinds let:prop={item} autosave={true} clickable={true}>
@@ -1890,7 +1893,7 @@
       <span aria-hidden='true' class='icon ctrl align-items-center w-150 mw-full ml-auto' class:hidden={externalPlayback} class:mb-50={!miniplayer} on:click={forward}><FastForward size='3rem' /></span>
       <div class='position-absolute bufferingDisplay' class:bufferingPos={SUPPORTS.isAndroid && !miniplayer}/>
       {#if currentSkippable}
-        <button class='skip btn text-dark position-absolute bottom-0 right-0 mr-20 mb-5 font-weight-bold z-30 d-flex align-items-center justify-content-center' use:click={skip}>
+        <button class='skip position-absolute bottom-0 right-0 mr-20 mb-5 z-30 d-flex align-items-center justify-content-center' use:click={skip}>
           <FastForward size='1.8rem' /><span class='ml-5'>Skip {currentSkippable}</span>
         </button>
       {/if}
@@ -1904,7 +1907,7 @@
   <div class='bottom d-flex z-40 flex-column px-20'>
     <div class='w-full d-flex align-items-center h-20 mb-5 seekbar' tabindex='-1' role='button' on:keydown={handleSeekbarKey}>
       <Seekbar
-        accentColor='{completed || (media?.media && ((($mediaCache[media.media.id] || media.media)?.mediaListEntry?.progress - (media?.zeroEpisode ? 1 : 0)) >= (media.episodeRange ? media.episodeRange.last : media.episode))) ? `var(--completed-color-dim)` : `var(--accent-color)`}'
+        accentColor='{completed || (media?.media && ((($mediaCache[media.media.id] || media.media)?.mediaListEntry?.progress - (media?.zeroEpisode ? 1 : 0)) >= (media.episodeRange ? media.episodeRange.last : media.episode))) ? `var(--completed-color-dim)` : animeAccent}'
         class='font-size-20'
         length={safeduration}
         {buffer}
@@ -2186,7 +2189,7 @@
     object-fit: cover !important;
   }
   .custom-range {
-    color: var(--accent-color);
+    color: var(--player-accent);
     --thumb-height: 0px;
     --track-height: 3px;
     --track-color: hsla(var(--white-color-hsl), 0.2);
@@ -2253,6 +2256,11 @@
   .custom-range:active::-webkit-slider-thumb {
     filter: brightness(var(--brightness-down));
     cursor: grabbing;
+  }
+
+  .custom-range.boost-color {
+    color: var(--player-accent);
+    filter: saturate(1.4);
   }
 
   .custom-range:focus {
@@ -2453,20 +2461,29 @@
     filter: drop-shadow(0 0 8px var(--black-color));
   }
   .skip {
-    transition: 0.2s opacity ease 0s, background 0.12s, border-color 0.12s;
+    transition: 0.2s opacity ease 0s, background 0.12s;
     font-family: var(--font-mono) !important;
-    font-size: 1.15rem !important;
+    font-size: 1.1rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.08em !important;
-    background: var(--card-accent) !important;
-    color: var(--card-bg) !important;
-    border: none !important;
-    border-radius: 3px !important;
-    box-shadow: 0 2px 16px var(--card-acc-dim) !important;
+    background: hsla(var(--black-color-hsl), 0.6) !important;
+    color: var(--card-fg) !important;
+    border: 1px solid hsla(var(--white-color-hsl), 0.08) !important;
+    border-radius: 6px !important;
+    padding: 6px 14px !important;
+    backdrop-filter: blur(8px);
+    gap: 6px;
   }
   .skip:hover {
-    background: rgba(212,245,94,0.85) !important;
-    box-shadow: 0 4px 20px rgba(212,245,94,0.35) !important;
+    background: hsla(var(--black-color-hsl), 0.75) !important;
+    border-color: var(--player-accent) !important;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--player-accent) 20%, transparent) !important;
+  }
+  .skip :global(svg) {
+    color: var(--player-accent);
+  }
+  .skip:hover :global(svg) {
+    filter: drop-shadow(0 0 6px var(--player-accent));
   }
 
   .bottom {
