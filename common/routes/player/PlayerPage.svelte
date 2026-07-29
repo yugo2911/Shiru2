@@ -2037,11 +2037,7 @@
           </div>
         </div>
       {/if}
-      {#if media?.media && !externalPlayback}
-        <span class='icon text-white ctrl mr-5 d-flex align-items-center' title='Explore Jimaku Subtitles' use:click={exploreJimaku}>
-          <FolderOpen size='2.5rem' strokeWidth={2.5} />
-        </span>
-      {/if}
+
       <!--{#if 'PresentationRequest' in window && canCast && current}-->
       <!--  <span class='icon text-white ctrl mr-5 d-flex align-items-center text-white' title='Cast Video [D]' data-name='toggleCast' use:click={toggleCast}>-->
       <!--    {#if presentationConnection}-->
@@ -2111,39 +2107,35 @@
       on:click|stopPropagation
       on:contextmenu|stopPropagation
     >
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">Play</span>
-        <span class="ctx-hint">Space</span>
-      </div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">Pause</span>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { playPause(); contextMenu = false }}>
+        <span class="ctx-label">{paused ? 'Play' : 'Pause'}</span>
         <span class="ctx-hint">Space</span>
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">Mute</span>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { toggleMute(); contextMenu = false }}>
+        <span class="ctx-label">{muted ? 'Unmute' : 'Mute'}</span>
         <span class="ctx-hint">M</span>
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { cycleSubtitles(); contextMenu = false }}>
         <span class="ctx-label">Subtitles</span>
         <span class="ctx-arrow">›</span>
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">Fullscreen</span>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { toggleFullscreen(); contextMenu = false }}>
+        <span class="ctx-label">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
         <span class="ctx-hint">F</span>
       </div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
-        <span class="ctx-label">Picture in Picture</span>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { togglePopout(); contextMenu = false }}>
+        <span class="ctx-label">{pip ? 'Exit PiP' : 'Picture in Picture'}</span>
         <span class="ctx-hint">P</span>
       </div>
       <div class="ctx-sep"></div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { playLast(); contextMenu = false }}>
         <span class="ctx-label">Previous Episode</span>
         <span class="ctx-hint">B</span>
       </div>
-      <div class="ctx-item" role="button" tabindex="-1" on:click={() => contextMenu = false}>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { playNext(); contextMenu = false }}>
         <span class="ctx-label">Next Episode</span>
         <span class="ctx-hint">N</span>
       </div>
@@ -2153,6 +2145,9 @@
       </div>
       <div class="ctx-item" role="button" tabindex="-1" class:d-none={externalPlayback} on:click={() => { fileInput.click(); contextMenu = false }}>
         <span class="ctx-label">Add Subtitles</span>
+      </div>
+      <div class="ctx-item" role="button" tabindex="-1" class:d-none={!media?.media || externalPlayback} on:click={() => { exploreJimaku(); contextMenu = false }}>
+        <span class="ctx-label">Jimaku Subtitles</span>
       </div>
       <div class="ctx-item" role="button" tabindex="-1" class:d-none={externalPlayback} on:click={() => { if ($settings.playerChapterSkip === 'embedded') { $settings.playerChapterSkip = 'aniskip'; findChapters() } else { $settings.playerChapterSkip = 'embedded'; chapters = embeddedChapters }; contextMenu = false }}>
         <span class="ctx-label">Chapter Source</span>
