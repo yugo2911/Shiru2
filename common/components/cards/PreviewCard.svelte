@@ -6,7 +6,7 @@
   import { click } from '@/modules/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import Scoring from '@/components/Scoring.svelte'
-  import { Heart, Play, VolumeX, Volume2, Target, Zap } from 'lucide-svelte'
+  import { Play, VolumeX, Volume2 } from 'lucide-svelte'
   import { ELECTRON } from '@/modules/bridge.js'
 
   export let media
@@ -19,32 +19,34 @@
 
   const play = () => media.status !== 'NOT_YET_RELEASED' && playMedia(media)
   const toggleMute = () => (muted = !muted)
-  const toggleFavourite = () => (media.isFavourite = anilistClient.favourite({ id: media.id }))
 </script>
 
 <style>
-  .curse-card {
-    background: #050505;
-    border-left: 4px solid #bc0000;
-    font-family: 'Inter', sans-serif;
-    color: #fff;
-    box-shadow: -15px 0 40px rgba(188, 0, 0, 0.2);
+  .preview-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-line);
+    border-left: 3px solid var(--card-accent);
+    color: var(--card-fg);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
   }
 
-  /* The "Cover" Container */
   .media-aside {
     width: 60%;
     height: 100%;
     position: absolute;
     right: 0;
     top: 0;
-    clip-path: polygon(25% 0, 100% 0, 100% 100%, 0% 100%);
     z-index: 1;
-    background: #000;
+    background: var(--card-bg);
     overflow: hidden;
   }
 
-  /* Force iframe to act like object-fit: cover */
+  .preview-overlay {
+    background: linear-gradient(90deg, var(--card-bg) 15%, color-mix(in srgb, var(--card-bg) 60%, transparent) 40%, transparent 100%);
+    z-index: 3;
+    pointer-events: none;
+  }
+
   .trailer-viewport {
     position: absolute;
     top: 50%;
@@ -52,7 +54,7 @@
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    min-width: 177.77vh; /* Maintains 16:9 aspect ratio coverage */
+    min-width: 177.77vh;
     min-height: 100%;
   }
 
@@ -63,62 +65,73 @@
     pointer-events: none;
   }
 
-  .curse-overlay {
-    background: linear-gradient(90deg, #050505 15%, rgba(5, 5, 5, 0.5) 40%, transparent 100%);
-    z-index: 3;
-    pointer-events: none;
-  }
-
-  .title-vertical {
-    font-size: 3rem;
+  .preview-title {
+    font-size: 2.2rem;
     font-weight: 900;
-    line-height: 0.85;
+    line-height: 1;
     text-transform: uppercase;
-    color: #fff;
-    letter-spacing: -3px;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    color: var(--card-fg);
+    letter-spacing: -0.02em;
   }
 
-  .action-orb {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: #bc0000;
-    color: #fff;
+  .preview-play-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50px;
+    background: var(--card-accent);
+    color: var(--card-bg);
     border: none;
-    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    transition: all 0.15s;
   }
 
-  .action-orb:hover {
-    background: #fff;
-    color: #000;
-    transform: scale(1.15) rotate(5deg);
+  .preview-play-btn:hover {
+    transform: scale(1.1);
   }
 
-  .data-row {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 12px 0;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #666;
+  .preview-icon-btn {
+    background: transparent;
+    border: 1px solid var(--card-line);
+    color: var(--card-fg);
+    border-radius: 50px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
   }
 
-  .data-value {
-    color: #bc0000;
-    float: right;
-    font-weight: 800;
+  .preview-icon-btn:hover {
+    border-color: var(--card-accent);
+    color: var(--card-accent);
+  }
+
+  .preview-stat {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--card-line);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    color: var(--card-dim);
+  }
+
+  .preview-stat-value {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--card-accent);
   }
 </style>
 
 <div 
-  class='position-absolute w-450 h-full curse-card absolute-container top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
+  class='position-absolute w-450 h-full preview-card absolute-container top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
   in:fadeIn out:fadeOut 
   bind:this={element}
 >
   <div class='media-aside'>
-    <div class='position-absolute w-full h-full curse-overlay'></div>
-    <SmartImage class='img-cover w-full h-full grayscale opacity-40' images={[media.bannerImage, media.coverImage?.extraLarge]}/>
+    <div class='position-absolute w-full h-full preview-overlay'></div>
+    <SmartImage class='img-cover w-full h-full grayscale opacity-30' images={[media.bannerImage, media.coverImage?.extraLarge]}/>
     
     {#await (media.trailer?.id && media) || episodesList.getMedia(media.idMal) then trailer}
       {#if trailer?.trailer?.id || trailer?.data?.trailer?.youtube_id}
@@ -136,37 +149,38 @@
     {/await}
   </div>
 
-  <div class='position-relative z-10 p-35 w-55 h-full d-flex flex-column'>
-    <div class='font-scale-10 letter-spacing-2 text-danger font-weight-bold mb-10'>[ ELIMINATION FILE ]</div>
+  <div class='position-relative z-10 p-30 w-55 h-full d-flex flex-column'>
+    <div class='font-size-10 letter-spacing-2 text-uppercase font-weight-bold mb-15' style="color: var(--card-accent);">PREVIEW</div>
     
-    <h1 class='title-vertical mb-30'>
-      {anilistClient.title(media).split(' ')[0]}<br/>
-      <span style="color: #bc0000;">{anilistClient.title(media).split(' ').slice(1).join(' ')}</span>
+    <h1 class='preview-title mb-25'>
+      {anilistClient.title(media)}
     </h1>
 
-    <div class='d-flex align-items-center gap-4 mb-40'>
-      <button class='action-orb d-flex align-items-center justify-content-center' use:click={play}>
-        <Play fill='currentColor' size='1.8rem' class="ml-5"/>
+    <div class='d-flex align-items-center gap-3 mb-30'>
+      <button class='preview-play-btn d-flex align-items-center justify-content-center' use:click={play}>
+        <Play fill='currentColor' size='1.5rem' class="ml-3"/>
       </button>
       
       <div class='d-flex flex-column gap-2'>
-        <button class='bg-transparent border-0 p-0 text-white' use:click={toggleFavourite}>
-          <Heart fill={media.isFavourite ? '#bc0000' : 'none'} color={media.isFavourite ? '#bc0000' : 'white'} size='1.3rem'/>
-        </button>
-        <button class='bg-transparent border-0 p-0 text-white opacity-30' use:click={toggleMute}>
-          {#if muted} <VolumeX size='1.3rem'/> {:else} <Volume2 size='1.3rem'/> {/if}
+        <button class='preview-icon-btn' use:click={toggleMute}>
+          {#if muted} <VolumeX size='1rem'/> {:else} <Volume2 size='1rem'/> {/if}
         </button>
       </div>
     </div>
 
     <div class='mt-auto'>
-      <div class='data-row'><Target size="12" class="mr-2"/> TARGETS <span class='data-value'>{maxEp || '??'}</span></div>
-      <div class='data-row'><Zap size="12" class="mr-2"/> SYNC <span class='data-value'>{media.averageScore || '0'}%</span></div>
+      <div class='preview-stat'>
+        EPISODES
+        <span class='preview-stat-value'>{maxEp || '??'}</span>
+      </div>
+      <div class='preview-stat' style="border-bottom: none;">
+        SCORE
+        <span class='preview-stat-value'>{media.averageScore || '0'}%</span>
+      </div>
     </div>
 
-    <div class='mt-20 d-flex justify-content-between align-items-center'>
+    <div class='mt-20'>
       <Scoring {media} previewAnime={true}/>
-      <span class="font-scale-8 opacity-20">REV_INTEL_SYSTEMS</span>
     </div>
   </div>
 </div>
