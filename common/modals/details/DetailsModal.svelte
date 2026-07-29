@@ -721,7 +721,7 @@
     max-height: none;
   }
   .SynopsisText {
-    font-size: 0.85rem !important;
+    font-size: 1.3rem !important;
     line-height: 1.6 !important;
     color: var(--card-fg) !important;
     overflow-wrap: break-word;
