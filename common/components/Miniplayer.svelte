@@ -284,7 +284,7 @@
       clearTimeout(shelveTimeout)
       shelveTimeout = setTimeout(() => {
         if (playbackPaused && !hovered && active && !dragging && !resizing) triggerShelve()
-      }, 100)
+      }, 200)
     }
   }
   function swipeShelve(node) {
@@ -453,16 +453,21 @@
   }
   .miniplayer-container:not(.shelved):not(.player-page) {
     transform: translateX(0);
-    opacity: 1;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), left 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), opacity 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.3, 1.5, 0.8, 1), left 0.5s cubic-bezier(0.3, 1.5, 0.8, 1);
   }
-  .miniplayer-container.shelved-right:not(.player-page),
+  .miniplayer-container.shelved-right:not(.player-page) {
+    transform: translateX(calc(100% - 10px));
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    transition-delay: 0.2s;
+  }
   .miniplayer-container.shelved-left:not(.player-page) {
-    opacity: 0;
-    transition: opacity 0.25s ease;
+    transform: translateX(calc(-100% + 10px));
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    transition-delay: 0.2s;
   }
   .miniplayer-container.shelved-right:hover:not(.player-page),
   .miniplayer-container.shelved-left:hover:not(.player-page) {
-    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0s;
   }
 </style>
