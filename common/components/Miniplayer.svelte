@@ -343,7 +343,7 @@
 </script>
 
 <div
-  class='miniplayer-container z-55 {position} {$$restProps.class}'
+  class='miniplayer-container z-55 pointer-events-auto {position} {$$restProps.class}'
   class:active
   class:animate={!dragging && !shelved}
   class:custompos={!position}

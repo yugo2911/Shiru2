@@ -134,7 +134,7 @@
     border: 1px solid var(--card-line); border-radius: 0; overflow: hidden;
     background: var(--card-bg2); transition: all 0.15s;
   }
-  .media-card:hover { border-color: var(--card-fg); transform: scale(1.02); }
+  .media-card:hover { border-color: var(--card-accent); transform: scale(1.02); }
   .media-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: all 0.3s; }
   .media-card:hover img { filter: grayscale(0) brightness(0.8); }
 
@@ -146,7 +146,7 @@
   }
   .behind-tag {
     position: absolute; top: 12px; right: 12px;
-    background: var(--card-fg); color: var(--card-bg);
+    background: var(--card-accent); color: var(--card-bg);
     padding: 4px 14px; font-weight: 900; font-size: 0.75rem;
     letter-spacing: 0.05em; z-index: 6; border-radius: 50px;
   }
@@ -197,8 +197,8 @@
     display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
   }
   .entry-item:hover {
-    background: var(--card-bg); border-color: var(--card-fg);
-    border-left-color: var(--card-fg); transform: scale(1.02);
+    background: var(--card-bg); border-color: var(--card-accent);
+    border-left-color: var(--card-accent); transform: scale(1.02);
   }
 
   .entry-cover {
@@ -217,11 +217,11 @@
   .entry-meta { display: flex; align-items: baseline; gap: 10px; font-weight: 700; }
   .entry-time { font-size: 1.6rem; font-weight: 900; color: var(--card-fg); }
   .entry-ep { font-size: 0.85rem; opacity: 0.6; font-weight: 700; color: var(--card-dim); }
-  .behind-count { color: var(--card-fg); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; }
+  .behind-count { color: var(--card-accent); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; }
 
   .missed-indicator {
     position: absolute; top: 0; right: 0;
-    background: var(--card-fg); color: var(--card-bg);
+    background: var(--card-accent); color: var(--card-bg);
     font-weight: 700; font-size: 0.65rem; padding: 2px 8px; z-index: 3;
     letter-spacing: 0.1em; text-transform: uppercase;
   }
