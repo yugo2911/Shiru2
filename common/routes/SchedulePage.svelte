@@ -94,74 +94,155 @@
 </script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700;900&display=swap');
-  :root { --danger: #ff003c; --bg: #030303; --panel: #0a0a0a; }
-  :global(body) { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
+  :root { --card-accent: var(--card-fg); }
+  :global(body) {
+    margin: 0; overflow: hidden;
+    background: var(--card-bg);
+    color: var(--card-fg);
+    font-family: system-ui, sans-serif;
+  }
+  :global(*:focus:not(:focus-visible)) { outline: none; }
+  :global(*:focus-visible) { outline: 4px solid var(--card-fg); outline-offset: 2px; border-radius: 8px; }
 
   .shell { display: grid; grid-template-columns: 550px 1fr; height: 100vh; overflow: hidden; }
-  
-  .side-panel { background: linear-gradient(to right, #000, var(--panel)); border-right: 1px solid rgba(255,0,60,0.3); display: flex; flex-direction: column; height: 100vh; }
+
+  .side-panel {
+    background: var(--card-bg2);
+    border-right: 1px solid var(--card-line);
+    display: flex; flex-direction: column; height: 100vh;
+  }
   .panel-header { padding: 4rem 3rem 2.5rem; position: relative; }
-  .live-clock { font-family: 'Bebas Neue'; font-size: 7.2rem; color: #666; position: absolute; top: 2rem; right: 3rem; cursor: pointer; transition: color 0.2s; user-select: none; }
-  .live-clock:hover { color: var(--danger); }
-  .panel-header h1 { font-family: 'Bebas Neue'; font-size: 8rem; line-height: 0.75; margin: 0; color: var(--danger); text-shadow: 4px 4px 0px #000; letter-spacing: -2px; }
-  .today-meta { font-family: 'Bebas Neue'; font-size: 1.2rem; color: #444; margin-top: 10px; letter-spacing: 2px; }
+  .live-clock {
+    font-weight: 900; font-size: 4rem; color: var(--card-dim);
+    position: absolute; top: 2rem; right: 3rem;
+    cursor: pointer; transition: color 0.2s; user-select: none;
+    letter-spacing: -0.02em;
+  }
+  .live-clock:hover { color: var(--card-fg); }
+  .panel-header h1 {
+    font-weight: 900; font-size: 5rem; line-height: 0.75; margin: 0;
+    color: var(--card-fg); letter-spacing: -0.02em; text-transform: uppercase;
+  }
+  .today-meta {
+    font-weight: 700; font-size: 0.85rem; color: var(--card-dim);
+    margin-top: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  }
   .schedule-scroll { flex: 1; overflow-y: auto; padding: 0 3rem 4rem; scrollbar-width: none; }
 
-  .media-card { position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer; border: 1px solid #222; transition: 0.3s; background: #000; }
-  .media-card:hover { border-color: var(--danger); transform: scale(1.02) translateX(10px); }
-  .media-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: 0.3s; }
+  .media-card {
+    position: relative; height: 350px; margin-bottom: 3rem; cursor: pointer;
+    border: 1px solid var(--card-line); border-radius: 0; overflow: hidden;
+    background: var(--card-bg2); transition: all 0.15s;
+  }
+  .media-card:hover { border-color: var(--card-fg); transform: scale(1.02); }
+  .media-card img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(0.6); transition: all 0.3s; }
   .media-card:hover img { filter: grayscale(0) brightness(0.8); }
 
-  .status-tag { position: absolute; top: 0; left: 0; background: var(--status-color); color: #000; padding: 8px 16px; font-weight: 900; font-size: 1rem; letter-spacing: 1.5px; z-index: 5; text-transform: uppercase; }
-  .behind-tag { position: absolute; top: 1.5rem; right: -5px; background: var(--danger); color: #fff; padding: 0.6rem 1.2rem; font-family: 'Bebas Neue'; font-size: 1.6rem; z-index: 6; box-shadow: 6px 6px 0 #000; }
+  .status-tag {
+    position: absolute; top: 12px; left: 12px;
+    background: var(--status-color); color: var(--card-bg);
+    padding: 4px 14px; font-weight: 900; font-size: 0.7rem;
+    letter-spacing: 0.1em; z-index: 5; border-radius: 50px; text-transform: uppercase;
+  }
+  .behind-tag {
+    position: absolute; top: 12px; right: 12px;
+    background: var(--card-fg); color: var(--card-bg);
+    padding: 4px 14px; font-weight: 900; font-size: 0.75rem;
+    letter-spacing: 0.05em; z-index: 6; border-radius: 50px;
+  }
 
-  .card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.98) 0%, transparent 70%); padding: 2.5rem; display: flex; flex-direction: column; justify-content: flex-end; border-left: 8px solid var(--status-color); }
-  .card-name { font-family: 'Bebas Neue'; font-size: 3.5rem; line-height: 0.9; margin: 0; text-transform: uppercase; }
-  .card-details { font-size: 1.1rem; font-weight: 700; color: #aaa; margin-top: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 15px; }
-  .card-details b { color: #fff; }
+  .card-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, var(--card-bg) 0%, transparent 70%);
+    padding: 2.5rem; display: flex; flex-direction: column; justify-content: flex-end;
+    border-left: 4px solid var(--status-color);
+  }
+  .card-name {
+    font-weight: 900; font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+    line-height: 1.05; margin: 0; text-transform: uppercase; letter-spacing: -0.02em;
+  }
+  .card-details {
+    font-size: 0.85rem; font-weight: 700; color: var(--card-dim);
+    margin-top: 12px; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 15px;
+  }
+  .card-details b { color: var(--card-fg); }
 
-  .main-grid { padding: 4rem; background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0); background-size: 40px 40px; overflow-y: auto; }
+  .main-grid { padding: 4rem; background: var(--card-bg); overflow-y: auto; }
+  .grid-header { margin-bottom: 3rem; }
+  .grid-header h2 {
+    font-weight: 900; font-size: 2.5rem; margin: 0;
+    letter-spacing: -0.02em; color: var(--card-fg); text-transform: uppercase;
+  }
+
   .day-section { margin-bottom: 4rem; }
-  .day-title { font-family: 'Bebas Neue'; font-size: 3rem; color: #222; margin-bottom: 1rem; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: baseline; }
+  .day-title {
+    font-weight: 900; font-size: 1.5rem; color: var(--card-fg);
+    margin-bottom: 1rem; padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--card-line);
+    display: flex; justify-content: space-between; align-items: baseline;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .day-title span:last-child {
+    font-size: 0.75rem; color: var(--card-dim);
+    font-weight: 700; letter-spacing: 0.1em;
+  }
   .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
 
-  .entry-item { 
-    background: #000; border: 1px solid #111; border-left: 4px solid var(--status-color); 
-    height: 90px; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
+  .entry-item {
+    background: var(--card-bg2); border: 1px solid var(--card-line);
+    border-left: 4px solid var(--status-color); border-radius: 0;
+    height: 90px; cursor: pointer; transition: all 0.15s;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center; padding: 0 1.2rem;
   }
-  .entry-item:hover { background: var(--status-color); border-color: var(--status-color); transform: translateX(5px); }
+  .entry-item:hover {
+    background: var(--card-bg); border-color: var(--card-fg);
+    border-left-color: var(--card-fg); transform: scale(1.02);
+  }
 
-  .entry-cover { 
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; 
-    opacity: 0.3; filter: grayscale(1) brightness(0.4); transition: opacity 0.4s, filter 0.4s; z-index: 1; 
+  .entry-cover {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    opacity: 0.3; filter: grayscale(1) brightness(0.4);
+    transition: opacity 0.4s, filter 0.4s; z-index: 1;
   }
   .entry-item:hover .entry-cover { opacity: 0.6; filter: grayscale(0.2) brightness(0.6); transform: scale(1.05); }
 
-  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: color 0.2s; }
-  .entry-item:hover .entry-content { color: #000; text-shadow: none; }
-
-  .entry-title { font-weight: 900; font-size: 0.95rem; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; text-transform: uppercase; }
-  .entry-meta { display: flex; align-items: baseline; gap: 10px; font-family: 'Bebas Neue'; }
-  .entry-time { font-size: 1.6rem; }
-  .entry-ep { font-size: 1.1rem; opacity: 0.6; }
-  .behind-count { color: var(--danger); font-size: 1.1rem; }
-  .entry-item:hover .behind-count { color: #000; font-weight: bold; }
-
-  .missed-indicator { position: absolute; top: 0; right: 0; background: var(--danger); color: #fff; font-family: 'Bebas Neue'; font-size: 0.7rem; padding: 1px 6px; z-index: 3; }
-
-  .preview-popup { position: fixed; z-index: 1000; pointer-events: none; width: 420px; border: 2px solid var(--danger); background: #000; padding: 5px; box-shadow: 0 0 40px rgba(0,0,0,0.9); }
-  
-  .filter-bar { display: flex; gap: 15px; margin-top: 1rem; }
-  .filter-btn { 
-    background: transparent; border: 1px solid #333; color: #666; 
-    padding: 4px 12px; font-family: 'Bebas Neue'; font-size: 1.1rem; 
-    cursor: pointer; transition: 0.2s; 
+  .entry-content { position: relative; z-index: 2; text-shadow: 0 2px 8px rgba(0,0,0,1); }
+  .entry-title {
+    font-weight: 900; font-size: 0.95rem; line-height: 1.1;
+    white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+    margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.02em;
   }
-  .filter-btn:hover { border-color: #fff; color: #fff; }
-  .filter-btn.active { background: #fff; color: #000; border-color: #fff; }
-  
+  .entry-meta { display: flex; align-items: baseline; gap: 10px; font-weight: 700; }
+  .entry-time { font-size: 1.6rem; font-weight: 900; color: var(--card-fg); }
+  .entry-ep { font-size: 0.85rem; opacity: 0.6; font-weight: 700; color: var(--card-dim); }
+  .behind-count { color: var(--card-fg); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; }
+
+  .missed-indicator {
+    position: absolute; top: 0; right: 0;
+    background: var(--card-fg); color: var(--card-bg);
+    font-weight: 700; font-size: 0.65rem; padding: 2px 8px; z-index: 3;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  .preview-popup {
+    position: fixed; z-index: 1000; pointer-events: none; width: 420px;
+    border: 1px solid var(--card-line); background: var(--card-bg2);
+    border-radius: 0; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .filter-bar { display: flex; gap: 8px; margin-top: 1rem; }
+  .filter-btn {
+    background: var(--card-bg2); border: 1px solid var(--card-line);
+    color: var(--card-dim); padding: 6px 16px;
+    font-weight: 700; font-size: 0.7rem; letter-spacing: 0.1em;
+    cursor: pointer; transition: all 0.15s; border-radius: 50px; text-transform: uppercase;
+  }
+  .filter-btn:hover { border-color: var(--card-fg); color: var(--card-fg); }
+  .filter-btn.active { background: var(--card-fg); color: var(--card-bg); border-color: var(--card-fg); }
+
   @keyframes blink { 50% { opacity: 0.2; } }
 </style>
 
@@ -184,14 +265,14 @@
           {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
           {@const behind = getBehind(media, {episode})}
           {@const up = isUpNext(airingAt, now)}
-          <div class="media-card" style="--status-color: {status.color}" 
+           <div class="media-card" style="--status-color: {status.color}; --card-accent: {media.coverImage?.color || status.color}" 
                use:click={() => modal.open(modal.ANIME_DETAILS, media)}
                on:mousemove={(e) => handleMouseMove(e, media)}
                on:mouseleave={() => hoveredMedia = null}
                role="button" tabindex="0">
             <div class="status-tag">{status.label}</div>
             {#if behind > 0}<div class="behind-tag">BEHIND: {behind} EP</div>{/if}
-            <img src={media.bannerImage || media.coverImage?.extraLarge || media.coverImage?.large} alt=""/>
+            <img src={media.coverImage?.extraLarge || media.coverImage?.large} alt=""/>
             <div class="card-overlay">
               <h2 class="card-name">{anilistClient.title(media)}</h2>
               <div class="card-details">
@@ -200,7 +281,7 @@
                 <span>TIME: <b>{fmtTime(airingAt)}</b></span>
               </div>
               {#if up}
-                <div style="color:var(--danger); font-weight:900; font-size:1.1rem; margin-top:12px; animation:blink 0.8s infinite; letter-spacing: 2px;">
+                <div style="color:var(--card-fg); font-weight:900; font-size:1.1rem; margin-top:12px; animation:blink 0.8s infinite; letter-spacing: 2px;">
                   ▶ AIRS IN: {fmtCountdown(airingAt, now)}
                 </div>
               {/if}
@@ -212,8 +293,8 @@
   </aside>
 
   <main class="main-grid">
-    <div class="grid-header" style="margin-bottom: 3rem;">
-      <h2 style="font-family: 'Bebas Neue'; font-size: 5rem; margin: 0; letter-spacing: 2px;">WEEKLY SCHEDULE</h2>
+    <div class="grid-header">
+      <h2>WEEKLY SCHEDULE</h2>
       <div class="filter-bar">
         <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL SHOWS</button>
         {#each Object.entries(STATUS_MAP) as [key, val]}
@@ -226,22 +307,22 @@
       <section class="day-section">
         <div class="day-title">
           <span>{group.day}</span>
-          <span style="font-size: 1.2rem; opacity: 0.3;">{group.items.length} SHOWS</span>
+          <span>{group.items.length} SHOWS</span>
         </div>
 
         <div class="grid-container">
           {#each group.items as {media, airingAt, episode}}
             {@const status = STATUS_MAP[media?.mediaListEntry?.status] || { label: 'UNKNOWN', color: '#444' }}
             {@const behind = getBehind(media, {episode})}
-            <div class="entry-item" 
-                 style="--status-color: {status.color}" 
+             <div class="entry-item" 
+                 style="--status-color: {status.color}; --card-accent: {media.coverImage?.color || status.color}" 
                  use:click={() => modal.open(modal.ANIME_DETAILS, media)} 
                  on:mousemove={(e) => handleMouseMove(e, media)} 
                  on:mouseleave={() => hoveredMedia = null}
                  role="button" tabindex="0">
               
               <img class="entry-cover" 
-                   src={media.bannerImage || media.coverImage?.large || media.coverImage?.extraLarge} 
+                   src={media.coverImage?.large || media.coverImage?.extraLarge} 
                    alt="" 
                    loading="lazy" />
 
