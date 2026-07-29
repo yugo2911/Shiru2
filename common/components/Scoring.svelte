@@ -189,11 +189,11 @@
 
 
 <div class='score-dropdown {viewAnime ? `z-10` : `z-1`} {$$restProps.class}' class:ml-10={!$$restProps.class}>
-  <button type='button' id='list-btn' data-toggle='tooltip' data-placement={previewAnime ? 'top-right' : 'top'} data-target-breakpoint='md' data-title='List Editor' class='btn scoring-btn font-size-{viewAnime ? `20 btn-lg` : `16`} btn-square shadow-none border-0 d-flex align-items-center justify-content-center' class:bg-dark-light={!previewAnime} use:click={() => toggleModal({ toggle: !$showModal })} disabled={!Helper.isAuthorized()}>
+  <button type='button' id='list-btn' data-toggle='tooltip' data-placement={previewAnime ? 'top-right' : 'top'} data-target-breakpoint='md' data-title='List Editor' class='btn scoring-btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0' use:click={() => toggleModal({ toggle: !$showModal })} disabled={!Helper.isAuthorized()}>
     {#if media?.mediaListEntry}
-      <PencilLine size='1.7rem' />
+      <PencilLine size='1.2rem' />
     {:else}
-      <Bookmark size='1.7rem' />
+      <Bookmark size='1.2rem' />
     {/if}
   </button>
   {#if Helper.isAuthorized()}

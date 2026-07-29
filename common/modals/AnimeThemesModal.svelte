@@ -90,7 +90,7 @@
 <svelte:window on:keydown={$modal[modal.ANIME_THEMES] ? handleKeydown : null} />
 
 <button 
-  class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' 
+  class='btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0 mr-10' 
   data-toggle='tooltip' 
   data-placement='top' 
   data-target-breakpoint='md' 
@@ -98,7 +98,7 @@
   use:click={() => modal.toggle(modal.ANIME_THEMES)}
   disabled={!staticMedia?.id}
 >
-  <Music size='1.7rem' />
+  <Music size='1.2rem' />
 </button>
 
 <SoftModal 

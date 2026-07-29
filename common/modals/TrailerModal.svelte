@@ -30,8 +30,8 @@
     mediaId = staticMedia?.id
   }
 </script>
-<button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={!$hide} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Watch Trailer' use:click={() => modal.toggle(modal.TRAILER)}>
-  <TvMinimalPlay size='1.7rem' />
+<button class='btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0 mr-10' class:d-none={$hide} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Watch Trailer' use:click={() => modal.toggle(modal.TRAILER)}>
+  <TvMinimalPlay size='1.2rem' />
 </button>
 <SoftModal class='pointer-events-none w-full scrollbar-none align-items-center mb-30' css={`top-0 left-0 position-fixed`} bind:showModal={$modal[modal.TRAILER]} shouldRender={true} {close} id={modal.TRAILER}>
   <div class='pointer-events-auto d-flex align-items-center rounded-top-5 w-full wm-calc bg-dark h-40'>
