@@ -287,12 +287,12 @@
             {@const resolvedTitle = episodeList.filter((ep) => ep.episode < episode).some((ep) => matchPhrase(ep.title, title, 0.1, true)) ? null : title}
             {@const largeCard = image}
             {@const resolvedHash = ($completedTorrents || $seedingTorrents || $stagingTorrents || $loadedTorrent) && getHash(media?.id, { episode, client: true, batchGuess: true }, false, true)}
-            <div class='w-full content-visibility-auto scale my-20' class:load-in={!loadScroll} class:opacity-half={completed} class:scale-target={target} class:px-20={!target} class:px-10={target} class:h-150={!SUPPORTS.isAndroid && largeCard} class:h-165={SUPPORTS.isAndroid && largeCard}>
+            <div class='w-full content-visibility-auto scale my-20' class:load-in={!loadScroll} class:opacity-half={completed} class:scale-target={target} class:px-20={!target} class:px-10={target} class:ep-card-h={!SUPPORTS.isAndroid && largeCard} class:h-165={SUPPORTS.isAndroid && largeCard}>
               <div role='button' tabindex='0' class='episode-card rounded-2 w-full h-full overflow-hidden d-flex flex-xsm-column flex-row position-relative {unreleased ? `unreleased not-allowed` : `pointer`}' class:not-reactive={!$reactive} class:smallCard={!largeCard} class:android={SUPPORTS.isAndroid}  class:border={target || hasFiller} class:bg-black={completed} class:border-secondary={hasFiller} class:bg-dark-light={!completed} use:click={() => play(media, episode)} on:contextmenu|preventDefault={() => play(media, episode, true)}>
                 <div class='unreleased-overlay position-absolute top-0 left-0 right-0 h-full pointer-events-none rounded-2' class:d-none={!unreleased}/>
                 {#if image}
                   <div class='d-flex episode-thumb'>
-                    <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `h-150` : `h-165`} w-full w-sm-265' images={[image, './404_episode.png']}/>
+                    <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `ep-card-h` : `h-165`} w-full w-sm-265' images={[image, './404_episode.png']}/>
                     {#if resolvedHash}
                       <div class='position-relative torrent-button-container'>
                         <div class='position-absolute top-0 right-0 text-danger icon-padding icon-shadow'>
@@ -319,13 +319,11 @@
                 {/if}
                 <div class='h-full w-full px-20 pt-15 d-flex flex-column'>
                   <div class='w-full d-flex flex-row mb-15'>
-                    <div class='text-white font-weight-bold font-size-16 overflow-hidden title'>
-                      {#if resolvedTitle && !new RegExp(`(?<![\\d.])${episode}(?![\\d.])`).test(resolvedTitle) && media?.episodes !== 1}{episode}. {/if}{resolvedTitle || 'Episode ' + episode}
-                    </div>
+<div class='text-white font-weight-bold font-size-16 title' title={resolvedTitle}>
+  {#if resolvedTitle && !new RegExp(`(?<![\\d.])${episode}(?![\\d.])`).test(resolvedTitle) && media?.episodes !== 1}<span class='ep-num'>{episode}.</span> {/if}<span class='ep-title'>{resolvedTitle || 'Episode ' + episode}</span>
+</div>
                     {#if length}
-                      <div class='ml-auto pl-5'>
-                        {length}m
-                      </div>
+                      <span class='duration ml-auto'>{length}m</span>
                     {/if}
                   </div>
                   {#if completed}
@@ -333,11 +331,11 @@
                       <div class='progress-bar w-full'/>
                     </div>
                   {:else if progress}
-                    <div class='progress mb-15'>
+                    <div class='progress mb-10'>
                       <div class='progress-bar' style='width: {progress}%'/>
                     </div>
                   {/if}
-                  <div class='font-size-12 mt-auto' class:mb-5={dubAiring} class:mb-10={!dubAiring}>
+                  <div class='airdate' class:mb-5={dubAiring} class:mb-10={!dubAiring}>
                     {#if dubAiring}
                       <div class='d-flex flex-row date-row'>
                         <div class='mr-5 py-5 px-10 text-dark text-nowrap rounded-top rounded-left font-weight-bold' class:lg-label={image} class:bg-danger={dubAiring.delayed} class:bg-senary={!dubAiring.delayed}>
@@ -395,7 +393,8 @@
   .episode-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    column-gap: 1.5rem;
+    row-gap: 0.5rem;
     padding: 0.5rem;
   }
 
@@ -424,7 +423,6 @@
   :global(.episode-card.pointer:hover) {
     border-color: var(--card-accent) !important;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-    transform: translateY(-2px);
   }
   :global(.episode-card.unreleased) {
     border-style: dashed;
@@ -455,11 +453,52 @@
     background: var(--card-line);
     border-radius: 50px;
     overflow: hidden;
-    height: 4px;
+    height: 2px;
   }
   :global(.episode-card .progress-bar) {
     background: var(--card-accent);
     height: 100%;
     border-radius: 50px;
+  }
+
+  :global(.episode-card .title) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  :global(.episode-card .ep-num) {
+    flex-shrink: 0;
+    color: var(--card-accent);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  :global(.episode-card .ep-title) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+  :global(.episode-card .duration) {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--card-accent);
+    flex-shrink: 0;
+  }
+  :global(.episode-card .airdate) {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--card-dim);
+    letter-spacing: 0.01em;
+  }
+  :global(.episode-card .date-row) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ep-card-h {
+    height: 115px;
   }
 </style>
