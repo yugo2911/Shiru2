@@ -2111,6 +2111,10 @@
         <span class="ctx-label">{muted ? 'Unmute' : 'Mute'}</span>
         <span class="ctx-hint">M</span>
       </div>
+      <div class="ctx-item" role="button" tabindex="-1" on:click={() => { fitWidth = !fitWidth; cache.setEntry(caches.GENERAL, 'fitWidth', String(fitWidth)); contextMenu = false }}>
+        <span class="ctx-label">{fitWidth ? 'Contain' : 'Cover'}</span>
+        <span class="ctx-hint">W</span>
+      </div>
       <div class="ctx-sep"></div>
       <div class="ctx-item" role="button" tabindex="-1" on:click={() => { cycleSubtitles(); contextMenu = false }}>
         <span class="ctx-label">Subtitles</span>
