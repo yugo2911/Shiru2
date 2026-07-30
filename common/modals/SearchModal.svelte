@@ -4,6 +4,8 @@
   import { X, Search } from 'lucide-svelte'
   import { click } from '@/modules/click.js'
 
+  const FORMAT_PRIORITY = { TV: 0, MOVIE: 1, ONA: 2, OVA: 3, SPECIAL: 4, TV_SHORT: 5 }
+
   let searchInput, query = '', results = [], loading, selectedIndex = 0
 
   function close() {
@@ -16,7 +18,8 @@
     loading = true
     try {
       const res = await anilistClient.search({ method: 'Search', search: query, perPage: 10, sort: 'SEARCH_MATCH' })
-      results = res?.data?.Page?.media || []
+      const all = res?.data?.Page?.media || []
+      results = all.sort((a, b) => (FORMAT_PRIORITY[a.format] ?? 99) - (FORMAT_PRIORITY[b.format] ?? 99))
     } catch { results = [] }
     loading = false; selectedIndex = 0
   }
