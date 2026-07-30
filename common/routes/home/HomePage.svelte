@@ -367,7 +367,7 @@
   // ─── Keyboard handler ────────────────────────────────────────────────────────
 
   function handleKeydown(e) {
-    if ($modal[modal.SEARCH]) return
+    if (modal.length) return
     if (!animeList?.length) return
     switch (e.key) {
       case 'ArrowRight':  e.preventDefault(); e.stopPropagation(); playSfx(sfx.nav); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
@@ -378,8 +378,7 @@
       case 'm':           e.preventDefault(); toggleMute(); break
       case 's':           e.preventDefault(); modal.open(modal.SEARCH); break
       case 'Enter':       e.preventDefault(); handleWatch(); break
-      case 'Backspace':
-      case 'Escape':      e.preventDefault(); handleDetails(); break
+      case 'Backspace':   e.preventDefault(); handleDetails(); break
     }
   }
 
