@@ -141,6 +141,7 @@
   class='position-absolute w-450 h-full preview-card top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
   in:fadeIn out:fadeOut 
   bind:this={element}
+  style={media.coverImage?.color ? `--card-accent: ${media.coverImage.color}` : ''}
 >
   <div class='media-aside'>
     <div class='position-absolute w-full h-full preview-overlay'></div>
