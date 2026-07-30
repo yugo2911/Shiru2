@@ -3,6 +3,7 @@
   import { hasUnreadNotifications } from '@/modals/NotificationsModal.svelte'
   import Helper from '@/modules/helper.js'
   import { Home, Settings, LogIn, Bell, BellDot, Download, Users, CalendarSearch, Search, ChevronLeft, ChevronRight } from 'lucide-svelte'
+  import { fade } from 'svelte/transition'
 
   const sfx = {
     menu: new Audio('./audio/カーソル移動6.mp3'),
@@ -12,9 +13,37 @@
     sound.currentTime = 0
     sound.play().catch(() => {})
   }
+
+  let hidden = true
+  let hideTimer = null
+  const ZONE = 60
+
+  function onMouseMove(e) {
+    const nearEdge = e.clientX <= ZONE
+    if (nearEdge) {
+      hidden = false
+      clearTimeout(hideTimer)
+      if ($page === page.PLAYER) {
+        hideTimer = setTimeout(() => { hidden = true }, 1500)
+      }
+    } else if (!hidden) {
+      hidden = true
+    }
+  }
+
+  function startIdle() {
+    if ($page === page.PLAYER) {
+      hideTimer = setTimeout(() => { hidden = true }, 1500)
+    }
+  }
+
+  $: if ($page) hidden = $page !== page.PLAYER ? false : true
 </script>
 
-<nav class="top-nav">
+<svelte:window on:mousemove={onMouseMove} />
+
+{#if !hidden}
+<nav class="top-nav" transition:fade={{ duration: 400 }}>
   <div class="nav-links">
     <button class="nav-item nav-icon-btn nav-back" on:click={() => { playSfx(sfx.menu); goBack() }} title="Back" disabled={!$canGoBack}>
       <ChevronLeft size="1.6rem" color={$canGoBack ? 'currentColor' : 'var(--gray-color-very-dim)'} />
@@ -57,28 +86,31 @@
     </button>
   </div>
 </nav>
+{/if}
 
 <style>
   .top-nav {
     position: fixed;
-    top: 0;
-    right: 1.5rem;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
     z-index: 999;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    padding: 0.6rem 1rem;
+    padding: 0.8rem 0.4rem;
     background: rgba(18, 18, 18, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border-radius: 0 0 16px 16px;
+    border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.06);
-    border-top: none;
+    gap: 0.2rem;
   }
-  .nav-links { display: flex; gap: 0.8rem; align-items: center; }
+  .nav-links { display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; transition: opacity 0.15s; }
   .nav-item.active { opacity: 1; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
-  .nav-divider { width: 1px; height: 1.8rem; background: rgba(255,255,255,0.12); flex-shrink: 0; }
-  .nav-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.8rem; height: 2.8rem; padding: 0; border-radius: 50%; opacity: 0.5; overflow: hidden; transition: opacity 0.15s, background 0.15s; }
+  .nav-divider { width: 1.8rem; height: 1px; background: rgba(255,255,255,0.12); flex-shrink: 0; margin: 0.2rem 0; }
+  .nav-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 3.2rem; height: 3.2rem; padding: 0; border-radius: 50%; opacity: 0.5; overflow: hidden; transition: opacity 0.15s, background 0.15s; }
   .nav-icon-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
   .nav-back[disabled] { opacity: 0.3; cursor: default; }
   .nav-back[disabled]:hover { opacity: 0.3; background: none; }
