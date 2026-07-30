@@ -12,8 +12,7 @@
 
   import { playActive } from '@/components/TorrentButton.svelte'
   import { prefetchTorrent } from '@/modals/torrent/components/TorrentResults.svelte'
-  import { modal, goBack, goForward, canGoBack, canGoForward } from '@/modules/navigation.js'
-  import { hasUnreadNotifications } from '@/modals/NotificationsModal.svelte'
+  import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
   import { VolumeX, Volume2 } from 'lucide-svelte'
 
@@ -112,17 +111,6 @@
     return unsubscribe
   }
 
-  // ─── Clock ───────────────────────────────────────────────────────────────────
-
-  export const clock = writable('')
-  setInterval(() => {
-    const d = new Date()
-    clock.set(
-      d.getHours().toString().padStart(2, '0') + ':' +
-      d.getMinutes().toString().padStart(2, '0')
-    )
-  }, 1000)
-
   // ─── Episode Air Time ───────────────────────────────────────────────────────
 
   function getAirTime(anime) {
@@ -175,7 +163,7 @@
   import { page } from '@/modules/navigation.js'
   import { onMount, onDestroy, tick } from 'svelte'
   import { dragScroll } from '@/modules/click.js'
-  import { Home, Settings, LogIn, Bell, BellDot, Download, Users, CalendarSearch, Search, ChevronLeft, ChevronRight } from 'lucide-svelte'
+
 
   // ─── Derived display values ──────────────────────────────────────────────────
 
@@ -452,48 +440,9 @@
         <button class="nav-item section-toggle" on:click={() => { playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length) }}>
           {sectionName?.toUpperCase()}
         </button>
-        <button class="nav-item nav-icon-btn nav-back" on:click={() => { playSfx(sfx.menu); goBack() }} title="Back" disabled={!$canGoBack}>
-          <ChevronLeft size="1.6rem" color={$canGoBack ? 'currentColor' : 'var(--gray-color-very-dim)'} />
-        </button>
-        <button class="nav-item nav-icon-btn nav-back" on:click={() => { playSfx(sfx.menu); goForward() }} title="Forward" disabled={!$canGoForward}>
-          <ChevronRight size="1.6rem" color={$canGoForward ? 'currentColor' : 'var(--gray-color-very-dim)'} />
-        </button>
-        <span class="nav-divider"></span>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.HOME) }} title="Home">
-          <Home size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SCHEDULE) }} title="Schedule">
-          <CalendarSearch size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SEARCH) }} title="Search">
-          <Search size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn nav-notify" on:click={() => { playSfx(sfx.menu); modal.toggle(modal.NOTIFICATIONS) }} title="Notifications">
-          {#if $hasUnreadNotifications > 0}
-            <BellDot size="1.6rem" class="fill-1" style="--fill-color: var(--notify-color)" />
-          {:else}
-            <Bell size="1.6rem" />
-          {/if}
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.TORRENT_MANAGER) }} title="Torrents">
-          <Download size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.WATCH_TOGETHER) }} title="Watch Together">
-          <Users size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SETTINGS) }} title="Settings">
-          <Settings size="1.6rem" />
-        </button>
-        <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); modal.toggle(modal.PROFILE) }} title={Helper.getUser() ? 'Profile' : 'Login'}>
-          {#if Helper.getUser()}
-            <img src={Helper.getUserAvatar()} class="nav-avatar" alt="avatar" />
-          {:else}
-            <LogIn size="1.6rem" />
-          {/if}
-        </button>
+
       </nav>
     </div>
-    <div class="clock">{$clock}</div>
   </header>
 
   <main class="content-gate">
@@ -621,16 +570,6 @@
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; }
   .nav-item.active { opacity: 1; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
   .section-toggle { opacity: 1; padding-left: 1.5rem; border-left: 2px solid rgba(255,255,255,0.2); color: #fff; }
-  .nav-divider { width: 1px; height: 2.2rem; background: rgba(255,255,255,0.12); flex-shrink: 0; }
-  .nav-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; padding: 0; border-radius: 50%; opacity: 0.5; overflow: hidden; }
-  .nav-icon-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
-  .nav-back[disabled] { opacity: 0.3; cursor: default; }
-  .nav-back[disabled]:hover { opacity: 0.3; background: none; }
-  .nav-notify :global(.fill-1) { font-variation-settings: 'FILL' 1; color: var(--fill-color); filter: drop-shadow(0 0 .6rem var(--fill-color)); }
-  .nav-avatar { width: 100%; height: 100%; object-fit: cover; }
-
-  .clock { font-size: 1.1rem; font-weight: 700; opacity: 0.8; }
-
   /* ── Content / meta ── */
   .content-gate { position: relative; z-index: 10; padding: 0 5%; margin-top: 5vh; min-height: 400px; width: 55%; }
   .hero-title { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 900; line-height: 0.95; letter-spacing: -2px; margin: 0 0 1.5rem; text-transform: uppercase; }

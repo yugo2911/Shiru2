@@ -28,6 +28,7 @@
   import MinimizeModal from '@/modals/MinimizeModal.svelte'
   import SearchModal from '@/modals/SearchModal.svelte'
   import Navbar from '@/components/navigation/Navbar.svelte'
+  import TopNav from '@/components/navigation/TopNav.svelte'
   import Status from '@/components/Status.svelte'
   import { status } from '@/modules/networking.js'
   import { Toaster } from 'svelte-sonner'
@@ -69,6 +70,7 @@
 <div class='page-wrapper with-transitions bg-dark position-relative pl-safe-area'>
   <Status />
   <Menubar />
+  <TopNav />
   <Navbar />
   <div class='overflow-hidden content-wrapper h-full' class:status-transition={$statusTransition}>
     <Toaster visibleToasts={2} position='top-right' theme='dark' richColors duration={10_000} closeButton toastOptions={{class: `${$page === page.SETTINGS ? 'mt-70 mt-lg-0' : ''} ${isFullscreen && (!$modal || !modal.length) ? 'd-none' : ''}`}} />
