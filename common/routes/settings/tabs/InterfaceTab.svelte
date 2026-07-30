@@ -62,24 +62,6 @@
   </div>
 </SettingCard>
 {/if}
-{#if !SUPPORTS.isAndroid}
-{#if matches('Donate Button', 'Support This App button', 'Interface Settings')}
-<SettingCard title='Donate Button' description='Enables the "Support This App" button on the side bar.'>
-  <div class='custom-switch'>
-    <input type='checkbox' id='donate' bind:checked={settings.donate} />
-    <label for='donate'>{settings.donate ? 'On' : 'Off'}</label>
-  </div>
-</SettingCard>
-{/if}
-{/if}
-{#if matches('Expandable Sidebar', 'sidebar to expand', 'Interface Settings')}
-<SettingCard title='Expandable Sidebar' description='Enables the sidebar to expand revealing detailed text for the navigation buttons.'>
-  <div class='custom-switch'>
-    <input type='checkbox' id='disable-sidebar' bind:checked={settings.expandingSidebar} />
-    <label for='disable-sidebar'>{settings.expandingSidebar ? 'On' : 'Off'}</label>
-  </div>
-</SettingCard>
-{/if}
 {#if SUPPORTS.isAndroid}
 {#if matches('Expandable Lists', 'lists like recommendations or relations', 'Interface Settings')}
 <SettingCard title='Expandable Lists' description='Choose whether lists like recommendations or relations, open as dropdowns or scroll horizontally. Scrollable lists work better on smaller screens.'>

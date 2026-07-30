@@ -18,7 +18,6 @@
 </script>
 
 <script>
-  import Sidebar from '@/components/navigation/Sidebar.svelte'
   import Router from '@/routes/Router.svelte'
   import DetailsModal from '@/modals/details/DetailsModal.svelte'
   import TorrentModal from '@/modals/torrent/TorrentModal.svelte'
@@ -67,10 +66,9 @@
 
 <MinimizeModal />
 <UpdateModal />
-<div class='page-wrapper with-transitions bg-dark position-relative pl-safe-area' data-sidebar-type='overlayed-all'>
+<div class='page-wrapper with-transitions bg-dark position-relative pl-safe-area'>
   <Status />
   <Menubar />
-  <Sidebar />
   <Navbar />
   <div class='overflow-hidden content-wrapper h-full' class:status-transition={$statusTransition}>
     <Toaster visibleToasts={2} position='top-right' theme='dark' richColors duration={10_000} closeButton toastOptions={{class: `${$page === page.SETTINGS ? 'mt-70 mt-lg-0' : ''} ${isFullscreen && (!$modal || !modal.length) ? 'd-none' : ''}`}} />
@@ -93,8 +91,8 @@
     top: 0 !important;
   }
   .page-wrapper > .content-wrapper {
-    margin-left: var(--sidebar-minimised) !important;
-    width: calc(100% - var(--sidebar-minimised)) !important;
+    margin-left: 0 !important;
+    width: 100% !important;
     height: calc(100% - var(--wrapper-offset, 0rem)) !important;
   }
 </style>
