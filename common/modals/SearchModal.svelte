@@ -24,6 +24,7 @@
   function selectResult(media) { modal.open(modal.ANIME_DETAILS, media); close() }
 
   function handleKeydown(e) {
+    e.stopPropagation()
     if (e.key === 'ArrowDown') { e.preventDefault(); selectedIndex = Math.min(selectedIndex + 1, results.length - 1) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); selectedIndex = Math.max(selectedIndex - 1, 0) }
     else if (e.key === 'Enter') { e.preventDefault(); if (results[selectedIndex]) selectResult(results[selectedIndex]) }
