@@ -474,9 +474,6 @@
     font-weight: 700;
   }
   :global(.episode-card .ep-title) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     letter-spacing: 0.02em;
     line-height: 1.4;
   }
