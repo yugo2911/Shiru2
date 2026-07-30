@@ -290,23 +290,25 @@
             <div class='w-full content-visibility-auto scale my-20' class:load-in={!loadScroll} class:opacity-half={completed} class:scale-target={target} class:px-20={!target} class:px-10={target} class:ep-card-h={!SUPPORTS.isAndroid && largeCard} class:h-165={SUPPORTS.isAndroid && largeCard}>
               <div role='button' tabindex='0' class='episode-card rounded-2 w-full h-full overflow-hidden d-flex flex-xsm-column flex-row position-relative {unreleased ? `unreleased not-allowed` : `pointer`}' class:not-reactive={!$reactive} class:smallCard={!largeCard} class:android={SUPPORTS.isAndroid}  class:border={target || hasFiller} class:bg-black={completed} class:border-secondary={hasFiller} class:bg-dark-light={!completed} use:click={() => play(media, episode)} on:contextmenu|preventDefault={() => play(media, episode, true)}>
                 <div class='unreleased-overlay position-absolute top-0 left-0 right-0 h-full pointer-events-none rounded-2' class:d-none={!unreleased}/>
-                {#if image}
-                  <div class='d-flex episode-thumb'>
+                <div class='d-flex episode-thumb' class:thumb-empty={!image}>
+                  {#if image}
                     <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `ep-card-h` : `h-165`} w-full w-sm-265' images={[image, './404_episode.png']}/>
-                    {#if resolvedHash}
-                      <div class='position-relative torrent-button-container'>
-                        <div class='position-absolute top-0 right-0 text-danger icon-padding icon-shadow'>
-                          <TorrentButton class='btn btn-square shadow-none bg-transparent bd-highlight h-40 w-40' hash={[resolvedHash]} search={{ media, episode }} size={'3rem'} strokeWidth={'2.3'}/>
-                        </div>
+                  {:else}
+                    <div class='ep-placeholder {!SUPPORTS.isAndroid ? `ep-card-h` : `h-165`} w-full w-sm-265'></div>
+                  {/if}
+                  {#if resolvedHash}
+                    <div class='position-relative torrent-button-container'>
+                      <div class='position-absolute top-0 right-0 text-danger icon-padding icon-shadow'>
+                        <TorrentButton class='btn btn-square shadow-none bg-transparent bd-highlight h-40 w-40' hash={[resolvedHash]} search={{ media, episode }} size={'3rem'} strokeWidth={'2.3'}/>
                       </div>
-                    {/if}
-                    {#if dubAiring}
-                      <div class='position-relative d-none sm-label'>
-                        <AudioLabel {media} episodeList={true} dubbed={dubAiring?.airdate && (new Date(dubAiring.airdate).getTime() <= new Date().getTime())} subbed={(airdate && (new Date(airdate).getTime() <= new Date().getTime())) || (dubAiring?.airdate && (new Date(dubAiring.airdate).getTime() <= new Date().getTime()))} />
-                      </div>
-                    {/if}
-                  </div>
-                {/if}
+                    </div>
+                  {/if}
+                  {#if dubAiring}
+                    <div class='position-relative d-none sm-label'>
+                      <AudioLabel {media} episodeList={true} dubbed={dubAiring?.airdate && (new Date(dubAiring.airdate).getTime() <= new Date().getTime())} subbed={(airdate && (new Date(airdate).getTime() <= new Date().getTime())) || (dubAiring?.airdate && (new Date(dubAiring.airdate).getTime() <= new Date().getTime()))} />
+                    </div>
+                  {/if}
+                </div>
                 {#if hasFiller}
                   <div class='position-absolute bottom-0 right-0 bg-secondary py-5 px-10 text-dark rounded-top rounded-left font-weight-bold'>
                     {filler?.filler ? 'Filler' : 'Recap'}
