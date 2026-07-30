@@ -66,8 +66,11 @@
   })()
   $: staticMedia && (_modal?.focus(), (container && container.scrollTo({top: 0, behavior: 'smooth'})))
   $: staticMedia && (modal.length === 1 && $modal[modal.ANIME_DETAILS] && _modal?.focus())
-  function checkClose ({ keyCode }) {
-    if (keyCode === 27) close()
+  function checkClose (e) {
+    if (e.key !== 'Escape') return
+    if (modal.focused !== modal.ANIME_DETAILS) return
+    e.stopPropagation()
+    close()
   }
   function play (media, episode, force = false) {
     if (!media) return
@@ -198,7 +201,8 @@
 
 </script>
 
-<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} on:keydown={checkClose} tabindex="-1" role="button" bind:this={_modal} style={accentColor ? `--card-accent: ${accentColor}` : ''}>
+<svelte:window on:keydown={checkClose} />
+<div class="modal modal-full z-50 BlueprintContainer" class:show={staticMedia} tabindex="-1" role="button" bind:this={_modal} style={accentColor ? `--card-accent: ${accentColor}` : ''}>
   <div class="h-full modal-content p-0 overflow-y-auto position-relative StructuralCanvas" bind:this={container}>
     {#if staticMedia}
       <div class="GridOverlay"></div>
