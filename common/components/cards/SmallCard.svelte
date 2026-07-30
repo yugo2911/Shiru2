@@ -130,28 +130,38 @@
         {(Number.isInteger(type) ? Math.abs(type).toLocaleString() + (type >= 0 ? ' like' : ' dislike') + ((type !== 1 && type !== -1) ? 's' : '') : type)}
       </div>
     {/if}
-    <div class='text-white font-weight-very-bold font-size-16 title overflow-hidden' class:mb-10={type || type === 0}>
+    
+    <!-- Title Section with Status Dot -->
+    <div class='d-flex align-items-center title-container'>
       {#if media.mediaListEntry?.status}
-        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-dot d-inline-flex' title={media.mediaListEntry.status} />
+        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-dot flex-shrink-0' title={media.mediaListEntry.status} />
       {/if}
-      {anilistClient.title(media)}
+      <div class='text-white font-weight-very-bold font-size-16 title text-truncate' class:mb-10={type || type === 0}>
+        {anilistClient.title(media)}
+      </div>
     </div>
-    <div class='d-flex flex-row mt-auto font-weight-medium justify-content-between w-full text-muted'>
-      <div class='d-flex align-items-center pr-5'>
+
+    <!-- Bottom Metadata Row (Format, Year, etc.) -->
+    <div class='d-flex flex-row mt-auto font-weight-medium align-items-center gap-1 w-full text-muted metadata-row'>
+      <div class='badge-pill'>
+        <span class='line-height-1'>{formatMap[media.format]}</span>
+      </div>
+      <div class='badge-pill'>
         {#await ((media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
           {@const attributes = details?.included?.[0]?.attributes}
           <span class='line-height-1'>{details.seasonYear || ((media.status === 'NOT_YET_RELEASED') && 'TBA') || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear()) || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
         {/await}
-      </div>
-      <div class='d-flex align-items-center text-nowrap text-right'>
-        <span class='line-height-1'>{formatMap[media.format]}</span>
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  .small-card-ct { transition: transform 0.2s; outline: none; }
+  .small-card-ct { 
+    transition: transform 0.2s; 
+    outline: none; 
+    margin: 8px; /* Added external margin to increase space between grid items[cite: 1] */
+  }
   .small-card-ct:hover, .small-card-ct:focus-within { transform: translateY(-4px); z-index: 10; }
   
   .small-card { 
@@ -159,14 +169,14 @@
     min-height: 280px; 
     background: var(--secondary-color-dark); 
     border-radius: 8px;
-    padding: 4px;
+    padding: 6px;
   }
 
   .cover-img { 
     aspect-ratio: 2 / 3; 
-    object-fit: cover; 
+    object-file: cover; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    padding: 2px;
+    border-radius: 6px;
   }
 
   .airing-badge {
@@ -178,23 +188,36 @@
     z-index: 2;
   }
 
+  .title-container {
+    margin-top: 8px;
+    gap: 6px;
+    min-height: 22px;
+  }
+
   .title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.2;
-    margin-top: 4px;
-    height: 34px;
+    width: 100%;
   }
 
   .list-status-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background-color: var(--statusColor, #eee);
-    flex-shrink: 0;
-    margin-right: 4px;
-    margin-bottom: 1px;
+    background-color: var(--statusColor, #22c55e);
+  }
+
+  .metadata-row {
+    margin-top: 8px;
+    gap: 6px;
+  }
+
+  .badge-pill {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 3px 8px;
+    border-radius: 6px;
   }
 
   .context-type { 
@@ -205,9 +228,7 @@
 
   :global(.small-card-ct .cover-color) { background-color: var(--color); }
   
-  /* Airing State Glow */
   .airing .cover-img { border: 2px solid var(--success-color); }
-  
   .not-reactive { pointer-events: none; }
 
   .small-card-ct :global(.preview-card) {
