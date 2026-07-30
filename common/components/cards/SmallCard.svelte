@@ -209,4 +209,9 @@
   .airing .cover-img { border: 2px solid var(--success-color); }
   
   .not-reactive { pointer-events: none; }
+
+  .small-card-ct :global(.preview-card) {
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
 </style>

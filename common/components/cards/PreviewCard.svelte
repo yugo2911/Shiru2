@@ -2,7 +2,20 @@
   import { formatMap, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
   import { anilistClient } from '@/modules/anilist.js'
   import { episodesList } from '@/modules/episodes.js'
-  import { fadeIn, fadeOut } from '@/modules/util.js'
+  import { fadeIn as _fadeIn, fadeOut as _fadeOut } from '@/modules/util.js'
+
+  function fadeIn(node, params) {
+    const t = _fadeIn(node, params)
+    const origCss = t.css
+    t.css = (t, u) => origCss(t, u).replace('transform:', 'transform: translateX(-50%) ')
+    return t
+  }
+  function fadeOut(node, params) {
+    const t = _fadeOut(node, params)
+    const origCss = t.css
+    t.css = (t, u) => origCss(t, u).replace('transform:', 'transform: translateX(-50%) ')
+    return t
+  }
   import { click } from '@/modules/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import Scoring from '@/components/Scoring.svelte'
@@ -125,7 +138,7 @@
 </style>
 
 <div 
-  class='position-absolute w-450 h-full preview-card absolute-container top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
+  class='position-absolute w-450 h-full preview-card top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
   in:fadeIn out:fadeOut 
   bind:this={element}
 >
