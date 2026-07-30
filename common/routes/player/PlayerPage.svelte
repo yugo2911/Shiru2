@@ -2472,9 +2472,8 @@
     gap: 6px;
   }
   .skip:hover {
-    background: rgba(18, 18, 18, 0.8) !important;
-    border-color: var(--player-accent) !important;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--player-accent) 20%, transparent) !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    border-color: rgba(255,255,255,0.15) !important;
   }
   .skip :global(svg) {
     color: var(--player-accent);
