@@ -17,6 +17,7 @@
     return t
   }
   import { click } from '@/modules/click.js'
+  import { settings } from '@/modules/settings.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import Scoring from '@/components/Scoring.svelte'
   import { Play, VolumeX, Volume2 } from 'lucide-svelte'
@@ -28,7 +29,7 @@
 
   $: maxEp = getMediaMaxEp(media)
   let hide = true
-  let muted = true
+  let muted = settings.value.autoMuteTrailers
 
   const play = () => media.status !== 'NOT_YET_RELEASED' && playMedia(media)
   const toggleMute = () => (muted = !muted)

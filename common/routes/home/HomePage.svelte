@@ -296,7 +296,7 @@
 
   // ─── Trailer mute ────────────────────────────────────────────────────────────
 
-  let muted = true
+  let muted = settings.value.autoMuteTrailers
   let trailerHide = true
   const toggleMute = () => { muted = !muted }
 

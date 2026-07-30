@@ -621,6 +621,7 @@ export const defaults = {
   cardPreview: true,
   jimakuKey: '',
   cardAudio: false,
+  autoMuteTrailers: true,
   toggleList: !SUPPORTS.isAndroid,
   titleLang: 'romaji',
   hideMyAnime: false,

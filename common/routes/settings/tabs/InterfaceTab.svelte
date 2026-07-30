@@ -118,6 +118,14 @@
 </SettingCard>
 {/if}
 {/if}
+{#if matches('Auto Mute Trailers', 'automatically mute trailer previews', 'Interface Settings')}
+<SettingCard title='Auto Mute Trailers' description='Automatically mute trailer previews when hovering over cards or viewing the home banner.'>
+  <div class='custom-switch'>
+    <input type='checkbox' id='auto-mute-trailers' bind:checked={settings.autoMuteTrailers} />
+    <label for='auto-mute-trailers'>{settings.autoMuteTrailers ? 'On' : 'Off'}</label>
+  </div>
+</SettingCard>
+{/if}
 {#if matches('Card Audio', 'sub, dub, partial dub, and age rating icons', 'Interface Settings')}
 <SettingCard title='Card Audio' description={'If the sub, dub, partial dub, and age rating icons should be shown on the cards, the corresponding episode number will be shown when possible. Additionally a label will be shown on the preview cards, anime view, episode cards, and the home banner of the highest possible audio available, either dub, partial dub, or sub. Note these will not be visible when viewing the schedule page. '}>
   <div class='custom-switch'>
