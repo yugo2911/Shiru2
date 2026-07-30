@@ -706,8 +706,7 @@
   .GenrePill :global(svg) { color: var(--card-accent); }
 
   .SynopsisStrip {
-    max-height: 6em;
-    max-width: 65ch;
+    max-width: 85ch;
     overflow: hidden;
     overflow-wrap: break-word;
     background: var(--card-bg2);
@@ -739,7 +738,7 @@
   }
   .SynopsisStrip:not(.expanded) .SynopsisText {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    /* -webkit-line-clamp: 10; */
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
