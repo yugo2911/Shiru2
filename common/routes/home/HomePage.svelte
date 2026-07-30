@@ -444,9 +444,6 @@
 
   <header class="header">
     <div class="nav-cluster">
-      <button class="brand" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.HOME); filterMode.set('section'); pinnedAnime = null }}>
-        <img src="./icon_filled.png" class="brand-icon" alt="Shiru" />
-      </button>
       <nav class="nav-links">
         <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => { playSfx(sfx.menu); filterMode.set('section'); pinnedAnime = null; selectedIndex.set(savedSectionIndex) }}>HOME</button>
         <button class="nav-item" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SEARCH) }}>LIBRARY</button>
@@ -619,8 +616,6 @@
 
   /* ── Header ── */
   .header { position: relative; z-index: 100; display: flex; justify-content: space-between; padding: 2rem 4%; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.05); }
-  .brand { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; }
-  .brand-icon { width: 3.2rem; height: 3.2rem; object-fit: contain; }
   .nav-cluster { display: flex; align-items: center; gap: 3rem; }
   .nav-links { display: flex; gap: 2rem; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 24px; border-radius: 50px; }
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; }
