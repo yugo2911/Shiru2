@@ -2462,16 +2462,17 @@
     font-size: 1.1rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.08em !important;
-    background: hsla(var(--black-color-hsl), 0.6) !important;
+    background: rgba(18, 18, 18, 0.65) !important;
     color: var(--card-fg) !important;
-    border: 1px solid hsla(var(--white-color-hsl), 0.08) !important;
-    border-radius: 6px !important;
-    padding: 6px 14px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 50px !important;
+    padding: 8px 18px !important;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     gap: 6px;
   }
   .skip:hover {
-    background: hsla(var(--black-color-hsl), 0.75) !important;
+    background: rgba(18, 18, 18, 0.8) !important;
     border-color: var(--player-accent) !important;
     box-shadow: 0 0 20px color-mix(in srgb, var(--player-accent) 20%, transparent) !important;
   }
