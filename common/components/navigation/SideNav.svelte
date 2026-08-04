@@ -1,8 +1,9 @@
 <script>
-  import { page, modal, goBack, goForward, canGoBack, canGoForward } from '@/modules/navigation.js'
+  import { page, modal, playPage, goBack, goForward, canGoBack, canGoForward } from '@/modules/navigation.js'
+  import { nowPlaying as media } from '@/components/MediaHandler.svelte'
   import { hasUnreadNotifications } from '@/modals/NotificationsModal.svelte'
   import Helper from '@/modules/helper.js'
-  import { Home, Settings, LogIn, Bell, BellDot, Download, Users, CalendarSearch, Search, ChevronLeft, ChevronRight } from 'lucide-svelte'
+  import { Home, Settings, LogIn, Bell, BellDot, Download, Users, CalendarSearch, Search, ChevronLeft, ChevronRight, TvMinimalPlay, History, ListVideo } from 'lucide-svelte'
   import { fade } from 'svelte/transition'
 
   const sfx = {
@@ -61,6 +62,27 @@
     <button class="nav-item nav-icon-btn" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SEARCH) }} title="Search">
       <Search size="1.6rem" />
     </button>
+    {#if $media?.media || ($playPage && (Object.keys($media).length > 0))}
+      <button class="nav-item nav-icon-btn" on:click={() => {
+        playSfx(sfx.menu)
+        if ($playPage && page.value === page.PLAYER) {
+          playPage.set(false)
+        }
+        if ($playPage) {
+          page.navigateTo(page.PLAYER)
+        } else {
+          modal.toggle(modal.ANIME_DETAILS, $media?.media)
+        }
+      }} title={$media?.display ? 'Last Watched' : 'Now Playing'}>
+        {#if $playPage}
+          <TvMinimalPlay size="1.6rem" />
+        {:else if $media?.display}
+          <History size="1.6rem" />
+        {:else}
+          <ListVideo size="1.6rem" />
+        {/if}
+      </button>
+    {/if}
     <button class="nav-item nav-icon-btn nav-notify" on:click={() => { playSfx(sfx.menu); modal.toggle(modal.NOTIFICATIONS) }} title="Notifications">
       {#if $hasUnreadNotifications > 0}
         <BellDot size="1.6rem" class="fill-1" style="--fill-color: var(--notify-color)" />
