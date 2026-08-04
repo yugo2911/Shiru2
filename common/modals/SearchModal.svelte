@@ -39,19 +39,41 @@
     }
   }
 
-  function parseYear(q) {
-    const match = q.match(/\b(19|20)\d{2}\b/)
-    if (!match) return { title: q.trim(), year: null }
-    return { title: q.replace(match[0], '').trim(), year: Number(match[0]) }
+  const FORMAT_WORDS = [
+    { format: 'TV_SHORT', words: ['tv short'] },
+    { format: 'MOVIE', words: ['movie', 'film'] },
+    { format: 'TV', words: ['tv'] },
+    { format: 'SPECIAL', words: ['special'] },
+    { format: 'OVA', words: ['ova'] },
+    { format: 'ONA', words: ['ona'] },
+  ]
+
+  function parseQuery(q) {
+    let title = q
+    const yearMatch = title.match(/\b(19|20)\d{2}\b/)
+    const year = yearMatch ? Number(yearMatch[0]) : null
+    if (yearMatch) title = title.replace(yearMatch[0], '')
+    let format = null
+    for (const { format: fmt, words } of FORMAT_WORDS) {
+      const re = new RegExp(`\\b${words.join('\\b|\\b')}\\b`, 'i')
+      const match = title.match(re)
+      if (match) {
+        format = fmt
+        title = title.replace(re, '')
+        break
+      }
+    }
+    return { title: title.trim(), year, format }
   }
 
   async function handleSearch() {
     const id = ++requestId
     try {
-      const { title, year } = parseYear(query)
+      const { title, year, format } = parseQuery(query)
       const variables = { perPage: 20, sort: 'SEARCH_MATCH' }
       if (title) variables.search = title
       if (year) variables.year = year
+      if (format) variables.format = [format]
       const res = await anilistClient.search(variables)
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
