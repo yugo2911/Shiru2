@@ -1890,7 +1890,24 @@
         </button>
       {/if}
     {/if}
-    <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-50 pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!volumeVisible} class:text-white={volumeBoosted || !boostScrollCount} class:boosting={!volumeBoosted && boostScrollCount} class:muted={volume === 0}>{volumeText}</span>
+    <span class='ui-volume position-absolute z-10 pointer-events-none opacity-90 opacity-ts-3 d-flex align-items-center justify-content-center' class:transparent={!volumeVisible}>
+      <svg class='volume-ring' viewBox='0 0 100 100'>
+        <circle class='ring-bg' cx='50' cy='50' r='42' />
+        <circle class='ring-fill' cx='50' cy='50' r='42'
+          style='stroke-dashoffset: {264 - (264 * (volumeBoosted ? Math.min(gain, 3) / 3 : volume))}' />
+      </svg>
+      <span class='volume-icon-inner'>
+        {#if muted || volume === 0}
+          <VolumeX size='2.8rem' />
+        {:else if volumeBoosted}
+          <Volume2 size='2.8rem' />
+        {:else if volume < 0.5}
+          <Volume1 size='2.8rem' />
+        {:else}
+          <Volume2 size='2.8rem' />
+        {/if}
+      </span>
+    </span>
     <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' style='left: 0; bottom: 6rem;' class:transparent={!subVisible}>{subText}</span>
     {#if subDelayText}
       <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
@@ -2553,6 +2570,36 @@
   }
   .ui-volume.muted {
     color: var(--paused-color) !important;
+  }
+  .volume-ring {
+    width: 7rem;
+    height: 7rem;
+    transform: rotate(-90deg);
+  }
+  .ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 6;
+  }
+  .ring-fill {
+    fill: none;
+    stroke: var(--white-color);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 264;
+    transition: stroke-dashoffset 0.1s ease-out;
+  }
+  .ui-volume.muted .ring-fill {
+    stroke: var(--paused-color);
+  }
+  .ui-volume.boosting .ring-fill {
+    stroke: var(--quindenary-color);
+  }
+  .volume-icon-inner {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-shadow {
