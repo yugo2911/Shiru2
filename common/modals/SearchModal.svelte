@@ -95,11 +95,11 @@
     return { title: title.trim(), year, format, status, season }
   }
 
-  async function handleSearch() {
+async function handleSearch() {
     const id = ++requestId
     try {
       const { title, year, format, status, season } = parseQuery(query)
-      const variables = { perPage: 20, sort: year ? ['POPULARITY_DESC', 'SCORE_DESC'] : 'SEARCH_MATCH' }
+      const variables = { perPage: 20, sort: (year || status || season || format) ? ['POPULARITY_DESC', 'SCORE_DESC'] : 'SEARCH_MATCH' }
       if (title) variables.search = title
       if (year) variables.year = year
       if (format) variables.format = [format]
