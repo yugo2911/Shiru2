@@ -15,7 +15,7 @@
   import { getChaptersAniSkip } from '@/modules/anime/anime.js'
   import { mediaCache } from '@/modules/cache.js'
   import Seekbar from '@/routes/player/components/Seekbar.svelte'
-  import { click, closeOnClickOutside } from '@/modules/click.js'
+  import { click } from '@/modules/click.js'
   import VideoDeband from 'video-deband'
   import Helper from '@/modules/helper.js'
 
@@ -1977,7 +1977,7 @@
       <span class='icon text-white ctrl mr-5 d-flex align-items-center keybinds' title='Keybinds [`]' use:click={() => (showKeybinds = true)}>
         <Keyboard size='2.5rem' strokeWidth={2.5} />
       </span>
-      <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Episodes' data-episodes-toggle use:click={() => showEpisodes = !showEpisodes}>
+      <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Episodes' use:click={() => showEpisodes = !showEpisodes}>
         <ListVideo size='2.5rem' strokeWidth={2.5} />
       </span>
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1}
@@ -2080,7 +2080,8 @@
   </div>
 
   {#if showEpisodes && media?.media}
-    <div class='episodes-panel' use:closeOnClickOutside={[() => showEpisodes = false, '[data-episodes-toggle]']} on:click|self={() => showEpisodes = false}>
+    <div class='episodes-overlay' on:click={() => showEpisodes = false} on:contextmenu|preventDefault={() => showEpisodes = false}></div>
+    <div class='episodes-panel' on:click|stopPropagation on:contextmenu|stopPropagation>
       <div class='episodes-panel-header'>
         <span class='episodes-panel-title'>EPISODES</span>
         <button class='episodes-panel-close' on:click={() => showEpisodes = false}>✕</button>
@@ -2490,29 +2491,27 @@
     filter: drop-shadow(0 0 8px var(--black-color));
   }
   .skip {
-    transition: 0.2s opacity ease 0s, background 0.12s;
-    font-family: var(--font-mono) !important;
-    font-size: 1.1rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.08em !important;
-    background: rgba(18, 18, 18, 0.65) !important;
-    color: var(--card-fg) !important;
-    border: 1px solid rgba(255,255,255,0.06) !important;
-    border-radius: 50px !important;
-    padding: 8px 18px !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.12s;
+    font-family: inherit !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    background: rgba(18, 18, 18, 0.9) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px !important;
+    padding: 8px 14px !important;
     gap: 6px;
   }
   .skip:hover {
-    background: rgba(0, 0, 0, 0.8) !important;
-    border-color: rgba(255,255,255,0.15) !important;
+    background: rgba(0, 0, 0, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
   }
   .skip :global(svg) {
-    color: var(--player-accent);
+    color: inherit;
   }
   .skip:hover :global(svg) {
-    filter: drop-shadow(0 0 6px var(--player-accent));
+    filter: none;
   }
 
   .bottom {
@@ -2958,6 +2957,12 @@
     height: 1px;
     margin: 4px 8px;
     background: var(--card-line);
+  }
+
+  .episodes-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 49;
   }
 
   .episodes-panel {
