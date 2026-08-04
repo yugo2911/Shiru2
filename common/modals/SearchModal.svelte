@@ -95,7 +95,6 @@
         {#each groups as group}
           <div class="group-header" class:active={group.items.some(media => results.indexOf(media) === selectedIndex)}>
             {FORMAT_LABELS[group.format] || humanize(group.format)}
-            <span class="group-count">{group.items.length}</span>
           </div>
           {#each group.items as media}
             <button class="result-btn {(results.indexOf(media) === selectedIndex) ? 'selected' : ''}" bind:this={resultEls[results.indexOf(media)]}
@@ -171,10 +170,6 @@
     letter-spacing: 0.12em; text-transform: uppercase;
   }
   .group-header:first-child { padding-top: 4px; margin-top: 0; }
-  .group-header .group-count {
-    background: var(--card-faint); border-radius: 6px; padding: 1px 7px;
-    font-size: 10px; letter-spacing: 0;
-  }
   .group-header.active { color: var(--card-accent); }
   .result-btn {
     width: 100%; display: flex; align-items: center; gap: 14px;
