@@ -56,6 +56,13 @@
     { status: 'FINISHED', words: ['finished', 'completed'] },
   ]
 
+  const SEASON_WORDS = [
+    { season: 'WINTER', words: ['winter'] },
+    { season: 'SPRING', words: ['spring'] },
+    { season: 'SUMMER', words: ['summer'] },
+    { season: 'FALL', words: ['fall', 'autumn'] },
+  ]
+
   function stripKeyword(title, entry, key) {
     for (const words of [entry.words]) {
       const re = new RegExp(`\\b${words.join('\\b|\\b')}\\b`, 'i')
@@ -80,18 +87,24 @@
       const { value, title: next } = stripKeyword(title, entry, 'status')
       if (value) { status = value; title = next; break }
     }
-    return { title: title.trim(), year, format, status }
+    let season = null
+    for (const entry of SEASON_WORDS) {
+      const { value, title: next } = stripKeyword(title, entry, 'season')
+      if (value) { season = value; title = next; break }
+    }
+    return { title: title.trim(), year, format, status, season }
   }
 
   async function handleSearch() {
     const id = ++requestId
     try {
-      const { title, year, format, status } = parseQuery(query)
+      const { title, year, format, status, season } = parseQuery(query)
       const variables = { perPage: 20, sort: 'SEARCH_MATCH' }
       if (title) variables.search = title
       if (year) variables.year = year
       if (format) variables.format = [format]
       if (status) variables.status = [status]
+      if (season) variables.season = season
       const res = await anilistClient.search(variables)
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
