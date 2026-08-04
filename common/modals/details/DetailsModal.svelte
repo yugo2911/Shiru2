@@ -7,7 +7,7 @@
   import { add } from '@/modules/torrent.js'
   import { anilistClient } from '@/modules/anilist.js'
   import { isValidNumber } from '@/modules/util.js'
-  import { click } from '@/modules/click.js'
+  import { click, closeOnClickOutside } from '@/modules/click.js'
 
   import EpisodeList from '@/modals/details/components/EpisodeList.svelte'
   import ToggleList from '@/modals/details/components/ToggleList.svelte'
@@ -171,12 +171,6 @@
   let showAnimeThemes = false
   let activeTab = 'relations'
   let showSynopsis = false
-
-  function closeOnClickOutside(node, onClose) {
-    function handle(e) { if (!node.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', handle, true)
-    return { destroy() { document.removeEventListener('mousedown', handle, true) } }
-  }
 
   let resizeObserver
   let leftColumn, rightColumn

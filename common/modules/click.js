@@ -115,6 +115,35 @@ export function blurExit(node, onBlur = noop) {
 }
 
 /**
+ * Calls `onClose` when the user presses down outside of `node`.
+ * Optionally ignores targets matching `exclude` (a CSS selector or predicate),
+ * e.g. the button that toggles the element open.
+ * Pass `value` as either the callback directly, or `[onClose, exclude]`.
+ * @param {HTMLElement} node
+ * @param {Function|[Function, string|Function]} [value]
+ * @param {string|Function} [exclude]
+ */
+export function closeOnClickOutside(node, value = noop, exclude = null) {
+  if (Array.isArray(value)) {
+    exclude = value[1]
+    value = value[0]
+  }
+  const onClose = typeof value === 'function' ? value : noop
+
+  function handle(e) {
+    const target = e.target
+    if (node.contains(target)) return
+    if (exclude) {
+      if (typeof exclude === 'function') { if (exclude(target)) return }
+      else if (target.closest?.(exclude)) return
+    }
+    onClose()
+  }
+  document.addEventListener('mousedown', handle, true)
+  return { destroy() { document.removeEventListener('mousedown', handle, true) } }
+}
+
+/**
  * Fires a callback when the pointer leaves the node.
  * @param {HTMLElement} node
  * @param {Function} [hoverUpdate]

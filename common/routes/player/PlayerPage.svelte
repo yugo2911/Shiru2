@@ -15,7 +15,7 @@
   import { getChaptersAniSkip } from '@/modules/anime/anime.js'
   import { mediaCache } from '@/modules/cache.js'
   import Seekbar from '@/routes/player/components/Seekbar.svelte'
-  import { click } from '@/modules/click.js'
+  import { click, closeOnClickOutside } from '@/modules/click.js'
   import VideoDeband from 'video-deband'
   import Helper from '@/modules/helper.js'
 
@@ -832,11 +832,6 @@
 
   $: animeAccent = media?.media?.coverImage?.color || '#888888'
 
-  function closeOnClickOutside(node, onClose) {
-    function handle(e) { if (!node.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', handle, true)
-    return { destroy() { document.removeEventListener('mousedown', handle, true) } }
-  }
   loadWithDefaults({
     KeyX: {
       fn: () => !viewAnime && screenshot(),
@@ -1982,7 +1977,7 @@
       <span class='icon text-white ctrl mr-5 d-flex align-items-center keybinds' title='Keybinds [`]' use:click={() => (showKeybinds = true)}>
         <Keyboard size='2.5rem' strokeWidth={2.5} />
       </span>
-      <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Episodes' use:click={() => showEpisodes = !showEpisodes}>
+      <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Episodes' data-episodes-toggle use:click={() => showEpisodes = !showEpisodes}>
         <ListVideo size='2.5rem' strokeWidth={2.5} />
       </span>
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1}
@@ -2085,7 +2080,7 @@
   </div>
 
   {#if showEpisodes && media?.media}
-    <div class='episodes-panel' on:click|self={() => showEpisodes = false}>
+    <div class='episodes-panel' use:closeOnClickOutside={[() => showEpisodes = false, '[data-episodes-toggle]']} on:click|self={() => showEpisodes = false}>
       <div class='episodes-panel-header'>
         <span class='episodes-panel-title'>EPISODES</span>
         <button class='episodes-panel-close' on:click={() => showEpisodes = false}>✕</button>
