@@ -28,17 +28,27 @@
     currentEpisodes = []
     loadedAll = false
     episodes = await getEpisodes(media, episodeCount)
-    currentEpisodes = episodes?.slice(0, maxEpisodes) || []
+    currentEpisodes = await resolveWindow(episodes?.slice(0, maxEpisodes) || [])
     loadedAll = !episodes || currentEpisodes.length >= episodes.length
     loading = false
     ensureCurrentVisible()
   }
 
+  function resolveWindow(list) {
+    return Promise.all(list.map(async ep => ({
+      ...ep,
+      filler: await ep.filler,
+      dubAiring: await ep.dubAiring
+    })))
+  }
+
   function ensureCurrentVisible() {
     const key = userProgress + 1
     if (episodes && !currentEpisodes.some(ep => getProgressKey(ep) === key)) {
-      currentEpisodes = episodes.slice(0, Math.max(currentEpisodes.length, key + 5))
+      const slice = episodes.slice(0, Math.max(currentEpisodes.length, key + 5))
+      currentEpisodes = slice
       loadedAll = currentEpisodes.length >= episodes.length
+      resolveWindow(slice).then(resolved => { currentEpisodes = resolved })
     }
     scrollToCurrent()
   }
@@ -50,8 +60,9 @@
   function handleScroll(event) {
     const el = event.target
     if (!loadedAll && episodes && el.scrollTop + el.clientHeight + 80 >= el.scrollHeight) {
-      currentEpisodes = episodes.slice(0, currentEpisodes.length + maxEpisodes)
-      loadedAll = currentEpisodes.length >= episodes.length
+      const slice = episodes.slice(0, currentEpisodes.length + maxEpisodes)
+      loadedAll = slice.length >= episodes.length
+      resolveWindow(slice).then(resolved => { currentEpisodes = resolved })
     }
   }
 

@@ -618,6 +618,7 @@
   }
   function handleWheel(event) {
     if (viewAnime) return
+    if (event.target.closest?.('.episodes-panel')) return
     event.preventDefault()
     // make trackpad type device scroll more gradual
     wheelAccumulator += event.deltaY
@@ -2966,8 +2967,8 @@
 
   .episodes-panel {
     position: absolute;
-    bottom: 6rem;
-    right: 1rem;
+    bottom: 7.5rem;
+    right: 3rem;
     width: 420px;
     max-height: 60vh;
     background: var(--card-surface);
@@ -3010,7 +3011,8 @@
   @media (max-width: 480px) {
     .episodes-panel {
       width: calc(100vw - 2rem);
-      right: 0.5rem;
+      right: 1rem;
+      bottom: 7rem;
     }
   }
 
