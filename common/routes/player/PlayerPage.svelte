@@ -29,7 +29,7 @@
   import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, EyeOff, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
   import { jimakuClient } from '@/modules/jimaku.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
-  import EpisodeList from '@/modals/details/components/EpisodeList.svelte'
+  import EpisodePanel from '@/components/EpisodePanel.svelte'
   import Debug from 'debug'
   const debug = Debug('ui:player')
 
@@ -2085,19 +2085,16 @@
 
   {#if showEpisodes && media?.media}
     <div class='episodes-panel' on:click|self={() => showEpisodes = false}>
-      <div class='episodes-panel-content'>
-        <div class='episodes-panel-header'>
-          <span class='episodes-panel-title'>EPISODES</span>
-          <button class='episodes-panel-close' on:click={() => showEpisodes = false}>✕</button>
-        </div>
-        <EpisodeList
-          media={media.media}
-          episodeCount={getMediaMaxEp(media.media)}
-          userProgress={media.media?.mediaListEntry?.progress || 0}
-          play={(m, ep) => { playAnime(m, ep); showEpisodes = false }}
-          episodeOrder={true}
-        />
+      <div class='episodes-panel-header'>
+        <span class='episodes-panel-title'>EPISODES</span>
+        <button class='episodes-panel-close' on:click={() => showEpisodes = false}>✕</button>
       </div>
+      <EpisodePanel
+        media={media.media}
+        episodeCount={getMediaMaxEp(media.media)}
+        userProgress={media.media?.mediaListEntry?.progress || 0}
+        play={(m, ep) => { playAnime(m, ep); showEpisodes = false }}
+      />
     </div>
   {/if}
 
@@ -3009,11 +3006,6 @@
   .episodes-panel-close:hover {
     color: var(--card-fg);
     background: var(--card-faint);
-  }
-  .episodes-panel-content {
-    overflow-y: auto;
-    flex: 1;
-    padding: 8px;
   }
   @media (max-width: 480px) {
     .episodes-panel {
