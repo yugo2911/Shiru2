@@ -2523,29 +2523,18 @@
     color: var(--octonary-color) !important;
   }
 
-  .bottom .volume:hover .boost,
-  .bottom .volume:focus-within .boost{
+  .bottom .volume .boost {
     width: 3rem;
     height: 3rem;
   }
 
-  .bottom .volume .boost {
-    width: 0;
-    height: 0;
-    transition: width 0.1s ease, height 0.1s ease;
-  }
-
-  .bottom .volume:hover .custom-range,
-  .bottom .volume:focus-within .custom-range {
-    width: 5vw;
-    display: inline-block;
-    margin-right: 1.125rem;
-  }
-
   .bottom .volume .custom-range {
-    width: 0;
-    transition: width 0.1s ease;
+    width: 5vw;
     height: 100%;
+    color: var(--white-color);
+  }
+  .bottom .volume .custom-range.boost-color {
+    color: var(--white-color);
   }
 
   .mt-100 {
