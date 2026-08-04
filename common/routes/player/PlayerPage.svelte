@@ -29,6 +29,7 @@
   import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, EyeOff, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
   import { jimakuClient } from '@/modules/jimaku.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
+  import EpisodeList from '@/modals/details/components/EpisodeList.svelte'
   import Debug from 'debug'
   const debug = Debug('ui:player')
 
@@ -101,6 +102,7 @@
   let source = null
   let gainNode = null
   let playbackRate = 1
+  let showEpisodes = false
   let externalPlayerReady = false
   $: cache.setEntry(caches.GENERAL, 'volume', String(volume || 0))
   $: launchedExternal = false
@@ -1979,11 +1981,9 @@
       <span class='icon text-white ctrl mr-5 d-flex align-items-center keybinds' title='Keybinds [`]' use:click={() => (showKeybinds = true)}>
         <Keyboard size='2.5rem' strokeWidth={2.5} />
       </span>
-      {#if $playPage && media?.media}
-        <span class='icon text-white ctrl mr-5 d-flex align-items-center' title='Now Playing [O]' use:click={() => modal.toggle(modal.ANIME_DETAILS, media.media)}>
-          <Eye size='2.5rem' strokeWidth={2.5} />
-        </span>
-      {/if}
+      <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Episodes' use:click={() => showEpisodes = !showEpisodes}>
+        <ListVideo size='2.5rem' strokeWidth={2.5} />
+      </span>
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1}
         <div class='dropdown dropup with-arrow' use:click={toggleDropdown}>
           <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Audio Tracks'>
@@ -2001,6 +2001,11 @@
             </div>
           </div>
         </div>
+      {/if}
+      {#if $playPage && media?.media}
+        <span class='icon text-white ctrl mr-5 d-flex align-items-center' title='Now Playing [O]' use:click={() => modal.toggle(modal.ANIME_DETAILS, media.media)}>
+          <Eye size='2.5rem' strokeWidth={2.5} />
+        </span>
       {/if}
       {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1}
         <div class='dropdown dropup with-arrow' use:click={toggleDropdown}>
@@ -2077,6 +2082,24 @@
       </span>
     </div>
   </div>
+
+  {#if showEpisodes && media?.media}
+    <div class='episodes-panel' on:click|self={() => showEpisodes = false}>
+      <div class='episodes-panel-content'>
+        <div class='episodes-panel-header'>
+          <span class='episodes-panel-title'>EPISODES</span>
+          <button class='episodes-panel-close' on:click={() => showEpisodes = false}>✕</button>
+        </div>
+        <EpisodeList
+          media={media.media}
+          episodeCount={getMediaMaxEp(media.media)}
+          userProgress={media.media?.mediaListEntry?.progress || 0}
+          play={(m, ep) => { playAnime(m, ep); showEpisodes = false }}
+          episodeOrder={true}
+        />
+      </div>
+    </div>
+  {/if}
 
 <SoftModal class='p-0 w-700 mw-full rounded overflow-hidden jimaku-modal' bind:showModal={jimakuShow} close={closeJimaku} id='jimaku'>
 
@@ -2942,6 +2965,61 @@
     height: 1px;
     margin: 4px 8px;
     background: var(--card-line);
+  }
+
+  .episodes-panel {
+    position: absolute;
+    bottom: 6rem;
+    right: 1rem;
+    width: 420px;
+    max-height: 60vh;
+    background: var(--card-surface);
+    border: 1px solid var(--card-line);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .episodes-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--card-line);
+    background: var(--card-bg2);
+  }
+  .episodes-panel-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: var(--card-fg);
+  }
+  .episodes-panel-close {
+    background: none;
+    border: none;
+    color: var(--card-dim);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .episodes-panel-close:hover {
+    color: var(--card-fg);
+    background: var(--card-faint);
+  }
+  .episodes-panel-content {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px;
+  }
+  @media (max-width: 480px) {
+    .episodes-panel {
+      width: calc(100vw - 2rem);
+      right: 0.5rem;
+    }
   }
 
 </style>
