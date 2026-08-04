@@ -7,6 +7,8 @@
   import { fly, fade } from 'svelte/transition'
 
   const FORMAT_PRIORITY = { TV: 0, MOVIE: 1, ONA: 2, OVA: 3, SPECIAL: 4, TV_SHORT: 5 }
+  const FORMAT_ORDER = ['TV', 'MOVIE', 'ONA', 'OVA', 'SPECIAL', 'TV_SHORT']
+  const FORMAT_LABELS = { TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }
 
   let searchInput, query = '', results = [], loading, selectedIndex = 0, requestId = 0
   let resultEls = []
@@ -14,6 +16,10 @@
   const humanize = (str) => str?.replace(/_/g, ' ') || ''
 
   const formatAirDate = (date) => date?.year || ''
+
+  $: groups = FORMAT_ORDER
+    .map(format => ({ format, items: results.filter(media => media.format === format) }))
+    .filter(group => group.items.length)
 
   function close() {
     requestId++
@@ -36,7 +42,7 @@
   async function handleSearch() {
     const id = ++requestId
     try {
-      const res = await anilistClient.search({ method: 'Search', search: query, perPage: 10, sort: 'SEARCH_MATCH' })
+      const res = await anilistClient.search({ method: 'Search', search: query, perPage: 20, sort: 'SEARCH_MATCH' })
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
       results = all.sort((a, b) => (FORMAT_PRIORITY[a.format] ?? 99) - (FORMAT_PRIORITY[b.format] ?? 99))
@@ -86,24 +92,29 @@
       </div>
     {:else if results.length > 0}
       <div class="results">
-        {#each results as media, i}
-          <button class="result-btn {(i === selectedIndex) ? 'selected' : ''}" bind:this={resultEls[i]}
-            on:click={() => selectResult(media)} on:mouseenter={() => selectedIndex = i}>
-            <div class="cover-wrap">
-              <img src={media.coverImage?.extraLarge || media.coverImage?.large || './404_cover.png'} alt="" loading="lazy" />
-            </div>
-            <div class="result-text">
-              <div class="result-title">{media.title?.userPreferred || media.title?.romaji}</div>
-              <div class="result-meta">
-                {#if media.format}<span>{humanize(media.format)}</span>{/if}
-                {#if media.status}<span>{humanize(media.status)}</span>{/if}
-                {#if formatAirDate(media.startDate)}<span class="air-date">{formatAirDate(media.startDate)}</span>{/if}
+        {#each groups as group}
+          <div class="group-header" class:active={group.items.some(media => results.indexOf(media) === selectedIndex)}>
+            {FORMAT_LABELS[group.format] || humanize(group.format)}
+            <span class="group-count">{group.items.length}</span>
+          </div>
+          {#each group.items as media}
+            <button class="result-btn {(results.indexOf(media) === selectedIndex) ? 'selected' : ''}" bind:this={resultEls[results.indexOf(media)]}
+              on:click={() => selectResult(media)} on:mouseenter={() => selectedIndex = results.indexOf(media)}>
+              <div class="cover-wrap">
+                <img src={media.coverImage?.extraLarge || media.coverImage?.large || './404_cover.png'} alt="" loading="lazy" />
               </div>
-            </div>
-            {#if media.mediaListEntry?.progress}
-              <div class="result-progress">Ep {media.mediaListEntry.progress}</div>
-            {/if}
-          </button>
+              <div class="result-text">
+                <div class="result-title">{media.title?.userPreferred || media.title?.romaji}</div>
+                <div class="result-meta">
+                  {#if media.status}<span>{humanize(media.status)}</span>{/if}
+                  {#if formatAirDate(media.startDate)}<span class="air-date">{formatAirDate(media.startDate)}</span>{/if}
+                </div>
+              </div>
+              {#if media.mediaListEntry?.progress}
+                <div class="result-progress">Ep {media.mediaListEntry.progress}</div>
+              {/if}
+            </button>
+          {/each}
         {/each}
       </div>
     {:else if query.trim()}
@@ -153,6 +164,18 @@
   .popup-close:hover { color: var(--card-fg); background: var(--card-faint); }
   .results-area { flex: 1; overflow-y: auto; min-height: 0; margin-top: 8px; padding: 2px; }
   .results { display: flex; flex-direction: column; gap: 2px; }
+  .group-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 4px 4px; margin-top: 6px;
+    color: var(--card-dim); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .group-header:first-child { padding-top: 4px; margin-top: 0; }
+  .group-header .group-count {
+    background: var(--card-faint); border-radius: 6px; padding: 1px 7px;
+    font-size: 10px; letter-spacing: 0;
+  }
+  .group-header.active { color: var(--card-accent); }
   .result-btn {
     width: 100%; display: flex; align-items: center; gap: 14px;
     padding: 10px; border-radius: 10px; border: 1px solid transparent; background: transparent;
