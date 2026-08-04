@@ -127,7 +127,7 @@
   }
   .popup {
     position: fixed; top: 18%; left: 50%; transform: translateX(-50%); z-index: 1000;
-    width: min(560px, 92vw); max-height: 72vh; overflow: hidden;
+    width: min(760px, 92vw); max-height: 72vh; overflow: hidden;
     border-radius: 14px; padding: 0.75rem;
     background: var(--card-bg2); border: 1px solid var(--card-line);
     box-shadow: 0 24px 60px rgba(0,0,0,0.55);
@@ -142,6 +142,9 @@
     font-size: 18px; padding: 8px 4px; outline: none;
   }
   .search-row input::placeholder { color: var(--card-dim); }
+  .search-row input:focus-visible,
+  .result-btn:focus-visible,
+  .popup-close:focus-visible { box-shadow: none; }
   .popup-close {
     background: none; border: none; cursor: pointer;
     color: var(--card-dim); padding: 6px; border-radius: 8px; line-height: 0; flex-shrink: 0;
@@ -159,7 +162,7 @@
   .result-btn:hover { background: var(--card-faint); }
   .result-btn.selected { background: var(--card-accent-dim); border-color: var(--card-accent); }
   .cover-wrap {
-    width: 56px; aspect-ratio: 2/3; flex-shrink: 0; border-radius: 6px; overflow: hidden;
+    width: 96px; aspect-ratio: 2/3; flex-shrink: 0; border-radius: 8px; overflow: hidden;
     background: var(--card-faint);
   }
   .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
