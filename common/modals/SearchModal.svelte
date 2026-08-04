@@ -39,10 +39,20 @@
     }
   }
 
+  function parseYear(q) {
+    const match = q.match(/\b(19|20)\d{2}\b/)
+    if (!match) return { title: q.trim(), year: null }
+    return { title: q.replace(match[0], '').trim(), year: Number(match[0]) }
+  }
+
   async function handleSearch() {
     const id = ++requestId
     try {
-      const res = await anilistClient.search({ method: 'Search', search: query, perPage: 20, sort: 'SEARCH_MATCH' })
+      const { title, year } = parseYear(query)
+      const variables = { perPage: 20, sort: 'SEARCH_MATCH' }
+      if (title) variables.search = title
+      if (year) variables.year = year
+      const res = await anilistClient.search(variables)
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
       results = all.sort((a, b) => (FORMAT_PRIORITY[a.format] ?? 99) - (FORMAT_PRIORITY[b.format] ?? 99))
