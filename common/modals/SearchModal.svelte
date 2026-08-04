@@ -48,32 +48,50 @@
     { format: 'ONA', words: ['ona'] },
   ]
 
+  const STATUS_WORDS = [
+    { status: 'NOT_YET_RELEASED', words: ['not yet released', 'unreleased', 'upcoming'] },
+    { status: 'RELEASING', words: ['releasing', 'airing', 'ongoing'] },
+    { status: 'HIATUS', words: ['on hiatus', 'hiatus'] },
+    { status: 'CANCELLED', words: ['cancelled', 'canceled'] },
+    { status: 'FINISHED', words: ['finished', 'completed'] },
+  ]
+
+  function stripKeyword(title, entry, key) {
+    for (const words of [entry.words]) {
+      const re = new RegExp(`\\b${words.join('\\b|\\b')}\\b`, 'i')
+      const match = title.match(re)
+      if (match) return { value: entry[key], title: title.replace(re, '') }
+    }
+    return { value: null, title }
+  }
+
   function parseQuery(q) {
     let title = q
     const yearMatch = title.match(/\b(19|20)\d{2}\b/)
     const year = yearMatch ? Number(yearMatch[0]) : null
     if (yearMatch) title = title.replace(yearMatch[0], '')
     let format = null
-    for (const { format: fmt, words } of FORMAT_WORDS) {
-      const re = new RegExp(`\\b${words.join('\\b|\\b')}\\b`, 'i')
-      const match = title.match(re)
-      if (match) {
-        format = fmt
-        title = title.replace(re, '')
-        break
-      }
+    for (const entry of FORMAT_WORDS) {
+      const { value, title: next } = stripKeyword(title, entry, 'format')
+      if (value) { format = value; title = next; break }
     }
-    return { title: title.trim(), year, format }
+    let status = null
+    for (const entry of STATUS_WORDS) {
+      const { value, title: next } = stripKeyword(title, entry, 'status')
+      if (value) { status = value; title = next; break }
+    }
+    return { title: title.trim(), year, format, status }
   }
 
   async function handleSearch() {
     const id = ++requestId
     try {
-      const { title, year, format } = parseQuery(query)
+      const { title, year, format, status } = parseQuery(query)
       const variables = { perPage: 20, sort: 'SEARCH_MATCH' }
       if (title) variables.search = title
       if (year) variables.year = year
       if (format) variables.format = [format]
+      if (status) variables.status = [status]
       const res = await anilistClient.search(variables)
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
