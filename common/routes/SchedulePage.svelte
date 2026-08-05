@@ -200,8 +200,22 @@
   .filter-btn:hover { border-color: var(--card-fg); color: var(--card-fg); }
   .filter-btn.active { background: var(--card-fg); color: var(--card-bg); border-color: var(--card-fg); }
 
-  .day-content { flex: 1; overflow-y: auto; padding: 3rem; scrollbar-width: none; }
-  .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+  .day-content { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 3rem;
+    padding-left: max(3rem, calc((100% - 1400px) / 2));
+    padding-right: max(3rem, calc((100% - 1400px) / 2));
+    scrollbar-width: none; 
+  }
+  
+  .grid-container { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 1rem; 
+    max-width: 1400px;
+    margin: 0 auto;
+  }
 
   .entry-item {
     position: relative; overflow: hidden;
@@ -229,9 +243,15 @@
     text-transform: uppercase;
   }
   .entry-title {
-    font-weight: 900; font-size: 1.2rem; line-height: 1.2;
-    color: var(--card-fg); text-transform: uppercase; letter-spacing: 0.01em;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    font-weight: 900; 
+    font-size: 1.8rem; /* Increased by 50% from 1.2rem */
+    line-height: 1.2;
+    color: var(--card-fg); 
+    text-transform: uppercase; 
+    letter-spacing: 0.01em;
+    display: -webkit-box; 
+    -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .entry-meta { display: flex; align-items: baseline; gap: 12px; margin-top: 12px; font-weight: 800; flex-wrap: wrap; }
@@ -275,6 +295,33 @@
   }
 
   @keyframes blink { 50% { opacity: 0.2; } }
+
+  /* Responsive adjustments */
+  @media (max-width: 1200px) {
+    .day-content {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+    .entry-title {
+      font-size: 1.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .day-content {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .grid-container {
+      grid-template-columns: 1fr;
+    }
+    .entry-title {
+      font-size: 1.3rem;
+    }
+    .entry-poster {
+      width: 80px;
+    }
+  }
 </style>
 
 <div class="page">
