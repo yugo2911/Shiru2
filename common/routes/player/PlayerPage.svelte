@@ -674,7 +674,7 @@
     volumeTimeout.unref?.()
   }
   function toggleFullscreen () {
-    if (!externalPlayback) document.fullscreenElement ? document.exitFullscreen() : document.querySelector('.content-wrapper').requestFullscreen()
+    if (!externalPlayback) document.fullscreenElement ? document.exitFullscreen() : document.querySelector('.page-wrapper').requestFullscreen()
   }
   function skip () {
     const current = findChapter(currentTime)
