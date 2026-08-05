@@ -68,8 +68,11 @@
 
   function scrollToCurrent() {
     requestAnimationFrame(() => {
-      const row = container?.querySelector(`[data-progress="${userProgress + 1}"]`)
-      row?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      if (!container) return
+      const row = container.querySelector(`[data-progress="${userProgress + 1}"]`)
+      if (!row) return
+      const top = row.offsetTop - container.clientHeight / 2 + row.offsetHeight / 2
+      container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     })
   }
 
@@ -144,8 +147,8 @@
   .ep-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: 12px;
+    padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid transparent;
     cursor: pointer;
@@ -174,10 +177,10 @@
 
   .ep-num {
     flex-shrink: 0;
-    width: 1.75rem;
+    width: 2rem;
     text-align: center;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     color: var(--card-accent);
   }
 
@@ -190,7 +193,7 @@
   }
 
   .ep-title {
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--card-fg);
     white-space: nowrap;
@@ -204,10 +207,10 @@
     gap: 4px;
   }
   .ep-badge {
-    font-size: 0.65rem;
+    font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
     background: var(--card-faint);
     color: var(--card-dim);
@@ -218,12 +221,12 @@
 
   .ep-side {
     flex-shrink: 0;
-    min-width: 5rem;
+    min-width: 5.5rem;
     text-align: right;
   }
 
   .ep-air {
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--card-dim);
     white-space: nowrap;
