@@ -1806,27 +1806,29 @@
       <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.up)}/s</span>
     </div>
   </div>
-
-  <div style='position: absolute; bottom: 80px; left: 20px; max-width: 60%; pointer-events: auto; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);'>
-    <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
-      {#if media?.title}
-        {media?.title}
-      {:else if media?.media?.title}
-        {anilistClient.title(media?.media)}
-      {:else if current}
-        {AnimeResolver.cleanFileName(current.name)}
-      {/if}
-    </div>
-    <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
-      {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
-        {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
-        Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
-        {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if}
-      {:else if current && (videos?.length > 1)}
-        Episode {videos.indexOf(current) + 1} of {videos.length}
-      {/if}
-      {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
-      {#if media?.episodeTitle}{media.episodeTitle}{/if}
+  <div class='now-playing'>
+    <div class='now-playing-inner'>
+      <div class='np-eyebrow'>You're Watching</div>
+      <div class='np-title'>
+        {#if media?.title}
+          {media?.title}
+        {:else if media?.media?.title}
+          {anilistClient.title(media?.media)}
+        {:else if current}
+          {AnimeResolver.cleanFileName(current.name)}
+        {/if}
+      </div>
+      <div class='np-episode'>
+        {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
+          {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
+          Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
+          {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if}
+        {:else if current && (videos?.length > 1)}
+          Episode {videos.indexOf(current) + 1} of {videos.length}
+        {/if}
+        {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
+        {#if media?.episodeTitle}{media.episodeTitle}{/if}
+      </div>
     </div>
   </div>
 
@@ -2370,19 +2372,57 @@
   }
 
   /* ── Top bar title/subtitle ─────────────────── */
-  :global(.player .font-scale-23) {
-    font-family: var(--font-display) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.02em !important;
-    color: var(--card-fg) !important;
-    text-shadow: 0 2px 14px rgba(0,0,0,0.8);
+  /* NOTE: these use px/vw, not rem — this app's root font-size is scaled
+     down to ~48-62% (see :root --default-html-font-size), so 1rem here is
+     only ~8-10px, not 16px. rem-based clamps were silently capping the
+     title around 22-34px. */
+  .now-playing {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding-left: clamp(16px, 1.6vw, 32px);
+    /* readability scrim so the text holds up over any banner art */
+    background: linear-gradient(100deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.03) 60%, rgba(0,0,0,0) 80%);
+    pointer-events: none;
   }
-  :global(.player .font-scale-16) {
-    font-family: var(--font-mono) !important;
-    color: var(--card-dim) !important;
-    font-size: 1.3rem !important;
-    letter-spacing: 0.04em !important;
-    text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+  .now-playing-inner {
+    max-width: min(640px, 46vw);
+    pointer-events: auto;
+  }
+  .np-eyebrow {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--card-fg);
+    opacity: 0.7;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    margin-bottom: 10px;
+  }
+  .np-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-size: clamp(30px, 3.4vw, 54px);
+    line-height: 1.18;
+    color: var(--card-fg);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 4px 5px rgba(0,0,0,0.55);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .np-episode {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(17px, 1.3vw, 23px);
+    letter-spacing: 0.04em;
+    color: var(--card-fg);
+    opacity: 0.78;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
   }
 
   .pip :global(canvas:not(.w-full)) {
