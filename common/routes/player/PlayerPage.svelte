@@ -2391,7 +2391,7 @@
   }
   .now-playing-inner {
     max-width: min(640px, 46vw);
-    pointer-events: auto;
+    pointer-events: none;
   }
   .np-eyebrow {
     font-family: var(--font-mono);
