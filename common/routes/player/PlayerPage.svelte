@@ -2559,6 +2559,7 @@
 
   .bottom {
     transition: 0.2s opacity ease 0s;
+    zoom: 1.3;
   }
   .top {
     transition: 0.2s opacity ease 0s;
