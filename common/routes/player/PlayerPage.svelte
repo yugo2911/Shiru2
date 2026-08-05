@@ -2578,7 +2578,7 @@
   }
 
   .boost-color {
-    color: var(--octonary-color) !important;
+    color: var(--quindenary-color) !important;
   }
 
   .bottom .volume .boost {
@@ -2592,7 +2592,7 @@
     color: var(--white-color);
   }
   .bottom .volume .custom-range.boost-color {
-    color: var(--white-color);
+    color: var(--white-color) !important;
   }
 
   .mt-100 {
