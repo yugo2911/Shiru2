@@ -2386,7 +2386,7 @@
     align-items: center;
     padding-left: clamp(16px, 1.6vw, 32px);
     /* readability scrim so the text holds up over any banner art */
-    background: linear-gradient(100deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.03) 60%, rgba(0,0,0,0) 80%);
+    background: linear-gradient(100deg, rgba(0,0,0,0.325) 0%, rgba(0,0,0,0.195) 30%, rgba(0,0,0,0.039) 60%, rgba(0,0,0,0) 80%);
     pointer-events: none;
   }
   .now-playing-inner {
