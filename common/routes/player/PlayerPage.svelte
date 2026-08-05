@@ -9,6 +9,7 @@
   import AnimeResolver from '@/modules/anime/animeresolver.js'
   import { durationMap, getMediaMaxEp } from '@/modules/anime/anime.js'
   import { createEventDispatcher } from 'svelte'
+  import { fade } from 'svelte/transition'
   import Subtitles from '@/modules/subtitles.js'
   import { toTS, fastPrettyBytes, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
   import { toast } from 'svelte-sonner'
@@ -1806,31 +1807,33 @@
       <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.up)}/s</span>
     </div>
   </div>
-  <div class='now-playing'>
-    <div class='now-playing-inner'>
-      <div class='np-eyebrow'>You're Watching</div>
-      <div class='np-title'>
-        {#if media?.title}
-          {media?.title}
-        {:else if media?.media?.title}
-          {anilistClient.title(media?.media)}
-        {:else if current}
-          {AnimeResolver.cleanFileName(current.name)}
-        {/if}
-      </div>
-      <div class='np-episode'>
-        {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
-          {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
-          Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
-          {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if}
-        {:else if current && (videos?.length > 1)}
-          Episode {videos.indexOf(current) + 1} of {videos.length}
-        {/if}
-        {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
-        {#if media?.episodeTitle}{media.episodeTitle}{/if}
+  {#if paused}
+    <div class='now-playing' transition:fade={{ duration: 200 }}>
+      <div class='now-playing-inner'>
+        <div class='np-eyebrow'>You're Watching</div>
+        <div class='np-title'>
+          {#if media?.title}
+            {media?.title}
+          {:else if media?.media?.title}
+            {anilistClient.title(media?.media)}
+          {:else if current}
+            {AnimeResolver.cleanFileName(current.name)}
+          {/if}
+        </div>
+        <div class='np-episode'>
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
+            {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
+            Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
+            {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if}
+          {:else if current && (videos?.length > 1)}
+            Episode {videos.indexOf(current) + 1} of {videos.length}
+          {/if}
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)}{' - '}{/if}
+          {#if media?.episodeTitle}{media.episodeTitle}{/if}
+        </div>
       </div>
     </div>
-  </div>
+  {/if}
 
   {#if resolvePrompt || skipPrompt}
     <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: auto;'>
