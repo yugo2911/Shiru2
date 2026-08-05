@@ -2954,7 +2954,7 @@
     min-width: 240px;
     padding: 4px 0;
     background: var(--card-surface);
-    border: 1px solid var(--card-line);
+    border: 1px solid color-mix(in srgb, var(--player-accent) 30%, var(--card-line));
     border-radius: 6px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.7);
     font-family: var(--font-mono);
@@ -2974,8 +2974,8 @@
     gap: 24px;
   }
   .ctx-item:hover {
-    background: var(--card-accent-dim);
-    color: var(--card-fg);
+    background: color-mix(in srgb, var(--player-accent) 12%, transparent);
+    color: var(--player-accent);
   }
   .ctx-item .ctx-label {
     flex: 1;
@@ -2987,7 +2987,7 @@
     text-align: right;
   }
   .ctx-item:hover .ctx-hint {
-    color: var(--card-dim);
+    color: color-mix(in srgb, var(--player-accent) 75%, var(--card-fg));
   }
   .ctx-item .ctx-arrow {
     font-size: 1.4rem;
@@ -2995,7 +2995,7 @@
     line-height: 1;
   }
   .ctx-item:hover .ctx-arrow {
-    color: var(--card-dim);
+    color: color-mix(in srgb, var(--player-accent) 75%, var(--card-fg));
   }
   .ctx-sep {
     height: 1px;
