@@ -4,11 +4,13 @@
   import { X, Search } from 'lucide-svelte'
   import { click } from '@/modules/click.js'
   import { debounce } from '@/modules/util.js'
+  import { statusColorMap } from '@/modules/anime/anime.js'
   import { fly, fade } from 'svelte/transition'
 
   const FORMAT_PRIORITY = { TV: 0, MOVIE: 1, ONA: 2, OVA: 3, SPECIAL: 4, TV_SHORT: 5 }
   const FORMAT_ORDER = ['TV', 'MOVIE', 'ONA', 'OVA', 'SPECIAL', 'TV_SHORT']
   const FORMAT_LABELS = { TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }
+  const LIST_STATUS_LABELS = { CURRENT: 'Watching', PLANNING: 'Plan to Watch', COMPLETED: 'Completed', PAUSED: 'On Hold', DROPPED: 'Dropped', REPEATING: 'Rewatching' }
 
   let searchInput, query = '', results = [], loading, selectedIndex = 0, requestId = 0
   let resultEls = []
@@ -172,6 +174,12 @@ async function handleSearch() {
                   {#if formatAirDate(media.startDate)}<span class="air-date">{formatAirDate(media.startDate)}</span>{/if}
                 </div>
               </div>
+              {#if media.mediaListEntry?.status}
+                <div class="list-status">
+                  <div class="list-status-dot" style:--statusColor={statusColorMap[media.mediaListEntry.status]} title={media.mediaListEntry.status}></div>
+                  <span>{LIST_STATUS_LABELS[media.mediaListEntry.status] || media.mediaListEntry.status}</span>
+                </div>
+              {/if}
               {#if media.mediaListEntry?.progress}
                 <div class="result-progress">Ep {media.mediaListEntry.progress}</div>
               {/if}
@@ -257,6 +265,15 @@ async function handleSearch() {
     color: var(--card-dim); font-size: 12px;
   }
   .result-meta .air-date { color: var(--card-accent); }
+  .list-status {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; color: var(--card-fg);
+    background: var(--card-faint); border-radius: 6px; padding: 3px 8px;
+  }
+  .list-status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--statusColor, var(--card-dim));
+  }
   .result-progress {
     flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--card-accent);
     background: var(--card-accent-dim); border-radius: 6px; padding: 3px 8px;
