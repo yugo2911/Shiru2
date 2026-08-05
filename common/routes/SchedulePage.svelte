@@ -143,59 +143,126 @@
 
   .page-header {
     flex: none; z-index: 5;
-    padding: 2.5rem 3rem 1.5rem;
+    padding: 1.5rem 3rem;
     background: var(--card-bg);
     border-bottom: 1px solid var(--card-line);
   }
 
-  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+  .header-top { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
   .page-header h1 {
-    font-weight: 900; font-size: clamp(2rem, 4vw, 3.5rem);
-    line-height: 1; margin: 0; letter-spacing: -0.02em;
-    color: var(--card-fg); text-transform: uppercase;
+    font-weight: 900; 
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    line-height: 1; 
+    margin: 0; 
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
   }
+  
   .header-meta {
-    font-weight: 700; font-size: 0.85rem; color: var(--card-dim);
-    margin-top: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700; 
+    font-size: 0.85rem; 
+    color: var(--card-dim);
+    letter-spacing: 0.1em; 
+    text-transform: uppercase;
   }
+  
   .live-clock {
-    font-weight: 900; font-size: 1.6rem; color: var(--card-dim);
-    cursor: pointer; transition: color 0.2s; user-select: none;
-    letter-spacing: -0.02em; white-space: nowrap;
+    font-weight: 900; 
+    font-size: 1.4rem; 
+    color: var(--card-dim);
+    cursor: pointer; 
+    transition: color 0.2s; 
+    user-select: none;
+    letter-spacing: -0.02em; 
+    white-space: nowrap;
   }
   .live-clock:hover { color: var(--card-fg); }
 
   .day-strip {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 10px; margin-top: 2rem;
+    display: grid; 
+    grid-template-columns: repeat(7, 1fr); 
+    gap: 8px; 
+    max-width: 800px;
+    margin: 0 auto 1.5rem auto;
   }
+  
   .day-btn {
     position: relative;
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 12px 8px; cursor: pointer;
-    background: var(--card-bg2); border: 1px solid var(--card-line);
-    color: var(--card-dim); transition: all 0.15s;
-    text-transform: uppercase; border-radius: 0;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 2px;
+    padding: 8px 4px; 
+    cursor: pointer;
+    background: var(--card-bg2); 
+    border: 1px solid var(--card-line);
+    color: var(--card-dim); 
+    transition: all 0.15s;
+    text-transform: uppercase; 
+    border-radius: 0;
+    min-width: 0;
+    width: 100%;
   }
   .day-btn:hover { border-color: var(--card-fg); color: var(--card-fg); transform: translateY(-2px); }
   .day-btn.active { background: var(--card-fg); color: var(--card-bg); border-color: var(--card-fg); }
   .day-btn.today:not(.active) { border-color: var(--card-accent); color: var(--card-accent); }
-  .day-weekday { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; }
-  .day-number { font-size: 1.6rem; font-weight: 900; line-height: 1; }
-  .day-month { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; opacity: 0.7; }
+  
+  .day-weekday,
+  .day-month { 
+    font-weight: 800; 
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .day-weekday { font-size: 0.65rem; }
+  .day-month { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; opacity: 0.7; }
+  .day-number { 
+    font-size: 1.4rem; 
+    font-weight: 900; 
+    line-height: 1; 
+  }
   .day-count {
-    position: absolute; top: 6px; right: 8px;
-    font-size: 0.6rem; font-weight: 900; letter-spacing: 0.05em;
+    position: absolute; top: 4px; right: 6px;
+    font-size: 0.55rem; font-weight: 900; letter-spacing: 0.05em;
     background: var(--card-accent); color: var(--card-bg);
-    padding: 1px 6px; border-radius: 50px;
+    padding: 1px 5px; border-radius: 50px;
   }
 
-  .filter-bar { display: flex; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap; }
+  .filter-bar { 
+    display: flex; 
+    gap: 6px; 
+    justify-content: center;
+    flex-wrap: wrap; 
+  }
+  
   .filter-btn {
-    background: var(--card-bg2); border: 1px solid var(--card-line);
-    color: var(--card-dim); padding: 6px 16px;
-    font-weight: 700; font-size: 0.7rem; letter-spacing: 0.1em;
-    cursor: pointer; transition: all 0.15s; border-radius: 50px; text-transform: uppercase;
+    background: var(--card-bg2); 
+    border: 1px solid var(--card-line);
+    color: var(--card-dim); 
+    padding: 4px 12px;
+    font-weight: 700; 
+    font-size: 0.65rem; 
+    letter-spacing: 0.1em;
+    cursor: pointer; 
+    transition: all 0.15s; 
+    border-radius: 50px; 
+    text-transform: uppercase;
   }
   .filter-btn:hover { border-color: var(--card-fg); color: var(--card-fg); }
   .filter-btn.active { background: var(--card-fg); color: var(--card-bg); border-color: var(--card-fg); }
@@ -203,9 +270,9 @@
   .day-content { 
     flex: 1; 
     overflow-y: auto; 
-    padding: 3rem;
-    padding-left: max(3rem, calc((100% - 1400px) / 2));
-    padding-right: max(3rem, calc((100% - 1400px) / 2));
+    padding: 2rem;
+    padding-left: max(2rem, calc((100% - 1400px) / 2));
+    padding-right: max(2rem, calc((100% - 1400px) / 2));
     scrollbar-width: none; 
   }
   
@@ -244,9 +311,8 @@
   }
   .entry-title {
     font-weight: 900; 
-    font-size: 1.8rem; /* Increased by 50% from 1.2rem */
+    font-size: 1.8rem;
     line-height: 1.2;
-    color: var(--card-fg); 
     text-transform: uppercase; 
     letter-spacing: 0.01em;
     display: -webkit-box; 
@@ -255,10 +321,14 @@
     overflow: hidden;
   }
   .entry-meta { display: flex; align-items: baseline; gap: 12px; margin-top: 12px; font-weight: 800; flex-wrap: wrap; }
-  .entry-time { font-size: 1.5rem; font-weight: 900; color: var(--card-fg); }
-  .entry-ep { font-size: 0.8rem; color: var(--card-dim); letter-spacing: 0.05em; }
-  .entry-up { color: var(--card-accent); font-size: 0.8rem; letter-spacing: 0.05em; animation: blink 0.8s infinite; }
-  .behind-count { color: var(--card-accent); font-size: 0.8rem; letter-spacing: 0.05em; }
+  .entry-time { font-size: 1.5rem; font-weight: 900; }
+  .entry-ep,
+  .entry-up,
+  .behind-count { font-size: 0.8rem; letter-spacing: 0.05em; }
+  .entry-ep { color: var(--card-dim); }
+  .entry-up,
+  .behind-count { color: var(--card-accent); }
+  .entry-up { animation: blink 0.8s infinite; }
 
   .entry-poster { position: relative; flex: none; width: 104px; }
   .entry-poster::after {
@@ -298,40 +368,44 @@
 
   /* Responsive adjustments */
   @media (max-width: 1200px) {
-    .day-content {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-    .entry-title {
-      font-size: 1.5rem;
-    }
+    .day-content { padding-left: 2rem; padding-right: 2rem; }
+    .entry-title { font-size: 1.5rem; }
+    .day-strip { max-width: 700px; }
   }
 
   @media (max-width: 768px) {
-    .day-content {
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-    .grid-container {
-      grid-template-columns: 1fr;
-    }
-    .entry-title {
-      font-size: 1.3rem;
-    }
-    .entry-poster {
-      width: 80px;
-    }
+    .page-header { padding: 1rem; }
+    .day-content { padding: 1rem; }
+    .grid-container { grid-template-columns: 1fr; }
+    .entry-title { font-size: 1.3rem; }
+    .entry-poster { width: 80px; }
+    .day-strip { max-width: 100%; gap: 4px; }
+    .day-btn { padding: 6px 2px; }
+    .day-number { font-size: 1.2rem; }
+    .day-weekday { font-size: 0.55rem; }
+    .day-month { font-size: 0.5rem; }
+    .header-left { gap: 0.75rem; }
+    .page-header h1 { font-size: 1.4rem; }
+    .live-clock { font-size: 1rem; }
+  }
+
+  @media (max-width: 480px) {
+    .day-strip { gap: 3px; }
+    .day-btn { padding: 4px 2px; }
+    .day-number { font-size: 1rem; }
+    .day-weekday { font-size: 0.5rem; }
+    .day-month { font-size: 0.4rem; }
+    .day-count { font-size: 0.45rem; padding: 1px 4px; top: 2px; right: 3px; }
+    .filter-btn { font-size: 0.55rem; padding: 3px 8px; }
   }
 </style>
 
 <div class="page">
   <header class="page-header">
     <div class="header-top">
-      <div>
+      <div class="header-left">
         <h1>{selectedDay ? fmtHeaderDate(selectedDay.date) : 'SCHEDULE'}</h1>
-        <div class="header-meta">
-          {selectedDay?.items.length || 0} SHOWS
-        </div>
+        <span class="header-meta">{selectedDay?.items.length || 0} SHOWS</span>
       </div>
       <div class="live-clock" on:click={toggleClock} role="button" tabindex="0">
         {now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: is12h })}
@@ -357,7 +431,7 @@
     </div>
 
     <div class="filter-bar">
-      <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL SHOWS</button>
+      <button class="filter-btn" class:active={filterStatus === 'ALL'} on:click={() => filterStatus = 'ALL'}>ALL</button>
       {#each Object.entries(STATUS_MAP) as [key, val]}
         <button class="filter-btn" class:active={filterStatus === key} on:click={() => filterStatus = key}>{val.label}</button>
       {/each}
