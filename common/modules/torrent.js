@@ -263,9 +263,11 @@ function setupTorrentClient() {
   })
   client.on('info', ({ detail }) => {
     debug(`Info:`, detail.message || JSON.stringify(detail))
-    for (const exclude of excludedToastMessages) {
-      if ((detail.message || detail)?.toLowerCase()?.includes(exclude)) return
+    if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Warnings')) {
+      for (const exclude of excludedToastMessages) {
+        if ((detail.message || detail)?.toLowerCase()?.includes(exclude)) return
+      }
+      toast('Torrent Info', { description: '' + (detail.message || detail) })
     }
-    toast('Torrent Info', { description: '' + (detail.message || detail) })
   })
 }
