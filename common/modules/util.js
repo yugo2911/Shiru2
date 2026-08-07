@@ -578,6 +578,7 @@ export const defaults = {
   playerPause: true,
   playerAutocomplete: true,
   playerAutocompleteThreshold: 85,
+  playerAutoDownloadNext: false,
   playerDeband: false,
   preferDubs: false,
   adult: 'none',

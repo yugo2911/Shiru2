@@ -5,8 +5,9 @@
   import { findInCurrent, nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
   import { page, modal } from '@/modules/navigation.js'
   import { settings } from '@/modules/settings.js'
-  import { add } from '@/modules/torrent.js'
+  import { add, stage } from '@/modules/torrent.js'
   import { cache, caches } from '@/modules/cache.js'
+  import { getHash } from '@/modules/anime/animehash.js'
 
   export function playAnime (media, episode = 1, force = false) {
     episode = Number(episode)
@@ -42,6 +43,20 @@
     } catch {
       modal.open(modal.TORRENT_MENU, search)
     }
+  }
+
+  export async function autoStageNext(search) {
+    if (!settings.value.playerAutoDownloadNext || getHash(search.media.id, { episode: search.episode, client: true, batchGuess: true }, false, true)) return
+    const best = await fetchBestTorrent(search)
+    if (!best) return
+    const existingMagnets = cache.getEntry(caches.HISTORY, 'lastMagnet') || {}
+    cache.setEntry(caches.HISTORY, 'lastMagnet', {
+      ...existingMagnets,
+      [search.media.id]: !best.parseObject?.episode_number || Array.isArray(best.parseObject.episode_number)
+        ? { batch: best }
+        : { ...(existingMagnets[search.media.id] || {}), [`${search.episode}`]: best }
+    })
+    stage(best.link, search, best.hash)
   }
 </script>
 

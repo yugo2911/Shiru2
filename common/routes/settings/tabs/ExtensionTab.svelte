@@ -90,6 +90,14 @@
   </div>
 </SettingCard>
 {/if}
+{#if matches('Pre-Download Next Episode', 'Automatically pre-downloads the next episode in the background', 'Content Settings')}
+<SettingCard title='Pre-Download Next Episode' description='Automatically finds and downloads the best torrent for the next episode in the background as soon as the current episode is marked as watched, so the next episode plays instantly. Uses your Torrent Quality and audio preferences. If no suitable torrent is found, nothing happens.'>
+  <div class='custom-switch'>
+    <input type='checkbox' id='player-autodownload-next' bind:checked={settings.playerAutoDownloadNext} />
+    <label for='player-autodownload-next'>{settings.playerAutoDownloadNext ? 'On' : 'Off'}</label>
+  </div>
+</SettingCard>
+{/if}
 {#if matches('Auto-Scrape Results', 'scrapes seeder and leecher counts', 'Content Settings')}
 <SettingCard title='Auto-Scrape Results' description={'Automatically scrapes seeder and leecher counts when fetching extension results for torrent selection. When enabled, you\'ll see accurate peer data but results may load slower (5-15 seconds). When disabled, results load instantly but show the counts reported by indexers, which may be outdated. You can always manually scrape using the "Scrape" button in the torrent menu to refresh peer data on demand.'}>
   <div class='custom-switch'>

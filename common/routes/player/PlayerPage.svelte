@@ -3,7 +3,7 @@
   import { cache, caches } from '@/modules/cache.js'
   import { page, modal, playPage } from '@/modules/navigation.js'
   import { getAnimeProgress, setAnimeProgress } from '@/modules/anime/animeprogress.js'
-  import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
+  import { playAnime, autoStageNext } from '@/modals/torrent/TorrentModal.svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { episodesList } from '@/modules/episodes.js'
   import AnimeResolver from '@/modules/anime/animeresolver.js'
@@ -373,6 +373,9 @@
   $: checkAvail(media, current)
   let hasNext = false
   let hasLast = false
+  function hasNextEpisode() {
+    return media?.media && (media?.media?.nextAiringEpisode?.episode - 1 || (media?.media?.episodes || getMediaMaxEp(media?.media)) > media?.episode)
+  }
   function checkAvail (media, current) {
     if ((((media?.media?.nextAiringEpisode?.episode - 1 || getMediaMaxEp(media?.media)) - (media?.zeroEpisode ? 1 : 0)) > media?.episode) || ((media?.media && !media.media.nextAiringEpisode?.episode && !media.media.airingSchedule?.nodes?.[0]?.episode && !media.media.episodes))) hasNext = true
     else hasNext = videos.indexOf(current) !== videos.length - 1
@@ -1537,6 +1540,7 @@
       const _media = media.episodeRange ? structuredClone(media) : media
       if (media.episodeRange) _media.episode = media.episodeRange.last
       Helper.updateEntry(_media)
+      if ($settings.playerAutoDownloadNext && !externalPlayback && hasNextEpisode()) autoStageNext({ media: media.media, episode: media.episode + 1 })
       if (externalPlayback) tryPlayNext()
     }
   }
