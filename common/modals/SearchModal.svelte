@@ -14,6 +14,8 @@
 
   let searchInput, query = '', results = [], loading, selectedIndex = 0, requestId = 0
   let resultEls = []
+  let resultsAreaEl, sentinelEl, observer
+  let page = 1, hasNextPage = false, loadingMore = false
 
   const humanize = (str) => str?.replace(/_/g, ' ') || ''
 
@@ -25,8 +27,9 @@
 
   function close() {
     requestId++
+    observer?.disconnect()
     modal.close(modal.SEARCH)
-    query = ''; results = []; selectedIndex = 0; loading = false
+    query = ''; results = []; selectedIndex = 0; loading = false; loadingMore = false; hasNextPage = false; page = 1
   }
 
   function onSearchInput() {
@@ -34,6 +37,9 @@
       requestId++
       results = []
       loading = false
+      loadingMore = false
+      hasNextPage = false
+      page = 1
       selectedIndex = 0
     } else {
       loading = true
@@ -97,25 +103,66 @@
     return { title: title.trim(), year, format, status, season }
   }
 
+  function buildVariables() {
+    const { title, year, format, status, season } = parseQuery(query)
+    const variables = { perPage: 25, sort: (year || status || season || format) ? ['POPULARITY_DESC', 'SCORE_DESC'] : 'SEARCH_MATCH' }
+    if (title) variables.search = title
+    if (year) variables.year = year
+    if (format) variables.format = [format]
+    if (status) variables.status = [status]
+    if (season) variables.season = season
+    return variables
+  }
+
+  const sortResults = (media) => media.sort((a, b) => (FORMAT_PRIORITY[a.format] ?? 99) - (FORMAT_PRIORITY[b.format] ?? 99))
+
 async function handleSearch() {
     const id = ++requestId
+    loading = true; loadingMore = false; page = 1; hasNextPage = false
     try {
-      const { title, year, format, status, season } = parseQuery(query)
-      const variables = { perPage: 50, sort: (year || status || season || format) ? ['POPULARITY_DESC', 'SCORE_DESC'] : 'SEARCH_MATCH' }
-      if (title) variables.search = title
-      if (year) variables.year = year
-      if (format) variables.format = [format]
-      if (status) variables.status = [status]
-      if (season) variables.season = season
-      const res = await anilistClient.search(variables)
+      const res = await anilistClient.search({ page: 1, ...buildVariables() })
       const all = res?.data?.Page?.media || []
       if (id !== requestId) return
-      results = all.sort((a, b) => (FORMAT_PRIORITY[a.format] ?? 99) - (FORMAT_PRIORITY[b.format] ?? 99))
+      results = sortResults(all)
+      hasNextPage = !!res?.data?.Page?.pageInfo?.hasNextPage
     } catch {
       if (id !== requestId) return
       results = []
     }
     if (id === requestId) { loading = false; selectedIndex = 0 }
+  }
+
+  async function loadMore() {
+    if (loading || loadingMore || !hasNextPage || !results.length) return
+    const id = requestId
+    loadingMore = true
+    try {
+      const res = await anilistClient.search({ page: page + 1, ...buildVariables() })
+      const all = res?.data?.Page?.media || []
+      if (id !== requestId) return
+      page++
+      hasNextPage = !!res?.data?.Page?.pageInfo?.hasNextPage
+      if (all.length) {
+        const selectedMedia = results[selectedIndex]
+        results = sortResults([...results, ...all])
+        if (selectedMedia) {
+          const idx = results.findIndex(m => m.id === selectedMedia.id)
+          if (idx >= 0) selectedIndex = idx
+        }
+      }
+    } catch {
+      if (id !== requestId) return
+      hasNextPage = false
+    }
+    if (id === requestId) loadingMore = false
+  }
+
+  $: if (sentinelEl && resultsAreaEl) {
+    observer?.disconnect()
+    observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) loadMore()
+    }, { root: resultsAreaEl, rootMargin: '0px 0px 250px 0px' })
+    observer.observe(sentinelEl)
   }
 
   const debouncedSearch = debounce(handleSearch, 250)
@@ -149,7 +196,7 @@ async function handleSearch() {
       <input bind:this={searchInput} bind:value={query} on:input={onSearchInput} on:keydown={handleKeydown} type="text" placeholder="Search anime..." autocomplete="off" spellcheck="false" />
       <button use:click={close} class="popup-close" aria-label="Close search"><X size={20} /></button>
     </div>
-    <div class="results-area">
+    <div class="results-area" bind:this={resultsAreaEl}>
     {#if loading}
       <div class="loading">
         <div class="spinner"></div>
@@ -186,6 +233,15 @@ async function handleSearch() {
             </button>
           {/each}
         {/each}
+        {#if hasNextPage}
+          <div class="sentinel" bind:this={sentinelEl}></div>
+        {/if}
+        {#if loadingMore}
+          <div class="loading-more">
+            <div class="spinner"></div>
+            <span>Loading more...</span>
+          </div>
+        {/if}
       </div>
     {:else if query.trim()}
       <div class="empty">No results found for "{query.trim()}"</div>
@@ -248,7 +304,7 @@ async function handleSearch() {
     color: inherit; text-align: left; cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
   }
-  .result-btn:hover { background: var(--card-faint); }
+  .result-btn:hover { background: var(--card-faint); scale: 1; }
   .result-btn.selected { background: var(--card-accent-dim); border-color: var(--card-accent); }
   .cover-wrap {
     width: 96px; aspect-ratio: 2/3; flex-shrink: 0; border-radius: 8px; overflow: hidden;
@@ -281,6 +337,11 @@ async function handleSearch() {
   .loading, .empty {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     color: var(--card-dim); padding: 32px 0; font-size: 13px;
+  }
+  .sentinel { height: 1px; }
+  .loading-more {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    color: var(--card-dim); padding: 14px 0; font-size: 12px;
   }
   .spinner {
     width: 18px; height: 18px; border: 2px solid var(--card-faint);
