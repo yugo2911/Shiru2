@@ -143,6 +143,14 @@
     return 'UPCOMING'
   }
 
+  function getBehind(anime) {
+    const next = anime.nextAiringEpisode
+    const progress = anime.mediaListEntry?.progress ?? null
+    if (!next || progress === null) return null
+    const behind = Math.max(0, next.episode - 1 - progress)
+    return behind > 0 ? behind : null
+  }
+
   // ─── SFX ────────────────────────────────────────────────────────────────────────
 
   const sfx = {
@@ -504,6 +512,7 @@
         {@const airTime = getAirTime(anime)}
         {@const recentEp = getRecentEp(anime)}
         {@const upcoming = getUpcoming(anime)}
+        {@const behind = getBehind(anime)}
         <button
           class="card-unit"
           class:is-active={i === $selectedIndex}
@@ -517,8 +526,9 @@
             alt=""
             loading="lazy"
           />
-          {#if upcoming || recentEp}
+          {#if upcoming || recentEp || behind}
             <div class="card-badges" style="--badge-color: {color}">
+              {#if behind}<span class="badge badge-behind">BEHIND {behind}</span>{/if}
               {#if upcoming}<span class="badge badge-upcoming">{upcoming}</span>{/if}
               {#if recentEp}<span class="badge badge-new">{recentEp}</span>{/if}
             </div>
@@ -661,6 +671,7 @@
   .badge { font-size: 0.7rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
   .badge-upcoming { background: var(--badge-color); color: #000; }
   .badge-new { background: var(--badge-color); color: #fff; }
+  .badge-behind { background: var(--badge-color); color: #000; }
 
   /* ── Pinned parent card ── */
   .card-pinned:not(.is-active) { opacity: 0.55; }
