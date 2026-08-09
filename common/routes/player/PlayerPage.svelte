@@ -2199,6 +2199,9 @@
       <div class="ctx-item" role="button" tabindex="-1" class:d-none={!((!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath))} on:click={() => { setCurrent(current, true); contextMenu = false }}>
         <span class="ctx-label">External Player</span>
       </div>
+      <div class="ctx-item" role="button" tabindex="-1" class:d-none={!media?.media || externalPlayback} on:click={() => { modal.open(modal.TORRENT_MENU, { media: media.media, episode: media.episode }); contextMenu = false }}>
+        <span class="ctx-label">Torrent Selection</span>
+      </div>
       <div class="ctx-item" role="button" tabindex="-1" on:click={() => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER); contextMenu = false }}>
         <span class="ctx-label">File Manager</span>
       </div>
