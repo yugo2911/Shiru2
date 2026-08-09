@@ -20,6 +20,16 @@
     selectedThread = null
   }
 
+  function convertAniImages(body) {
+    return body.replace(/img(\d+)?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
+      const url = inner.match(/href=["']([^"']+)["']/)?.[1]
+        || inner.match(/\]\(\s*([^)\s]+)\s*\)/)?.[1]
+        || inner.trim()
+      const style = size ? ` style="max-width: min(${size}px, 100%)"` : ''
+      return `<img src="${url}"${style} />`
+    })
+  }
+
   function sanitize(body) {
     if (!body) return ''
     const cleanBody = body.trim()
@@ -32,7 +42,7 @@
       breaks: true,
       gfm: true
     })
-    return DOMPurify.sanitize(marked.parse(cleanBody).trim(), {
+    return DOMPurify.sanitize(marked.parse(convertAniImages(cleanBody)).trim(), {
       ALLOWED_TAGS: [
         'p', 'br', 'span', 'div',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -51,6 +61,7 @@
         'href', 'target', 'rel', 'title',
         'src', 'alt', 'width', 'height',
         'class', 'id',
+        'style',
         'align',
         'type', 'checked', 'disabled'
       ]
@@ -59,7 +70,7 @@
 
   function plainText(body) {
     if (!body) return ''
-    return body.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>-]/g, '')
+    return body.replace(/img\d*\([^)]*\)/gi, '').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>-]/g, '')
   }
 
   async function loadThreads () {
@@ -121,9 +132,9 @@
           <div class='thread-detail-meta'>
             <span>By <span class='author'>{selectedThread.user?.name || 'Anonymous'}</span></span>
             {#if selectedThread.createdAt}<span>{since(new Date(selectedThread.createdAt * 1000))}</span>{/if}
-            <span class='stat'><MessageSquare size='0.9rem'/>{selectedThread.replyCount}</span>
-            <span class='stat'><Eye size='0.9rem'/>{selectedThread.viewCount}</span>
-            <span class='stat'><Heart size='0.9rem'/>{selectedThread.likeCount}</span>
+            <span class='stat'><MessageSquare size='1.3rem'/>{selectedThread.replyCount}</span>
+            <span class='stat'><Eye size='1.3rem'/>{selectedThread.viewCount}</span>
+            <span class='stat'><Heart size='1.3rem'/>{selectedThread.likeCount}</span>
           </div>
         </div>
         {#if selectedThread.body}
@@ -145,7 +156,7 @@
                   <div class='comment-head'>
                     <span class='author'>{comment.user?.name || 'Anonymous'}</span>
                     {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
-                    {#if comment.likeCount}<span class='comment-likes'><Heart size='0.85rem'/>{comment.likeCount}</span>{/if}
+                    {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
                   </div>
                   {#if comment.comment}
                     <div class='comment-text'>{@html sanitize(comment.comment)}</div>
@@ -174,7 +185,7 @@
             <div class='thread-main'>
               <span class='category-tag'>{thread.categories?.[0]?.name || 'General'}</span>
               {#if thread.isSticky}<span class='sticky-tag'>PINNED</span>{/if}
-              {#if thread.isLocked}<span class='sticky-tag locked'><Lock size='0.75rem'/></span>{/if}
+              {#if thread.isLocked}<span class='sticky-tag locked'><Lock size='1.1rem'/></span>{/if}
               <span class='thread-title'>{thread.title}</span>
               {#if thread.body}
                 <div class='thread-preview'>{plainText(thread.body)}</div>
@@ -251,9 +262,9 @@
   }
 
   .avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 4px;
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
     background-color: var(--tt-bg);
     background-image: url('./404_square.png');
     background-size: cover;
@@ -269,7 +280,7 @@
 
   .thread-preview {
     color: var(--ts-text);
-    font-size: 0.85rem;
+    font-size: 1.4rem;
     margin-bottom: 6px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -280,9 +291,9 @@
   .category-tag {
     background-color: var(--tt-bg);
     color: var(--ts-accent);
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 1.15rem;
     display: inline-block;
     margin-bottom: 4px;
     margin-right: 6px;
@@ -293,9 +304,9 @@
     align-items: center;
     background-color: var(--tt-bg);
     color: var(--ts-accent);
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     margin-bottom: 4px;
@@ -308,7 +319,7 @@
 
   .thread-title {
     color: var(--ts-bright);
-    font-size: 1.1rem;
+    font-size: 1.8rem;
     margin-bottom: 6px;
     display: block;
     transition: color 0.2s;
@@ -318,7 +329,7 @@
   }
 
   .thread-meta {
-    font-size: 0.85rem;
+    font-size: 1.35rem;
     display: flex;
     gap: 15px;
   }
@@ -332,7 +343,7 @@
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 1.35rem;
     min-width: 80px;
     flex-shrink: 0;
   }
@@ -353,12 +364,12 @@
   }
   .thread-detail-title {
     color: var(--ts-bright);
-    font-size: 1.25rem;
+    font-size: 2rem;
     font-weight: 700;
     margin-bottom: 10px;
   }
   .thread-detail-meta {
-    font-size: 0.85rem;
+    font-size: 1.35rem;
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
@@ -373,7 +384,7 @@
     color: var(--ts-accent);
   }
   .thread-body {
-    font-size: 1rem;
+    font-size: 1.5rem;
     line-height: 1.7;
     color: var(--ts-text);
     margin-bottom: 20px;
@@ -403,7 +414,7 @@
     color: var(--ts-bright);
   }
   .comments-title {
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--ts-accent);
@@ -423,9 +434,9 @@
     padding: 12px 14px;
   }
   .comment-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
     background-color: var(--tt-bg);
     background-image: url('./404_square.png');
     background-size: cover;
@@ -438,7 +449,7 @@
     min-width: 0;
   }
   .comment-head {
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
@@ -455,7 +466,7 @@
     color: var(--ts-accent);
   }
   .comment-text {
-    font-size: 0.95rem;
+    font-size: 1.45rem;
     line-height: 1.55;
     overflow-wrap: break-word;
   }
@@ -467,6 +478,6 @@
     padding: 20px;
     text-align: center;
     color: var(--ts-text);
-    font-size: 0.95rem;
+    font-size: 1.35rem;
   }
 </style>
