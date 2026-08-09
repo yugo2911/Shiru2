@@ -72,6 +72,7 @@
   let duration = 0.1
   let muted = false
   let wasPaused = null
+  let seeking = false
   let videos = []
   let immersed = false
   let buffering = false
@@ -445,6 +446,7 @@
   $: progress = currentTime / safeduration * 100
   $: targetTime = (!paused && currentTime) || targetTime
   function handleMouseDown ({ detail }) {
+    seeking = true
     if (wasPaused == null) {
       wasPaused = paused
       paused = true
@@ -452,6 +454,7 @@
     targetTime = detail / 100 * safeduration
   }
   function handleMouseUp () {
+    seeking = false
     paused = wasPaused
     wasPaused = null
     currentTime = targetTime
@@ -1811,7 +1814,7 @@
       <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.up)}/s</span>
     </div>
   </div>
-  {#if paused}
+  {#if paused && !seeking}
     <div class='now-playing' transition:fade={{ duration: 200 }}>
       <div class='now-playing-inner'>
         <div class='np-eyebrow'>You're Watching</div>
