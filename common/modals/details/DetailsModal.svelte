@@ -541,7 +541,6 @@
   .StructuralHeader {
     border: 1px solid var(--card-line);
     background: var(--card-bg2);
-    backdrop-filter: blur(8px);
     border-radius: 16px;
     padding: 20px; position: relative;
   }
