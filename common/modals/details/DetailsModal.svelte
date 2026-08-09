@@ -14,6 +14,7 @@
   import Scoring from '@/components/Scoring.svelte'
   import TrailerModal from '@/modals/TrailerModal.svelte'
   import AnimeThemesModal from '@/modals/AnimeThemesModal.svelte'
+  import ThreadsModal from '@/modals/ThreadsModal.svelte'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
   import Following from '@/modals/details/components/Following.svelte'
@@ -343,6 +344,8 @@
                     <TrailerModal {staticMedia} />
 
                     <AnimeThemesModal {staticMedia} />
+
+                    <ThreadsModal {staticMedia} />
 
                     {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
                       {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}

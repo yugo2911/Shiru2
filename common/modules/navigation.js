@@ -38,10 +38,11 @@ const debug = Debug('ui:history')
  * @property {string} FILE_MANAGER
  * @property {string} NOTIFICATIONS
  * @property {string} PROFILE
- * @property {string} TORRENT_MENU
- * @property {string} TRAILER
- * @property {string} ANIME_DETAILS
- */
+  * @property {string} TORRENT_MENU
+  * @property {string} TRAILER
+  * @property {string} ANIME_THEMES
+  * @property {string} ANIME_DETAILS
+  */
 
 /** @type {import('simple-store-svelte').Writable<boolean>} */
 export const playPage = writable(settings.value.disableMiniplayer || false)
@@ -149,6 +150,13 @@ export const modal = (() => {
     },
     ANIME_THEMES: {
       id: 'anime_themes',
+      priority: 8,
+      get siblings() {
+        return [MODALS.ANIME_DETAILS]
+      }
+    },
+    THREADS: {
+      id: 'anime_threads',
       priority: 8,
       get siblings() {
         return [MODALS.ANIME_DETAILS]

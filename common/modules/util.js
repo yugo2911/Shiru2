@@ -723,6 +723,7 @@ export const queryDefaults = {
   notifications: {},
   following: {},
   episodes: {},
+  threads: {},
   search: {},
   searchIDS: {},
   compound: {},

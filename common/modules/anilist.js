@@ -916,6 +916,79 @@ class AnilistClient {
     return cache.cacheEntry(caches.RECOMMENDATIONS, variables.id, variables, this.alRequest(query, variables), Date.now() + getRandomInt(1500, 2000) * 60 * 1000)
   }
 
+  /** @returns {Promise<import('./al.d.ts').PagedQuery<{ threads: import('./al.d.ts').Thread[] }>>} */
+  threads(variables) {
+    debug(`Getting threads for media ${variables.id}`)
+    const cachedEntry = cache.cachedEntry(caches.THREADS, `media:${variables.id}`, status.value.match(/offline/i))
+    if (cachedEntry) return cachedEntry
+    const query = /* js */`
+      query($id: Int, $sort: [ThreadSort]) {
+        Page(page: 1, perPage: 50) {
+          pageInfo {
+            hasNextPage
+          },
+          threads(mediaCategoryId: $id, sort: $sort) {
+            id,
+            title,
+            body,
+            replyCount,
+            viewCount,
+            likeCount,
+            isLocked,
+            isSticky,
+            createdAt,
+            updatedAt,
+            siteUrl,
+            user {
+              id,
+              name,
+              avatar {
+                medium,
+                large
+              }
+            },
+            categories {
+              id,
+              name
+            }
+          }
+        }
+      }`
+    return cache.cacheEntry(caches.THREADS, `media:${variables.id}`, variables, this.alRequest(query, { ...variables, sort: ['IS_STICKY', 'REPLIED_AT_DESC'] }), Date.now() + getRandomInt(20, 30) * 60 * 1000)
+  }
+
+  /** @returns {Promise<import('./al.d.ts').PagedQuery<{ threadComments: import('./al.d.ts').ThreadComment[] }>>} */
+  threadComments(variables) {
+    debug(`Getting thread comments for ${variables.id}`)
+    const cachedEntry = cache.cachedEntry(caches.THREADS, `comment:${variables.id}`, status.value.match(/offline/i))
+    if (cachedEntry) return cachedEntry
+    const query = /* js */`
+      query($id: Int) {
+        Page(page: 1, perPage: 100) {
+          pageInfo {
+            hasNextPage
+          },
+          threadComments(threadId: $id) {
+            id,
+            comment,
+            likeCount,
+            isLiked,
+            createdAt,
+            updatedAt,
+            user {
+              id,
+              name,
+              avatar {
+                medium,
+                large
+              }
+            }
+          }
+        }
+      }`
+    return cache.cacheEntry(caches.THREADS, `comment:${variables.id}`, variables, this.alRequest(query, variables), Date.now() + getRandomInt(20, 30) * 60 * 1000)
+  }
+
   favourite(variables) {
     debug(`Toggling favourite for ${variables.id}`)
     const query = /* js */`

@@ -114,6 +114,49 @@ export type Media = {
   }
 }
 
+export type Thread = {
+  id: number
+  title: string
+  body?: string
+  replyCount: number
+  viewCount: number
+  likeCount: number
+  isLocked: boolean
+  isSticky: boolean
+  createdAt: number
+  updatedAt?: number
+  siteUrl?: string
+  user: {
+    id: number
+    name: string
+    avatar: {
+      medium?: string
+      large?: string
+    }
+  }
+  categories: {
+    id: number
+    name: string
+  }[]
+}
+
+export type ThreadComment = {
+  id: number
+  comment?: string
+  likeCount: number
+  isLiked?: boolean
+  createdAt: number
+  updatedAt?: number
+  user: {
+    id: number
+    name: string
+    avatar: {
+      medium?: string
+      large?: string
+    }
+  }
+}
+
 export type Following = {
   score?: number
   status?: string
