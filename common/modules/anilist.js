@@ -919,8 +919,6 @@ class AnilistClient {
   /** @returns {Promise<import('./al.d.ts').PagedQuery<{ threads: import('./al.d.ts').Thread[] }>>} */
   threads(variables) {
     debug(`Getting threads for media ${variables.id}`)
-    const cachedEntry = cache.cachedEntry(caches.THREADS, `media:${variables.id}`, status.value.match(/offline/i))
-    if (cachedEntry) return cachedEntry
     const query = /* js */`
       query($id: Int, $sort: [ThreadSort]) {
         Page(page: 1, perPage: 50) {
@@ -934,6 +932,7 @@ class AnilistClient {
             replyCount,
             viewCount,
             likeCount,
+            isLiked,
             isLocked,
             isSticky,
             createdAt,
@@ -954,14 +953,12 @@ class AnilistClient {
           }
         }
       }`
-    return cache.cacheEntry(caches.THREADS, `media:${variables.id}`, variables, this.alRequest(query, { ...variables, sort: ['IS_STICKY', 'REPLIED_AT_DESC'] }), Date.now() + getRandomInt(20, 30) * 60 * 1000)
+    return this.alRequest(query, { ...variables, sort: ['IS_STICKY', 'REPLIED_AT_DESC'] })
   }
 
   /** @returns {Promise<import('./al.d.ts').PagedQuery<{ threadComments: import('./al.d.ts').ThreadComment[] }>>} */
   threadComments(variables) {
     debug(`Getting thread comments for ${variables.id}`)
-    const cachedEntry = cache.cachedEntry(caches.THREADS, `comment:${variables.id}`, status.value.match(/offline/i))
-    if (cachedEntry) return cachedEntry
     const query = /* js */`
       query($id: Int) {
         Page(page: 1, perPage: 100) {
@@ -987,7 +984,27 @@ class AnilistClient {
           }
         }
       }`
-    return cache.cacheEntry(caches.THREADS, `comment:${variables.id}`, variables, this.alRequest(query, variables), Date.now() + getRandomInt(20, 30) * 60 * 1000)
+    return this.alRequest(query, variables)
+  }
+
+  /**
+   * Toggles a like on a thread or thread comment.
+   * @param {{ id: number, type: 'THREAD' | 'THREAD_COMMENT' }} variables
+   */
+  toggleLike(variables) {
+    debug(`Toggling like for ${variables.type} ${variables.id}`)
+    const query = /* js */`
+      mutation($id: Int, $type: LikeableType) {
+        ToggleLikeV2(id: $id, type: $type) {
+          ...on&nbsp;Thread {
+            id
+          }
+          ...on&nbsp;ThreadComment {
+            id
+          }
+        }
+      }`
+    return this.alRequest(query, variables)
   }
 
   favourite(variables) {

@@ -42,11 +42,11 @@
   }
 
   function convertAniImages (body) {
-    return body.replace(/img(\d+)?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
+    return body.replace(/img(\d+)?%?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
       const url = inner.match(/href=["']([^"']+)["']/)?.[1]
         || inner.match(/\]\(\s*([^)\s]+)\s*\)/)?.[1]
         || inner.trim()
-      const style = size ? ` style="max-width: min(${size}px, 100%)"` : ''
+      const style = size ? ` style="max-width: min(${size}%, 100%)"` : ''
       return `<img src="${url}"${style} />`
     })
   }
@@ -105,6 +105,8 @@
   let comments = null
   let selectedThread = null
   let flatComments = []
+  let threadLikeCount = 0
+  let threadIsLiked = false
 
   function close () {
     modal.close(modal.THREADS)
@@ -120,11 +122,49 @@
   async function loadComments () {
     if (!selectedThread?.id) return
     comments = null
-    const res = await anilistClient.threadComments({ id: selectedThread.id })
-    comments = res?.data?.Page?.threadComments || []
+    try {
+      const res = await anilistClient.threadComments({ id: selectedThread.id })
+      comments = res?.data?.Page?.threadComments || []
+    } catch (error) {
+      comments = []
+    }
+  }
+
+  async function toggleThreadLike (thread) {
+    if (!thread) return
+    const wasLiked = threadIsLiked
+    threadIsLiked = !wasLiked
+    threadLikeCount = Math.max(0, threadLikeCount + (wasLiked ? -1 : 1))
+    thread.isLiked = threadIsLiked
+    thread.likeCount = threadLikeCount
+    try {
+      await anilistClient.toggleLike({ id: thread.id, type: 'THREAD' })
+    } catch (error) {
+      threadIsLiked = wasLiked
+      threadLikeCount = Math.max(0, threadLikeCount + (wasLiked ? 1 : -1))
+      thread.isLiked = threadIsLiked
+      thread.likeCount = threadLikeCount
+    }
+  }
+
+  async function toggleCommentLike (comment) {
+    if (!comment) return
+    const wasLiked = comment.isLiked
+    comment.isLiked = !wasLiked
+    comment.likeCount = Math.max(0, (comment.likeCount || 0) + (wasLiked ? -1 : 1))
+    comments = comments
+    try {
+      await anilistClient.toggleLike({ id: comment.id, type: 'THREAD_COMMENT' })
+    } catch (error) {
+      comment.isLiked = wasLiked
+      comment.likeCount = Math.max(0, (comment.likeCount || 0) + (wasLiked ? 1 : -1))
+      comments = comments
+    }
   }
 
   $: flatComments = comments ? flattenComments(comments) : []
+  $: threadLikeCount = selectedThread?.likeCount || 0
+  $: threadIsLiked = !!selectedThread?.isLiked
   $: if ($modal[modal.THREADS] && !threads) loadThreads()
   $: if (selectedThread) loadComments()
   $: if (!$modal[modal.THREADS]) {
@@ -169,11 +209,17 @@
         <div class='thread-detail-top'>
           <div class='thread-detail-title'>{selectedThread.title}</div>
           <div class='thread-detail-meta'>
+            {#if selectedThread.user?.avatar?.medium}
+              <img class='comment-avatar' src={selectedThread.user.avatar.medium} alt='' />
+            {/if}
             <span>By <span class='author'>{selectedThread.user?.name || 'Anonymous'}</span></span>
             {#if selectedThread.createdAt}<span>{since(new Date(selectedThread.createdAt * 1000))}</span>{/if}
             <span class='stat'><MessageSquare size='1.3rem'/>{selectedThread.replyCount}</span>
             <span class='stat'><Eye size='1.3rem'/>{selectedThread.viewCount}</span>
-            <span class='stat'><Heart size='1.3rem'/>{selectedThread.likeCount}</span>
+            <button type='button' class='comment-likes stat' class:liked={threadIsLiked} use:click={() => toggleThreadLike(selectedThread)}>
+              <Heart size='1.3rem' fill={threadIsLiked ? 'currentColor' : 'none'}/>
+              {threadLikeCount}
+            </button>
           </div>
         </div>
         {#if selectedThread.body}
@@ -197,7 +243,10 @@
                       <div class='comment-head'>
                         <span class='author'>{comment.user?.name || 'Anonymous'}</span>
                         {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
-                        {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
+                        <button type='button' class='comment-likes' class:liked={comment.isLiked} use:click={() => toggleCommentLike(comment)}>
+                          <Heart size='1.2rem' fill={comment.isLiked ? 'currentColor' : 'none'}/>
+                          {comment.likeCount || 0}
+                        </button>
                       </div>
                       {#if comment.comment}
                         <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
@@ -216,7 +265,10 @@
                     <div class='comment-head'>
                       <span class='author'>{comment.user?.name || 'Anonymous'}</span>
                       {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
-                      {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
+                      <button type='button' class='comment-likes' class:liked={comment.isLiked} use:click={() => toggleCommentLike(comment)}>
+                        <Heart size='1.2rem' fill={comment.isLiked ? 'currentColor' : 'none'}/>
+                        {comment.likeCount || 0}
+                      </button>
                     </div>
                     {#if comment.comment}
                       <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
@@ -539,8 +591,22 @@
     align-items: center;
     gap: 4px;
     margin-left: auto;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font: inherit;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s;
   }
   .comment-likes :global(svg) {
+    color: var(--ts-accent);
+  }
+  .comment-likes:hover {
+    color: var(--ts-bright);
+  }
+  .comment-likes.liked {
     color: var(--ts-accent);
   }
   .comment-text {

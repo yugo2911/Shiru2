@@ -36,7 +36,6 @@ export const caches = Object.freeze({
   EPISODES: { key: 'episodes' },
   FOLLOWING: { key: 'following' },
   RECOMMENDATIONS: { key: 'recommendations' },
-  THREADS: { key: 'threads' },
   SEARCH_IDS: { key: 'searchIDS' },
   SEARCH: { key: 'search' },
   RSS: { key: 'rss' }
