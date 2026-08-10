@@ -426,9 +426,8 @@
                   <button class="TabButton" class:active={activeTab === 'episodes'} use:click={() => activeTab = 'episodes'}>EPISODES</button>
                   <button class="TabButton" class:active={activeTab === 'relations'} use:click={() => activeTab = 'relations'}>RELATIONS</button>
                   <button class="TabButton" class:active={activeTab === 'recommendations'} use:click={() => activeTab = 'recommendations'}>RECOMMENDATIONS</button>
-                  <button class="TabButton" class:active={$modal[modal.THREADS]} disabled={!staticMedia?.id} use:click={() => modal.toggle(modal.THREADS)}>THREADS</button>
+                  <button class="TabButton" class:active={activeTab === 'threads'} disabled={!staticMedia?.id} use:click={() => activeTab = 'threads'}>THREADS</button>
                 </div>
-                <ThreadsModal {staticMedia} />
                 <button class="close order pointer z-30 TowerOrderToggle" class:d-none={activeTab !== 'episodes' || !episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
                   <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
                 </button>
@@ -436,6 +435,8 @@
               <div class="TowerListBody">
                 {#if activeTab === 'episodes'}
                   <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+                {:else if activeTab === 'threads'}
+                  <ThreadsModal {staticMedia} />
                 {:else if activeTab === 'relations'}
                   <div class="d-lg-block LinkedRelationsPanel">
                     <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">

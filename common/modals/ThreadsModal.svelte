@@ -1,10 +1,9 @@
 <script>
-  import SoftModal from '@/components/modals/SoftModal.svelte'
+  import { onMount } from 'svelte'
   import { click } from '@/modules/click.js'
   import { X, ChevronLeft, Lock, MessageSquare, Eye, Heart, Send, Pencil, Trash2 } from 'lucide-svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { alToken } from '@/modules/settings.js'
-  import { modal } from '@/modules/navigation.js'
   import { since } from '@/modules/util.js'
   import { toast } from 'svelte-sonner'
   import DOMPurify from 'dompurify'
@@ -119,11 +118,6 @@
   let composerRef = null
   let deleteConfirmId = null
   let deleteTimer = null
-
-  function close () {
-    modal.close(modal.THREADS)
-    selectedThread = null
-  }
 
   async function loadThreads () {
     if (!staticMedia?.id) return
@@ -333,39 +327,23 @@
   $: threadLikeCount = selectedThread?.likeCount || 0
   $: threadIsLiked = !!selectedThread?.isLiked
   $: threadReplyCount = selectedThread?.replyCount || 0
-  $: if ($modal[modal.THREADS] && !threads) loadThreads()
   $: if (selectedThread) loadComments()
-  $: if (!$modal[modal.THREADS]) {
-    selectedThread = null
-    comments = null
-    commentDraft = ''
-    replyingTo = null
-    editingComment = null
-    editDraft = ''
-    deleteConfirmId = null
-    clearTimeout(deleteTimer)
-  }
+  onMount(() => {
+    if (staticMedia?.id) loadThreads()
+  })
 </script>
 
-<SoftModal 
-  class='pointer-events-none w-full scrollbar-none align-items-center mb-30' 
-  css='top-0 left-0 position-fixed' 
-  bind:showModal={$modal[modal.THREADS]} 
-  shouldRender={true} 
-  {close} 
-  id={modal.THREADS}
->
-  <div class='pointer-events-auto d-flex align-items-center rounded-top-5 w-full wm-calc bg-dark h-40'>
+<div class='threads-inline'>
+  <div class='threads-inline-header d-flex align-items-center'>
     {#if selectedThread}
       <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-5' data-toggle='tooltip' data-placement='top' data-title='Back to Discussions' use:click={() => selectedThread = null}>
         <ChevronLeft size='1.5rem' strokeWidth='3'/>
       </button>
     {/if}
-    <span class='title ml-15 font-weight-very-bold text-muted select-all mr-20 font-scale-18'>{anilistClient.title(staticMedia)} - Discussions</span>
-    <button type='button' class='btn btn-square bg-transparent shadow-none border-0 d-flex align-items-center justify-content-center ml-auto mr-5' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
+    <span class='title ml-15 font-weight-very-bold select-all mr-20 font-scale-18'>{anilistClient.title(staticMedia)} - Discussions</span>
   </div>
 
-  <div class='pointer-events-auto w-full wm-calc rounded-bottom-5 threads-scope thread-content'>
+  <div class='threads-scope thread-content'>
     {#if selectedThread}
       <div class='thread-detail'>
         <div class='thread-detail-top'>
@@ -546,11 +524,21 @@
       </div>
     {/if}
   </div>
-</SoftModal>
+</div>
 
 <style>
-  .wm-calc {
-    max-width: min(max(70vw, 90rem), 120rem);
+  .threads-inline {
+    border: 1px solid var(--card-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .threads-inline-header {
+    background: var(--card-bg2);
+    border-bottom: 1px solid var(--card-line);
+    height: 40px;
+  }
+  .threads-inline-header .title {
+    color: var(--card-fg);
   }
   .title {
     display: inline-block;
@@ -581,8 +569,6 @@
     flex-direction: column;
     gap: 10px;
     padding: 15px;
-    max-height: 70vh;
-    overflow-y: auto;
   }
 
   .thread-card {
