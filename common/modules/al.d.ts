@@ -155,6 +155,7 @@ export type ThreadComment = {
       large?: string
     }
   }
+  childComments?: ThreadComment[]
 }
 
 export type Following = {

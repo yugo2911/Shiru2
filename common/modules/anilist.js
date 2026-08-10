@@ -1007,6 +1007,73 @@ class AnilistClient {
     return this.alRequest(query, variables)
   }
 
+  /**
+   * Creates a new comment on a thread, or a reply to an existing comment
+   * when parentCommentId is provided.
+   * @param {{ threadId: number, parentCommentId?: number, comment: string }} variables
+   * @returns {Promise<import('./al.d.ts').Query<{ SaveThreadComment: import('./al.d.ts').ThreadComment }>>}
+   */
+  saveThreadComment(variables) {
+    debug(`Saving thread comment for thread ${variables.threadId}`)
+    const query = /* js */`
+      mutation($threadId: Int, $parentCommentId: Int, $comment: String) {
+        SaveThreadComment(threadId: $threadId, parentCommentId: $parentCommentId, comment: $comment) {
+          id,
+          comment,
+          createdAt,
+          user {
+            id,
+            name,
+            avatar {
+              medium
+            }
+          }
+        }
+      }`
+    return this.alRequest(query, variables)
+  }
+
+  /**
+   * Updates the text of an existing thread comment.
+   * @param {{ id: number, comment: string }} variables
+   * @returns {Promise<import('./al.d.ts').Query<{ SaveThreadComment: import('./al.d.ts').ThreadComment }>>}
+   */
+  updateThreadComment(variables) {
+    debug(`Updating thread comment ${variables.id}`)
+    const query = /* js */`
+      mutation($id: Int, $comment: String) {
+        SaveThreadComment(id: $id, comment: $comment) {
+          id,
+          comment,
+          createdAt,
+          user {
+            id,
+            name,
+            avatar {
+              medium
+            }
+          }
+        }
+      }`
+    return this.alRequest(query, variables)
+  }
+
+  /**
+   * Deletes an existing thread comment and its replies.
+   * @param {{ id: number }} variables
+   * @returns {Promise<import('./al.d.ts').Query<{ DeleteThreadComment: { deleted: boolean } }>>}
+   */
+  deleteThreadComment(variables) {
+    debug(`Deleting thread comment ${variables.id}`)
+    const query = /* js */`
+      mutation($id: Int) {
+        DeleteThreadComment(id: $id) {
+          deleted
+        }
+      }`
+    return this.alRequest(query, variables)
+  }
+
   favourite(variables) {
     debug(`Toggling favourite for ${variables.id}`)
     const query = /* js */`

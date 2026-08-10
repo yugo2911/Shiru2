@@ -1,10 +1,12 @@
 <script>
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import { click } from '@/modules/click.js'
-  import { MessagesSquare, X, ChevronLeft, Lock, MessageSquare, Eye, Heart } from 'lucide-svelte'
+  import { MessagesSquare, X, ChevronLeft, Lock, MessageSquare, Eye, Heart, Send, Pencil, Trash2 } from 'lucide-svelte'
   import { anilistClient } from '@/modules/anilist.js'
+  import { alToken } from '@/modules/settings.js'
   import { modal } from '@/modules/navigation.js'
   import { since } from '@/modules/util.js'
+  import { toast } from 'svelte-sonner'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
 
@@ -107,6 +109,16 @@
   let flatComments = []
   let threadLikeCount = 0
   let threadIsLiked = false
+  let threadReplyCount = 0
+  let commentDraft = ''
+  let commentSubmitting = false
+  let replyingTo = null
+  let editingComment = null
+  let editDraft = ''
+  let editSubmitting = false
+  let composerRef = null
+  let deleteConfirmId = null
+  let deleteTimer = null
 
   function close () {
     modal.close(modal.THREADS)
@@ -119,9 +131,9 @@
     threads = res?.data?.Page?.threads || []
   }
 
-  async function loadComments () {
+  async function loadComments (refresh = false) {
     if (!selectedThread?.id) return
-    comments = null
+    if (!refresh) comments = null
     try {
       const res = await anilistClient.threadComments({ id: selectedThread.id })
       comments = res?.data?.Page?.threadComments || []
@@ -162,14 +174,176 @@
     }
   }
 
+  function replyTo (comment) {
+    replyingTo = comment
+  }
+
+  function cancelReply () {
+    replyingTo = null
+  }
+
+  function focusComposer () {
+    replyingTo = null
+    requestAnimationFrame(() => {
+      composerRef?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      composerRef?.focus()
+    })
+  }
+
+  function startEdit (comment) {
+    editingComment = comment
+    editDraft = comment.comment || ''
+  }
+
+  function cancelEdit () {
+    editingComment = null
+    editDraft = ''
+  }
+
+  function countReplies (comment) {
+    if (!Array.isArray(comment.childComments)) return 0
+    let n = 0
+    for (const child of comment.childComments) n += 1 + countReplies(child)
+    return n
+  }
+
+  function removeCommentTree (list, id) {
+    const out = []
+    let removed = 0
+    for (const c of list) {
+      if (c.id === id) {
+        removed += 1 + countReplies(c)
+        continue
+      }
+      if (Array.isArray(c.childComments) && c.childComments.length) {
+        const res = removeCommentTree(c.childComments, id)
+        c.childComments = res.list
+        removed += res.removed
+      }
+      out.push(c)
+    }
+    return { list: out, removed }
+  }
+
+  function requestDelete (comment) {
+    if (deleteConfirmId !== comment.id) {
+      deleteConfirmId = comment.id
+      clearTimeout(deleteTimer)
+      deleteTimer = setTimeout(() => { deleteConfirmId = null }, 3000)
+      return
+    }
+    deleteComment(comment)
+  }
+
+  async function deleteComment (comment) {
+    if (!alToken) return
+    deleteConfirmId = null
+    clearTimeout(deleteTimer)
+    try {
+      await anilistClient.deleteThreadComment({ id: comment.id })
+      const res = removeCommentTree(comments || [], comment.id)
+      comments = res.list
+      threadReplyCount = Math.max(0, threadReplyCount - res.removed)
+    } catch (error) {
+      toast.error('Delete Failed', {
+        description: 'Failed to delete your comment. Please try again.',
+        duration: 10000
+      })
+    }
+  }
+
+  function checkEditInput (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      saveEdit()
+    } else if (event.key === 'Escape') {
+      cancelEdit()
+    }
+  }
+
+  async function saveEdit () {
+    if (!alToken || !editingComment || !editDraft.trim() || editSubmitting) return
+    editSubmitting = true
+    try {
+      const res = await anilistClient.updateThreadComment({
+        id: editingComment.id,
+        comment: editDraft.trim()
+      })
+      const updated = res?.data?.SaveThreadComment
+      if (!updated) throw new Error('No comment returned')
+      editingComment.comment = updated.comment
+      comments = comments
+      cancelEdit()
+    } catch (error) {
+      toast.error('Edit Failed', {
+        description: 'Failed to update your comment. Please try again.',
+        duration: 10000
+      })
+    } finally {
+      editSubmitting = false
+    }
+  }
+
+  $: rows = Math.min(Math.max(commentDraft.split('\n').length, 1), 8)
+  $: editRows = Math.min(Math.max(editDraft.split('\n').length, 1), 8)
+  $: currentUserId = alToken?.viewer?.data?.Viewer?.id
+
+  function checkCommentInput (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      submitComment()
+    } else if (event.key === 'Escape') {
+      cancelReply()
+    }
+  }
+
+  async function submitComment () {
+    if (!alToken || !commentDraft.trim() || commentSubmitting) return
+    commentSubmitting = true
+    try {
+      const res = await anilistClient.saveThreadComment({
+        threadId: selectedThread.id,
+        ...(replyingTo ? { parentCommentId: replyingTo.id } : {}),
+        comment: commentDraft.trim()
+      })
+      const newComment = res?.data?.SaveThreadComment
+      if (!newComment) throw new Error('No comment returned')
+      if (replyingTo) {
+        if (!Array.isArray(replyingTo.childComments)) replyingTo.childComments = []
+        replyingTo.childComments.push(newComment)
+        comments = comments
+      } else {
+        comments = [newComment, ...comments]
+      }
+      threadReplyCount++
+      commentDraft = ''
+      replyingTo = null
+      await loadComments(true)
+    } catch (error) {
+      toast.error('Comment Failed', {
+        description: 'Failed to post your comment. Please try again.',
+        duration: 10000
+      })
+    } finally {
+      commentSubmitting = false
+    }
+  }
+
   $: flatComments = comments ? flattenComments(comments) : []
   $: threadLikeCount = selectedThread?.likeCount || 0
   $: threadIsLiked = !!selectedThread?.isLiked
+  $: threadReplyCount = selectedThread?.replyCount || 0
   $: if ($modal[modal.THREADS] && !threads) loadThreads()
   $: if (selectedThread) loadComments()
   $: if (!$modal[modal.THREADS]) {
     selectedThread = null
     comments = null
+    commentDraft = ''
+    replyingTo = null
+    editingComment = null
+    editDraft = ''
+    deleteConfirmId = null
+    clearTimeout(deleteTimer)
   }
 </script>
 
@@ -213,9 +387,12 @@
               <img class='comment-avatar' src={selectedThread.user.avatar.medium} alt='' />
             {/if}
             <span>By <span class='author'>{selectedThread.user?.name || 'Anonymous'}</span></span>
-            {#if selectedThread.createdAt}<span>{since(new Date(selectedThread.createdAt * 1000))}</span>{/if}
-            <span class='stat'><MessageSquare size='1.3rem'/>{selectedThread.replyCount}</span>
+              {#if selectedThread.createdAt}<span title={new Date(selectedThread.createdAt * 1000).toLocaleString()}>{since(new Date(selectedThread.createdAt * 1000))}</span>{/if}
+            <span class='stat'><MessageSquare size='1.3rem'/>{threadReplyCount}</span>
             <span class='stat'><Eye size='1.3rem'/>{selectedThread.viewCount}</span>
+            <button type='button' class='comment-reply stat' data-toggle='tooltip' data-placement='top' data-title='Reply' use:click={focusComposer}>
+              <MessageSquare size='1.3rem'/>Reply
+            </button>
             <button type='button' class='comment-likes stat' class:liked={threadIsLiked} use:click={() => toggleThreadLike(selectedThread)}>
               <Heart size='1.3rem' fill={threadIsLiked ? 'currentColor' : 'none'}/>
               {threadLikeCount}
@@ -240,20 +417,37 @@
                       <div class='comment-avatar'></div>
                     {/if}
                     <div class='comment-main'>
-                      <div class='comment-head'>
-                        <span class='author'>{comment.user?.name || 'Anonymous'}</span>
-                        {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
-                        <button type='button' class='comment-likes' class:liked={comment.isLiked} use:click={() => toggleCommentLike(comment)}>
-                          <Heart size='1.2rem' fill={comment.isLiked ? 'currentColor' : 'none'}/>
-                          {comment.likeCount || 0}
+                    <div class='comment-head'>
+                      <span class='author'>{comment.user?.name || 'Anonymous'}</span>
+                      {#if comment.createdAt}<span title={new Date(comment.createdAt * 1000).toLocaleString()}>{since(new Date(comment.createdAt * 1000))}</span>{/if}
+                      <button type='button' class='comment-reply' use:click={() => replyTo(comment)}><MessageSquare size='1.2rem'/>Reply</button>
+                      {#if comment.user?.id === currentUserId}
+                        <button type='button' class='comment-edit-btn' use:click={() => startEdit(comment)}><Pencil size='1.2rem'/>Edit</button>
+                        <button type='button' class='comment-delete-btn' class:confirming={deleteConfirmId === comment.id} use:click={() => requestDelete(comment)}>
+                          <Trash2 size='1.2rem'/>{deleteConfirmId === comment.id ? 'Confirm?' : 'Delete'}
                         </button>
+                      {/if}
+                      <button type='button' class='comment-likes' class:liked={comment.isLiked} use:click={() => toggleCommentLike(comment)}>
+                        <Heart size='1.2rem' fill={comment.isLiked ? 'currentColor' : 'none'}/>
+                        {comment.likeCount || 0}
+                      </button>
+                    </div>
+                    {#if editingComment === comment}
+                      <div class='comment-edit'>
+                        <textarea class='comment-edit-textarea' bind:value={editDraft} rows={editRows} disabled={editSubmitting} placeholder='Edit your comment...' on:keydown={checkEditInput} />
+                        <div class='comment-edit-actions'>
+                          <button type='button' class='comment-edit-save' disabled={editSubmitting || !editDraft.trim()} use:click={saveEdit}>Save</button>
+                          <button type='button' class='comment-edit-cancel' disabled={editSubmitting} use:click={cancelEdit}>Cancel</button>
+                        </div>
                       </div>
+                    {:else}
                       {#if comment.comment}
                         <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
                       {/if}
-                    </div>
+                    {/if}
                   </div>
                 </div>
+              </div>
               {:else}
                 <div class='comment-card'>
                   {#if comment.user?.avatar?.medium}
@@ -264,14 +458,31 @@
                   <div class='comment-main'>
                     <div class='comment-head'>
                       <span class='author'>{comment.user?.name || 'Anonymous'}</span>
-                      {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
+                      {#if comment.createdAt}<span title={new Date(comment.createdAt * 1000).toLocaleString()}>{since(new Date(comment.createdAt * 1000))}</span>{/if}
+                      <button type='button' class='comment-reply' use:click={() => replyTo(comment)}><MessageSquare size='1.2rem'/>Reply</button>
+                      {#if comment.user?.id === currentUserId}
+                        <button type='button' class='comment-edit-btn' use:click={() => startEdit(comment)}><Pencil size='1.2rem'/>Edit</button>
+                        <button type='button' class='comment-delete-btn' class:confirming={deleteConfirmId === comment.id} use:click={() => requestDelete(comment)}>
+                          <Trash2 size='1.2rem'/>{deleteConfirmId === comment.id ? 'Confirm?' : 'Delete'}
+                        </button>
+                      {/if}
                       <button type='button' class='comment-likes' class:liked={comment.isLiked} use:click={() => toggleCommentLike(comment)}>
                         <Heart size='1.2rem' fill={comment.isLiked ? 'currentColor' : 'none'}/>
                         {comment.likeCount || 0}
                       </button>
                     </div>
-                    {#if comment.comment}
-                      <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
+                    {#if editingComment === comment}
+                      <div class='comment-edit'>
+                        <textarea class='comment-edit-textarea' bind:value={editDraft} rows={editRows} disabled={editSubmitting} placeholder='Edit your comment...' on:keydown={checkEditInput} />
+                        <div class='comment-edit-actions'>
+                          <button type='button' class='comment-edit-save' disabled={editSubmitting || !editDraft.trim()} use:click={saveEdit}>Save</button>
+                          <button type='button' class='comment-edit-cancel' disabled={editSubmitting} use:click={cancelEdit}>Cancel</button>
+                        </div>
+                      </div>
+                    {:else}
+                      {#if comment.comment}
+                        <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
+                      {/if}
                     {/if}
                   </div>
                 </div>
@@ -281,6 +492,36 @@
             <div class='empty'>No comments yet</div>
           {/if}
         </div>
+        {#if !alToken}
+          <div class='comment-composer disabled'>
+            <textarea disabled placeholder='Log in to comment' />
+          </div>
+        {:else}
+          <div class='comment-composer'>
+            {#if replyingTo}
+              <div class='reply-context'>
+                <span>Replying to {replyingTo.user?.name || 'Anonymous'}</span>
+                <button type='button' class='reply-cancel' data-toggle='tooltip' data-placement='top' data-title='Cancel Reply' use:click={cancelReply}><X size='1.2rem'/></button>
+              </div>
+            {/if}
+            <div class='comment-input-row'>
+              <textarea
+                bind:this={composerRef}
+                bind:value={commentDraft}
+                {rows}
+                class='form-control h-auto line-height-normal'
+                style='resize: none; min-height: 0 !important'
+                autocomplete='off'
+                placeholder={replyingTo ? `Reply to ${replyingTo.user?.name || 'Anonymous'}...` : 'Add a comment...'}
+                on:keydown={checkCommentInput}
+                disabled={commentSubmitting}
+              />
+              <button type='button' class='comment-send' data-toggle='tooltip' data-placement='top' data-title='Send' disabled={commentSubmitting || !commentDraft.trim()} use:click={submitComment}>
+                <Send size='1.5rem'/>
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
     {:else if threads === null}
       <div class='empty'>Loading discussions...</div>
@@ -305,7 +546,7 @@
               {/if}
               <div class='thread-meta'>
                 <span>By <span class='author'>{thread.user?.name || 'Anonymous'}</span></span>
-                {#if thread.createdAt}<span>{since(new Date(thread.createdAt * 1000))}</span>{/if}
+                {#if thread.createdAt}<span title={new Date(thread.createdAt * 1000).toLocaleString()}>{since(new Date(thread.createdAt * 1000))}</span>{/if}
               </div>
             </div>
             <div class='thread-stats'>
@@ -599,6 +840,175 @@
     color: var(--ts-text);
     cursor: pointer;
     transition: color 0.15s;
+  }
+  .comment-reply {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font: inherit;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .comment-reply:hover {
+    color: var(--ts-accent);
+  }
+  .comment-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font: inherit;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .comment-edit-btn:hover {
+    color: var(--ts-accent);
+  }
+  .comment-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font: inherit;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .comment-delete-btn:hover,
+  .comment-delete-btn.confirming {
+    color: var(--ts-danger, #ff6b6b);
+  }
+  .comment-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .comment-edit-textarea {
+    width: 100%;
+    background-color: var(--ts-bg);
+    border: 1px solid var(--ts-border);
+    border-radius: 6px;
+    color: var(--ts-text);
+    font: inherit;
+    line-height: 1.5;
+    padding: 8px 10px;
+    resize: none;
+  }
+  .comment-edit-textarea:focus {
+    outline: none;
+    border-color: var(--ts-accent);
+  }
+  .comment-edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .comment-edit-save,
+  .comment-edit-cancel {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--ts-border);
+    background: none;
+    font: inherit;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .comment-edit-save:hover:not(:disabled),
+  .comment-edit-cancel:hover:not(:disabled) {
+    color: var(--ts-accent);
+    border-color: var(--ts-accent);
+  }
+  .comment-edit-save:disabled,
+  .comment-edit-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .comment-composer {
+    margin-top: 15px;
+    border-top: 1px solid var(--ts-border);
+    padding-top: 15px;
+  }
+  .comment-composer.disabled {
+    opacity: 0.6;
+  }
+  .comment-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .comment-input-row textarea {
+    background-color: var(--ts-bg);
+    border: 1px solid var(--ts-border);
+    border-radius: 6px;
+    color: var(--ts-text);
+    font: inherit;
+    padding: 10px 12px;
+  }
+  .comment-input-row textarea:focus {
+    outline: none;
+    border-color: var(--ts-accent);
+  }
+  .comment-input-row textarea:disabled {
+    cursor: not-allowed;
+  }
+  .comment-send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    flex-shrink: 0;
+    background-color: var(--ts-accent);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .comment-send:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+  .comment-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .reply-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 1.2rem;
+    color: var(--ts-accent);
+    padding: 4px 6px 10px;
+  }
+  .reply-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: var(--ts-text);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .reply-cancel:hover {
+    color: #f87171;
   }
   .comment-likes :global(svg) {
     color: var(--ts-accent);
