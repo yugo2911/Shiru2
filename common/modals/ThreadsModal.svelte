@@ -42,7 +42,7 @@
   }
 
   function convertAniImages (body) {
-    return body.replace(/img(\d+)?%?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
+    return body.replace(/img\s*(\d+)?%?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
       const url = inner.match(/href=["']([^"']+)["']/)?.[1]
         || inner.match(/\]\(\s*([^)\s]+)\s*\)/)?.[1]
         || inner.trim()

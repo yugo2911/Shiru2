@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniList Live Threads Mockup</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@17/lib/marked.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.2/dist/purify.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #11161d;
+            --bg-secondary: #151f2e;
+            --bg-tertiary: #1f2937;
+            --accent: #3db4f2;
+            --text-main: #9fadbd;
+            --text-bright: #ffffff;
+            --border: #233142;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: var(--text-bright);
+            font-size: 1.5rem;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .thread-list, .comment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .thread-card {
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .thread-card:hover {
+            border-color: var(--accent);
+        }
+
+        .avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 6px;
+            background-color: var(--bg-tertiary);
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+            object-fit: cover;
+        }
+
+        .avatar.small {
+            width: 40px;
+            height: 40px;
+        }
+
+        .thread-content {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .thread-title {
+            color: var(--text-bright);
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+            display: block;
+            transition: color 0.2s;
+        }
+
+        .thread-card:hover .thread-title {
+            color: var(--accent);
+        }
+
+        .thread-preview {
+            color: var(--text-main);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .thread-meta {
+            font-size: 0.85rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .author {
+            color: var(--text-bright);
+            font-weight: 500;
+        }
+
+        .category-tag {
+            background-color: var(--bg-tertiary);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            align-self: flex-start;
+            display: inline-block;
+            margin-bottom: 4px;
+            margin-right: 6px;
+        }
+
+        .sticky-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: var(--bg-tertiary);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            margin-right: 6px;
+            vertical-align: top;
+        }
+
+        .sticky-tag.locked {
+            color: #f87171;
+        }
+
+        .sticky-tag svg {
+            width: 12px;
+            height: 12px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .thread-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            font-size: 0.85rem;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .replies-count {
+            color: var(--text-bright);
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .comment-card {
+            display: flex;
+            gap: 12px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 14px;
+        }
+
+        .comment-body {
+            color: var(--text-main);
+            font-size: 0.95rem;
+            margin-top: 8px;
+            line-height: 1.55;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Rendered markdown/HTML coming back from the AniList GraphQL API is run
+           through the same pipeline as ThreadsModal.svelte: convertAniImages()
+           for img###(url) embeds, then marked + DOMPurify sanitize(). */
+        .comment-body p { margin: 0 0 0.5em; }
+        .comment-body p:last-child { margin-bottom: 0; }
+        .comment-body img {
+            max-width: 100%;
+            border-radius: 4px;
+            margin: 8px 0;
+            display: block;
+            object-fit: contain;
+            background-color: var(--bg-tertiary);
+        }
+
+        .comment-body a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .comment-body blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 10px;
+            margin: 8px 0;
+            color: var(--text-main);
+        }
+
+        .comment-body code {
+            background-color: var(--bg-tertiary);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: var(--text-bright);
+        }
+
+        .comment-body pre {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .comment-body ul, .comment-body ol {
+            padding-left: 22px;
+            margin: 6px 0;
+        }
+
+        .comment-likes {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+        }
+
+        .comment-likes svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--accent);
+            stroke: var(--accent);
+        }
+
+        .thread-detail-title {
+            color: var(--text-bright);
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .thread-detail-meta {
+            font-size: 0.9rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .thread-detail-meta .stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .thread-detail-meta svg {
+            width: 15px;
+            height: 15px;
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2;
+        }
+
+        .thread-body {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            overflow-wrap: break-word;
+        }
+        .thread-body p { margin: 0 0 0.5em; }
+        .thread-body p:last-child { margin-bottom: 0; }
+        .thread-body a { color: var(--accent); }
+        .thread-body img { max-width: 100%; border-radius: 4px; }
+        .thread-body pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        .thread-body code { color: var(--text-bright); }
+        .thread-body blockquote {
+            border-left: 3px solid var(--accent);
+            margin: 0 0 0.5em;
+            padding-left: 10px;
+            color: var(--text-main);
+        }
+        .thread-body ul, .thread-body ol { padding-left: 20px; }
+        .thread-body h1, .thread-body h2, .thread-body h3,
+        .thread-body h4, .thread-body h5, .thread-body h6 {
+            color: var(--text-bright);
+        }
+
+        .comments-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 id="view-title">AniList Live Community Threads</h1>
+        <a href="https://anilist.co/forum/threads" target="_blank" class="btn" id="external-link">View on AniList</a>
+    </div>
+
+    <div id="main-view">
+        <div id="thread-list" class="thread-list">
+            <div class="loading">Fetching live threads from AniList GraphQL API...</div>
+        </div>
+    </div>
+
+    <div id="comment-view" class="hidden">
+        <button class="back-btn" onclick="showThreadList()">← Back to Threads</button>
+        <div id="thread-header-detail"></div>
+        <div id="comment-list" class="comment-list" style="margin-top: 15px;">
+            <div class="loading">Loading comments...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const commentCache = new Map();
+
+// Matches ThreadsModal.svelte: converts AniList img###(url) / img(url) embeds
+// into real <img> tags before markdown parsing, with a max-width capped to the
+// explicit px size when AniList provides one.
+function convertAniImages(body) {
+    return body.replace(/img(\d+)?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
+        const url = inner.match(/href=["']([^"']+)["']/)?.[1]
+            || inner.match(/\]\(\s*([^)\s]+)\s*\)/)?.[1]
+            || inner.trim();
+        const style = size ? ` style="max-width: min(${size}px, 100%)"` : '';
+        return `<img src="${url}"${style} />`;
+    });
+}
+
+// Same sanitize pipeline as ThreadsModal.svelte: trim, normalize dots/breaks,
+// then marked (gfm, breaks) + DOMPurify with the app's allow-list.
+function sanitize(body) {
+    if (!body) return '';
+    const cleanBody = body.trim()
+        .replace(/\.\.+(?=\s*$)/gm, '.')
+        .replace(/\n/g, '<br>')
+        .replace(/(<br\s*\/?>){2,}/gi, '<br><br>')
+        .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '');
+    marked.setOptions({ pedantic: false, breaks: true, gfm: true });
+    return DOMPurify.sanitize(marked.parse(convertAniImages(cleanBody)).trim(), {
+        ALLOWED_TAGS: [
+            'p', 'br', 'span', 'div',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
+            'ul', 'ol', 'li',
+            'blockquote',
+            'code', 'pre',
+            'a',
+            'img',
+            'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+            'hr',
+            'details', 'summary',
+            'input'
+        ],
+        ALLOWED_ATTR: [
+            'href', 'target', 'rel', 'title',
+            'src', 'alt', 'width', 'height',
+            'class', 'id',
+            'style',
+            'align',
+            'type', 'checked', 'disabled'
+        ]
+    });
+}
+
+// Strips img() embeds and markdown syntax for the two-line list preview.
+function plainText(body) {
+    if (!body) return '';
+    return body.replace(/img\d*\([^)]*\)/gi, '').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>-]/g, '');
+}
+
+async function fetchAniListThreads() {
+    const query = `
+        query {
+            Page(perPage: 50) {
+                pageInfo {
+                    hasNextPage
+                },
+                threads(sort: [IS_STICKY, REPLIED_AT_DESC]) {
+                    id
+                    title
+                    body
+                    replyCount
+                    viewCount
+                    likeCount
+                    isLocked
+                    isSticky
+                    createdAt
+                    updatedAt
+                    siteUrl
+                    user {
+                        id
+                        name
+                        avatar {
+                            medium,
+                            large
+                        }
+                    }
+                    categories {
+                        id,
+                        name
+                    }
+                }
+            }
+        }
+    `;
+
+    try {
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query })
+        });
+
+        const result = await response.json();
+        const threads = result.data.Page.threads;
+
+        const container = document.getElementById('thread-list');
+        container.innerHTML = '';
+
+        threads.forEach(thread => {
+            const categoryName = thread.categories && thread.categories.length > 0 ? thread.categories[0].name : 'General';
+            const avatarUrl = thread.user && thread.user.avatar ? (thread.user.avatar.medium || thread.user.avatar.large) : '';
+            const userName = thread.user ? thread.user.name : 'Anonymous';
+            const timeAgo = timeSince(new Date(thread.createdAt * 1000));
+            const lockIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M6 11h12v10H6z"/></svg>';
+
+            const card = document.createElement('div');
+            card.className = 'thread-card';
+            card.onclick = () => loadThreadComments(thread.id, thread);
+            card.onmouseenter = () => prefetchComments(thread.id);
+            card.innerHTML = `
+                <div class="avatar" style="background-image: ${avatarUrl ? `url('${avatarUrl}')` : ''}"></div>
+                <div class="thread-content">
+                    <span class="category-tag">${categoryName}</span>
+                    ${thread.isSticky ? '<span class="sticky-tag">PINNED</span>' : ''}
+                    ${thread.isLocked ? `<span class="sticky-tag locked">${lockIcon}</span>` : ''}
+                    <span class="thread-title">${escapeHtml(thread.title)}</span>
+                    ${thread.body ? `<div class="thread-preview">${escapeHtml(plainText(thread.body))}</div>` : ''}
+                    <div class="thread-meta">
+                        <span>By <span class="author">${escapeHtml(userName)}</span></span>
+                        <span>${timeAgo}</span>
+                    </div>
+                </div>
+                <div class="thread-stats">
+                    <span class="replies-count">${thread.replyCount}</span>
+                    <span>replies</span>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error('Error fetching AniList threads:', error);
+        document.getElementById('thread-list').innerHTML = `
+            <div class="error">Failed to load live data from AniList API. Please check your network connection.</div>
+        `;
+    }
+}
+
+async function prefetchComments(threadId) {
+    if (commentCache.has(threadId)) return;
+    // Raw markdown `comment` is fetched and rendered locally through the same
+    // convertAniImages + marked + DOMPurify pipeline as ThreadsModal.svelte.
+    const query = `
+        query ($threadId: Int) {
+            Page(perPage: 100) {
+                pageInfo {
+                    hasNextPage
+                },
+                threadComments(threadId: $threadId) {
+                    id
+                    comment
+                    likeCount
+                    isLiked
+                    createdAt
+                    updatedAt
+                    user {
+                        id
+                        name
+                        avatar {
+                            medium,
+                            large
+                        }
+                    }
+                }
+            }
+        }
+    `;
+    try {
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables: { threadId } })
+        });
+        const result = await response.json();
+        const comments = result.data && result.data.Page ? result.data.Page.threadComments : [];
+        commentCache.set(threadId, comments);
+    } catch (e) {}
+}
+
+async function loadThreadComments(threadId, threadData) {
+    document.getElementById('main-view').classList.add('hidden');
+    document.getElementById('comment-view').classList.remove('hidden');
+    document.getElementById('view-title').innerText = 'Thread Comments';
+    document.getElementById('external-link').href = threadData.siteUrl;
+
+    const categoryName = threadData.categories && threadData.categories.length > 0 ? threadData.categories[0].name : 'General';
+    const avatarUrl = threadData.user && threadData.user.avatar ? (threadData.user.avatar.medium || threadData.user.avatar.large) : '';
+    const userName = threadData.user ? threadData.user.name : 'Anonymous';
+    const lockIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M6 11h12v10H6z"/></svg>';
+    const replyIcon = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+    const eyeIcon = '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const heartIcon = '<svg viewBox="0 0 24 24"><path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.2 1.4 6.6 4.4 5c2.2-1.2 4.6-.5 6 1.2C11.8 4.5 14.2 3.8 16.4 5c3 1.6 3.6 5.2 1.7 7.9C18.7 16.65 12 21 12 21z"/></svg>';
+
+    document.getElementById('thread-header-detail').innerHTML = `
+        <div class="thread-card" style="cursor: default;">
+            <div class="avatar" style="background-image: ${avatarUrl ? `url('${avatarUrl}')` : ''}"></div>
+            <div class="thread-content">
+                <span class="category-tag">${categoryName}</span>
+                ${threadData.isSticky ? '<span class="sticky-tag">PINNED</span>' : ''}
+                ${threadData.isLocked ? `<span class="sticky-tag locked">${lockIcon}</span>` : ''}
+                <div class="thread-detail-title">${escapeHtml(threadData.title)}</div>
+                <div class="thread-detail-meta">
+                    <span>By <span class="author">${escapeHtml(userName)}</span></span>
+                    <span>${timeSince(new Date(threadData.createdAt * 1000))}</span>
+                    <span class="stat">${replyIcon}${threadData.replyCount}</span>
+                    <span class="stat">${eyeIcon}${threadData.viewCount}</span>
+                    <span class="stat">${heartIcon}${threadData.likeCount}</span>
+                </div>
+            </div>
+        </div>
+        ${threadData.body ? `<div class="thread-body">${sanitize(threadData.body)}</div>` : ''}
+        <div class="comments-title">COMMENTS</div>
+    `;
+
+    const commentListContainer = document.getElementById('comment-list');
+
+    let comments = commentCache.get(threadId);
+    if (!comments) {
+        commentListContainer.innerHTML = '<div class="loading">Loading comments from AniList API...</div>';
+        await prefetchComments(threadId);
+        comments = commentCache.get(threadId) || [];
+    }
+
+    commentListContainer.innerHTML = '';
+
+    if (comments.length === 0) {
+        commentListContainer.innerHTML = '<div class="loading">No comments found for this thread.</div>';
+        return;
+    }
+
+    comments.forEach(comment => {
+        commentListContainer.appendChild(renderComment(comment));
+    });
+}
+
+// Builds a single comment card (avatar, author, rendered markdown body, like
+// count) matching ThreadsModal.svelte's flat comment layout.
+function renderComment(comment) {
+    const cAvatar = comment.user && comment.user.avatar ? (comment.user.avatar.medium || comment.user.avatar.large) : '';
+    const cUser = comment.user ? comment.user.name : 'Anonymous';
+    const cTime = timeSince(new Date(comment.createdAt * 1000));
+    const likeCount = comment.likeCount || 0;
+
+    const card = document.createElement('div');
+    card.className = 'comment-card';
+    card.innerHTML = `
+        <div class="avatar small" style="background-image: ${cAvatar ? `url('${cAvatar}')` : ''}"></div>
+        <div class="thread-content">
+            <div class="thread-meta">
+                <span class="author">${escapeHtml(cUser)}</span>
+                <span>${cTime}</span>
+                ${likeCount ? `<span class="comment-likes"><svg viewBox="0 0 24 24"><path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.2 1.4 6.6 4.4 5c2.2-1.2 4.6-.5 6 1.2C11.8 4.5 14.2 3.8 16.4 5c3 1.6 3.6 5.2 1.7 7.9C18.7 16.65 12 21 12 21z"/></svg>${likeCount}</span>` : ''}
+            </div>
+            ${comment.comment ? `<div class="comment-body">${sanitize(comment.comment)}</div>` : ''}
+        </div>
+    `;
+    return card;
+}
+
+function showThreadList() {
+    document.getElementById('comment-view').classList.add('hidden');
+    document.getElementById('main-view').classList.remove('hidden');
+    document.getElementById('view-title').innerText = 'AniList Live Community Threads';
+    document.getElementById('external-link').href = 'https://anilist.co/forum/threads';
+}
+
+function timeSince(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return Math.floor(seconds) + " seconds ago";
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+fetchAniListThreads();
+</script>
+
+</body>
+</html>
