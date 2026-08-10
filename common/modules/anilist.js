@@ -973,6 +973,7 @@ class AnilistClient {
             comment,
             likeCount,
             isLiked,
+            childComments,
             createdAt,
             updatedAt,
             user {

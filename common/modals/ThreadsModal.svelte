@@ -1,8 +1,7 @@
 <script>
   import SoftModal from '@/components/modals/SoftModal.svelte'
-  import { MessagesSquare } from 'lucide-svelte'
   import { click } from '@/modules/click.js'
-  import { X, ChevronLeft, Lock, MessageSquare, Eye, Heart } from 'lucide-svelte'
+  import { MessagesSquare, X, ChevronLeft, Lock, MessageSquare, Eye, Heart } from 'lucide-svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { modal } from '@/modules/navigation.js'
   import { since } from '@/modules/util.js'
@@ -11,16 +10,38 @@
 
   export let staticMedia
 
-  let threads = null
-  let comments = null
-  let selectedThread = null
+  marked.setOptions({
+    pedantic: false,
+    breaks: true,
+    gfm: true
+  })
 
-  function close () {
-    modal.close(modal.THREADS)
-    selectedThread = null
+  const SANITIZE_CONFIG = {
+    ALLOWED_TAGS: [
+      'p', 'br', 'span', 'div',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
+      'ul', 'ol', 'li',
+      'blockquote',
+      'code', 'pre',
+      'a',
+      'img',
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      'hr',
+      'details', 'summary',
+      'input'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'target', 'rel', 'title',
+      'src', 'alt', 'width', 'height',
+      'class', 'id',
+      'style',
+      'align',
+      'type', 'checked', 'disabled'
+    ]
   }
 
-  function convertAniImages(body) {
+  function convertAniImages (body) {
     return body.replace(/img(\d+)?\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gi, (match, size, inner) => {
       const url = inner.match(/href=["']([^"']+)["']/)?.[1]
         || inner.match(/\]\(\s*([^)\s]+)\s*\)/)?.[1]
@@ -30,47 +51,64 @@
     })
   }
 
-  function sanitize(body) {
+  // AniList-flavored spoiler syntax: ~!hidden text!~
+  // Standard markdown doesn't know this, so marked would leave the raw
+  // tildes/bangs in the output if we didn't convert it first. Runs before
+  // marked.parse, same as convertAniImages.
+  function convertSpoilers (body) {
+    return body.replace(/~!([\s\S]*?)!~/g, (match, inner) => `<span class="spoiler">${inner}</span>`)
+  }
+
+  function sanitize (body) {
     if (!body) return ''
     const cleanBody = body.trim()
       .replace(/\.\.+(?=\s*$)/gm, '.')
       .replace(/\n/g, '<br>')
       .replace(/(<br\s*\/?>){2,}/gi, '<br><br>')
       .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '')
-    marked.setOptions({
-      pedantic: false,
-      breaks: true,
-      gfm: true
-    })
-    return DOMPurify.sanitize(marked.parse(convertAniImages(cleanBody)).trim(), {
-      ALLOWED_TAGS: [
-        'p', 'br', 'span', 'div',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
-        'ul', 'ol', 'li',
-        'blockquote',
-        'code', 'pre',
-        'a',
-        'img',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-        'hr',
-        'details', 'summary',
-        'input'
-      ],
-      ALLOWED_ATTR: [
-        'href', 'target', 'rel', 'title',
-        'src', 'alt', 'width', 'height',
-        'class', 'id',
-        'style',
-        'align',
-        'type', 'checked', 'disabled'
-      ]
-    })
+    const withEmbeds = convertSpoilers(convertAniImages(cleanBody))
+    return DOMPurify.sanitize(marked.parse(withEmbeds).trim(), SANITIZE_CONFIG)
   }
 
-  function plainText(body) {
+  function plainText (body) {
     if (!body) return ''
-    return body.replace(/img\d*\([^)]*\)/gi, '').replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>-]/g, '')
+    return body
+      .replace(/img\d*\([^)]*\)/gi, '')
+      .replace(/~!([\s\S]*?)!~/g, '$1')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/[*_`#>-]/g, '')
+  }
+
+  // Spoiler spans live inside raw {@html sanitize(...)} output, so individual
+  // spans can't carry their own Svelte listeners. Bind this to on:click on
+  // whatever container renders that HTML (comment-text, thread-body, etc.)
+  // and it'll toggle whichever spoiler was actually clicked.
+  function toggleSpoiler (event) {
+    const spoiler = event.target.closest('.spoiler')
+    if (spoiler) spoiler.classList.toggle('revealed')
+  }
+
+  // Flattens the nested childComments tree into a depth-annotated list so the
+  // comments can be rendered from a single component (Svelte 4 has no inline
+  // recursive components, so each level is indented instead of nested).
+  function flattenComments (comments, depth = 0, out = []) {
+    for (const comment of comments) {
+      out.push({ comment, depth })
+      if (Array.isArray(comment.childComments) && comment.childComments.length) {
+        flattenComments(comment.childComments, depth + 1, out)
+      }
+    }
+    return out
+  }
+
+  let threads = null
+  let comments = null
+  let selectedThread = null
+  let flatComments = []
+
+  function close () {
+    modal.close(modal.THREADS)
+    selectedThread = null
   }
 
   async function loadThreads () {
@@ -86,6 +124,7 @@
     comments = res?.data?.Page?.threadComments || []
   }
 
+  $: flatComments = comments ? flattenComments(comments) : []
   $: if ($modal[modal.THREADS] && !threads) loadThreads()
   $: if (selectedThread) loadComments()
   $: if (!$modal[modal.THREADS]) {
@@ -138,31 +177,53 @@
           </div>
         </div>
         {#if selectedThread.body}
-          <div class='thread-body'>{@html sanitize(selectedThread.body)}</div>
+          <div class='thread-body' on:click={toggleSpoiler}>{@html sanitize(selectedThread.body)}</div>
         {/if}
         <div class='comments-title'>COMMENTS</div>
         <div class='comments-list'>
           {#if comments === null}
             <div class='empty'>Loading comments...</div>
-          {:else if comments?.length}
-            {#each comments as comment}
-              <div class='comment-card'>
-                {#if comment.user?.avatar?.medium}
-                  <img class='comment-avatar' src={comment.user.avatar.medium} alt='' />
-                {:else}
-                  <div class='comment-avatar'></div>
-                {/if}
-                <div class='comment-main'>
-                  <div class='comment-head'>
-                    <span class='author'>{comment.user?.name || 'Anonymous'}</span>
-                    {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
-                    {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
+          {:else if flatComments.length}
+            {#each flatComments as { comment, depth } (comment.id)}
+              {#if depth > 0}
+                <div class='comment-replies' style='margin-left: {(depth - 1) * 46}px'>
+                  <div class='comment-card'>
+                    {#if comment.user?.avatar?.medium}
+                      <img class='comment-avatar' src={comment.user.avatar.medium} alt='' />
+                    {:else}
+                      <div class='comment-avatar'></div>
+                    {/if}
+                    <div class='comment-main'>
+                      <div class='comment-head'>
+                        <span class='author'>{comment.user?.name || 'Anonymous'}</span>
+                        {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
+                        {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
+                      </div>
+                      {#if comment.comment}
+                        <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
+                      {/if}
+                    </div>
                   </div>
-                  {#if comment.comment}
-                    <div class='comment-text'>{@html sanitize(comment.comment)}</div>
-                  {/if}
                 </div>
-              </div>
+              {:else}
+                <div class='comment-card'>
+                  {#if comment.user?.avatar?.medium}
+                    <img class='comment-avatar' src={comment.user.avatar.medium} alt='' />
+                  {:else}
+                    <div class='comment-avatar'></div>
+                  {/if}
+                  <div class='comment-main'>
+                    <div class='comment-head'>
+                      <span class='author'>{comment.user?.name || 'Anonymous'}</span>
+                      {#if comment.createdAt}<span>{since(new Date(comment.createdAt * 1000))}</span>{/if}
+                      {#if comment.likeCount}<span class='comment-likes'><Heart size='1.2rem'/>{comment.likeCount}</span>{/if}
+                    </div>
+                    {#if comment.comment}
+                      <div class='comment-text' on:click={toggleSpoiler}>{@html sanitize(comment.comment)}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
             {/each}
           {:else}
             <div class='empty'>No comments yet</div>
@@ -413,6 +474,16 @@
   .thread-body :global(h4), .thread-body :global(h5), .thread-body :global(h6) {
     color: var(--ts-bright);
   }
+  .thread-body :global(.spoiler) {
+    background-color: var(--tt-bg);
+    color: transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .thread-body :global(.spoiler.revealed) {
+    color: inherit;
+  }
   .comments-title {
     font-size: 1.2rem;
     font-weight: 700;
@@ -425,6 +496,13 @@
     flex-direction: column;
     gap: 10px;
   }
+  .empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--ts-text);
+    font-size: 1.35rem;
+  }
+
   .comment-card {
     display: flex;
     gap: 12px;
@@ -462,7 +540,7 @@
     gap: 4px;
     margin-left: auto;
   }
-  .comment-likes svg {
+  .comment-likes :global(svg) {
     color: var(--ts-accent);
   }
   .comment-text {
@@ -474,10 +552,23 @@
   .comment-text :global(p:last-child) { margin-bottom: 0; }
   .comment-text :global(a) { color: var(--ts-accent); }
   .comment-text :global(img) { max-width: 100%; border-radius: 4px; }
-  .empty {
-    padding: 20px;
-    text-align: center;
-    color: var(--ts-text);
-    font-size: 1.35rem;
+  .comment-text :global(.spoiler) {
+    background-color: var(--tt-bg);
+    color: transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .comment-text :global(.spoiler.revealed) {
+    color: inherit;
+  }
+
+  .comment-replies {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0 0 26px;
+    padding-left: 20px;
+    border-left: 2px solid var(--ts-border);
   }
 </style>
