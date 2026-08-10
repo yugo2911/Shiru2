@@ -147,6 +147,9 @@
                   {:else}
                     <div class='ep-placeholder {!SUPPORTS.isAndroid ? `ep-card-h` : `h-165`} w-full w-sm-265'></div>
                   {/if}
+                  {#if length}
+                    <span class='duration position-absolute bottom-0 left-0 m-5 py-2 px-6 bg-black-50 rounded-1'>{length}m</span>
+                  {/if}
                   {#if resolvedHash}
                     <div class='position-relative torrent-button-container'>
                       <div class='position-absolute top-0 right-0 text-danger icon-padding icon-shadow'>
@@ -171,13 +174,17 @@
                   </div>
                 {/if}
                 <div class='h-full w-full px-20 pt-15 d-flex flex-column'>
-                  <div class='w-full d-flex flex-row mb-15'>
-<div class='text-white font-weight-bold font-size-16 title' title={resolvedTitle}>
-  {#if resolvedTitle && !new RegExp(`(?<![\\d.])${episode}(?![\\d.])`).test(resolvedTitle) && media?.episodes !== 1}<span class='ep-num'>{episode}.</span> {/if}<span class='ep-title'>{resolvedTitle || 'Episode ' + episode}</span>
-</div>
-                    {#if length}
-                      <span class='duration ml-auto'>{length}m</span>
+                  <div class='w-full d-flex flex-column mb-15'>
+                    {#if media?.episodes !== 1}
+                      <div class='text-accent font-weight-bold font-size-14 ep-num mb-2'>
+                        EP {episode}
+                      </div>
                     {/if}
+                    <div class='d-flex flex-row w-full align-items-center'>
+                      <div class='text-white font-weight-bold font-size-16 title' title={resolvedTitle}>
+                        <span class='ep-title'>{resolvedTitle || 'Episode ' + episode}</span>
+                      </div>
+                    </div>
                   </div>
                   {#if completed}
                     <div class='progress mb-10'>
@@ -323,8 +330,9 @@
   :global(.episode-card .ep-num) {
     flex-shrink: 0;
     color: var(--card-accent);
-    font-size: 1.5rem;
+    font-size: 0.95rem;
     font-weight: 700;
+    letter-spacing: 0.05em;
   }
   :global(.episode-card .ep-title) {
     letter-spacing: 0.02em;
@@ -337,8 +345,13 @@
   :global(.episode-card .duration) {
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--card-accent);
+    color: white;
+    /* color: var(--card-accent); */
     flex-shrink: 0;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--card-line);
+    padding: 0.125rem 0.375rem;
   }
   :global(.episode-card .airdate) {
     font-size: 0.95rem;

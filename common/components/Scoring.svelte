@@ -173,6 +173,16 @@
     }
   }
 
+  function handleEpisodeWheel(event) {
+    event.preventDefault()
+    const maxEpisodes = getMediaMaxEp(media) || (media.status === 'RELEASING' ? 12 : 9999)
+    const delta = event.deltaY < 0 ? 1 : -1
+    let newEpisode = episode + delta
+    if (newEpisode < 0) newEpisode = 0
+    if (maxEpisodes && newEpisode > maxEpisodes) newEpisode = maxEpisodes
+    episode = newEpisode
+  }
+
   $: {
     if ($showModal) {
       const { reactive, init } = createListener([`scoring`, `scoring-btn`])
@@ -218,7 +228,7 @@
         <div class='form-group'>
           <label class='d-block mb-5' for='episode'>Episode</label>
           <div class='d-flex'>
-            <input class='form-control bg-dark-light w-full' type='number' id='episode' bind:value={episode} on:input={handleEpisodes} />
+            <input class='form-control bg-dark-light w-full' type='number' id='episode' bind:value={episode} on:input={handleEpisodes} on:wheel={handleEpisodeWheel} />
             <div>
               <span class='total-episodes position-absolute text-right pointer-events-none'>/ {totalEpisodes}</span>
             </div>
