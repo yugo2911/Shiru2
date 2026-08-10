@@ -1,26 +1,11 @@
 <script>
   import { settings } from '@/modules/settings.js'
-  import { click } from '@/modules/click.js'
   import { onDestroy, afterUpdate } from 'svelte'
-  import ToggleTitle from '@/modals/details/components/ToggleTitle.svelte'
-  import ToggleFooter from '@/modals/details/components/ToggleFooter.svelte'
 
-  export let title
   export let promise
   export let list
 
-  let showMore = false
-  function toggleList() {
-    showMore = !showMore
-  }
-
   let container = null
-  let previewLength = 4
-  function updateRowLength() {
-    if (!container || !settings.value.toggleList) return
-    const firstItem = container.querySelector('.small-card')
-    if (firstItem) previewLength = Math.floor((container.offsetWidth) / (firstItem.offsetWidth)) || 1
-  }
 
   function updateRowMarkers() {
     if (!container) return
@@ -48,7 +33,6 @@
   }
 
   function handleUpdate() {
-    updateRowLength()
     updateRowMarkers()
   }
 
@@ -69,10 +53,6 @@
 </script>
 
 {#if list?.length}
-  {@const canToggle = settings.value.toggleList && list.length > previewLength}
-  <span class='d-flex align-items-end mt-20' aria-hidden='true' tabindex='-1' class:pointer={canToggle} class:not-reactive={!canToggle} use:click={toggleList}>
-    <ToggleTitle title={title} class={canToggle ? `more` : ``}/>
-  </span>
   <div class='pt-10 text-capitalize d-flex gallery'
        class:justify-content-center={list.length <= 2 || settings.value.toggleList}
        class:justify-content-start={list.length > 2 && !settings.value.toggleList}
@@ -80,11 +60,10 @@
        class:flex-row={!settings.value.toggleList}
        class:flex-wrap={settings.value.toggleList}
        bind:this={container}>
-    {#each !settings.value.toggleList ? list : (showMore ? list : list.slice(0, previewLength)) as item}
+    {#each list as item}
       <slot {item} {promise} />
     {/each}
   </div>
-  <ToggleFooter {showMore} {toggleList} size={settings.value.toggleList && list.length} rowSize={previewLength} />
 {/if}
 
 <style>

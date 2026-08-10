@@ -1,7 +1,7 @@
 <script>
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import { click } from '@/modules/click.js'
-  import { MessagesSquare, X, ChevronLeft, Lock, MessageSquare, Eye, Heart, Send, Pencil, Trash2 } from 'lucide-svelte'
+  import { X, ChevronLeft, Lock, MessageSquare, Eye, Heart, Send, Pencil, Trash2 } from 'lucide-svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { alToken } from '@/modules/settings.js'
   import { modal } from '@/modules/navigation.js'
@@ -347,18 +347,6 @@
   }
 </script>
 
-<button 
-  class='btn TechnicalSquareButton d-flex align-items-center justify-content-center shadow-none border-0 mr-10' 
-  data-toggle='tooltip' 
-  data-placement='top' 
-  data-target-breakpoint='md' 
-  data-title='Discussions'
-  use:click={() => modal.toggle(modal.THREADS)}
-  disabled={!staticMedia?.id}
->
-  <MessagesSquare size='1.2rem' />
-</button>
-
 <SoftModal 
   class='pointer-events-none w-full scrollbar-none align-items-center mb-30' 
   css='top-0 left-0 position-fixed' 
@@ -620,7 +608,7 @@
     height: 52px;
     border-radius: 6px;
     background-color: var(--tt-bg);
-    background-image: url('./404_square.png');
+    /* background-image: url('./404_square.png'); */
     background-size: cover;
     background-position: center;
     flex-shrink: 0;
@@ -809,7 +797,7 @@
     height: 40px;
     border-radius: 6px;
     background-color: var(--tt-bg);
-    background-image: url('./404_square.png');
+    /* background-image: url('./404_square.png'); */
     background-size: cover;
     background-position: center;
     flex-shrink: 0;

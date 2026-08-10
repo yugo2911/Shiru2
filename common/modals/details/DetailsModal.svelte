@@ -170,7 +170,7 @@
   $: accentColor = media?.coverImage?.color
   let showExternalLinks = false
   let showAnimeThemes = false
-  let activeTab = 'relations'
+  let activeTab = 'episodes'
   let showSynopsis = false
 
   let resizeObserver
@@ -345,8 +345,6 @@
 
                     <AnimeThemesModal {staticMedia} />
 
-                    <ThreadsModal {staticMedia} />
-
                     {#if staticMedia.externalLinks?.filter(l => !l.isDisabled).length}
                       {@const activeLinks = staticMedia.externalLinks.filter(l => !l.isDisabled)}
                       {@const officialLinks = activeLinks.filter(l => l.type === 'OFFICIAL')}
@@ -421,47 +419,26 @@
               </div>
             </div>
 
-            <!-- EPISODE LIST - Main focus -->
+            <!-- EPISODE LIST / RELATIONS / RECOMMENDATIONS - Main focus -->
             <div class="EpisodeFocusArea">
               <div class="ControlTowerHeader">
-                <span class="TowerTitle">EPISODES</span>
-                <button class="close order pointer z-30 TowerOrderToggle" class:d-none={!episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
+                <div class="TabBar">
+                  <button class="TabButton" class:active={activeTab === 'episodes'} use:click={() => activeTab = 'episodes'}>EPISODES</button>
+                  <button class="TabButton" class:active={activeTab === 'relations'} use:click={() => activeTab = 'relations'}>RELATIONS</button>
+                  <button class="TabButton" class:active={activeTab === 'recommendations'} use:click={() => activeTab = 'recommendations'}>RECOMMENDATIONS</button>
+                  <button class="TabButton" class:active={$modal[modal.THREADS]} disabled={!staticMedia?.id} use:click={() => modal.toggle(modal.THREADS)}>THREADS</button>
+                </div>
+                <ThreadsModal {staticMedia} />
+                <button class="close order pointer z-30 TowerOrderToggle" class:d-none={activeTab !== 'episodes' || !episodeList?.length} data-toggle="tooltip" data-placement="top" data-target-breakpoint="md" data-title="Reverse Episodes" use:click={()=> {episodeOrder = !episodeOrder}}>
                   <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size="1.2rem" />
                 </button>
               </div>
               <div class="TowerListBody">
-                <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
-              </div>
-            </div>
-
-            <!-- Relations & Recommendations tabs -->
-            <div class="TabBar">
-              <button class="TabButton" class:active={activeTab === 'relations'} use:click={() => activeTab = 'relations'}>RELATIONS</button>
-              <button class="TabButton" class:active={activeTab === 'recommendations'} use:click={() => activeTab = 'recommendations'}>RECOMMENDATIONS</button>
-            </div>
-
-            {#if activeTab === 'relations'}
-              <div class="d-lg-block LinkedRelationsPanel">
-                <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
-                  {#await promise}
-                    <div class="small-card TechnicalCardShell">
-                      <SmallCardSk />
-                    </div>
-                  {:then res}
-                    {#if res}
-                      <div class="small-card TechnicalCardShell">
-                        <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
-                      </div>
-                    {/if}
-                  {/await}
-                </ToggleList>
-              </div>
-            {:else}
-              <div class="d-lg-block LinkedRelationsPanel">
-                {#await recommendations then res}
-                  {@const media = res?.data?.Media}
-                  {#if media}
-                    <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
+                {#if activeTab === 'episodes'}
+                  <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} bind:userProgress bind:watched episodeCount={getMediaMaxEp(media)} {play} />
+                {:else if activeTab === 'relations'}
+                  <div class="d-lg-block LinkedRelationsPanel">
+                    <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title="RELATIONS">
                       {#await promise}
                         <div class="small-card TechnicalCardShell">
                           <SmallCardSk />
@@ -469,15 +446,36 @@
                       {:then res}
                         {#if res}
                           <div class="small-card TechnicalCardShell">
-                            <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
+                            <SmallCard data={item.node} type={item.relationType.replace(/_/g, ' ').toLowerCase()} />
                           </div>
                         {/if}
                       {/await}
                     </ToggleList>
-                  {/if}
-                {/await}
+                  </div>
+                {:else}
+                  <div class="d-lg-block LinkedRelationsPanel">
+                    {#await recommendations then res}
+                      {@const media = res?.data?.Media}
+                      {#if media}
+                        <ToggleList list={ media.recommendations?.edges?.filter(({ node }) => node.mediaRecommendation && !(settings.value.adult === 'none' && node.mediaRecommendation.isAdult) && !(settings.value.adult !== 'hentai' && node.mediaRecommendation.genres?.includes('Hentai')) && !missingIds.includes(node.mediaRecommendation.id)).sort((a, b) => b.node.rating - a.node.rating) } promise={searchIDS} let:item let:promise title="RECOMMENDATIONS">
+                          {#await promise}
+                            <div class="small-card TechnicalCardShell">
+                              <SmallCardSk />
+                            </div>
+                          {:then res}
+                            {#if res}
+                              <div class="small-card TechnicalCardShell">
+                                <SmallCard data={item.node.mediaRecommendation} type={item.node.rating} />
+                              </div>
+                            {/if}
+                          {/await}
+                        </ToggleList>
+                      {/if}
+                    {/await}
+                  </div>
+                {/if}
               </div>
-            {/if}
+            </div>
           </div>
         </div>
       </div>
@@ -642,12 +640,8 @@
     padding: 15px;
   }
   .ControlTowerHeader {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
     margin-bottom: 12px;
-  }
-  .TowerTitle {
-    font-size: 0.8rem; font-weight: 900; color: var(--card-fg);
-    letter-spacing: 0.1em;
   }
   .TowerOrderToggle {
     position: relative !important; top: unset !important; right: unset !important;
@@ -664,11 +658,11 @@
     overflow-y: auto;
   }
 
-  /* Tab bar for Relations & Recommendations */
+  /* Tab bar for Episodes, Relations & Recommendations */
   .TabBar {
     display: flex;
     gap: 8px;
-    margin: 20px 0 15px;
+    margin: 0;
   }
   .TabButton {
     background: var(--card-bg2);
