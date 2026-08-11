@@ -15,10 +15,10 @@ if (process.platform === 'linux' && !app.isPackaged) {
 }
 
 import { toXmlString } from 'powertoast'
+import log from 'electron-log'
 import { youtubeServer } from './youtube.js'
 import Jimp from 'jimp'
 import fs from 'fs'
-import electronShutdownHandler from '@paymoapp/electron-shutdown-handler'
 
 import { development, getWindowState, saveWindowState, getDefaultBounds } from './util.js'
 import Discord from './discord.js'
@@ -58,7 +58,7 @@ export default class App {
       webSecurity: !development,
       allowRunningInsecureContent: false,
       enableBlinkFeatures: 'FontAccess, AudioVideoTracks',
-      backgroundThrottling: true,
+      backgroundThrottling: false,
       offscreen: false,
       preload: join(__dirname, '/preload.js'),
       spellcheck: false,
@@ -82,8 +82,21 @@ export default class App {
   constructor() {
     this.mainWindow.setMenuBarVisibility(false)
     this.mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    this.mainWindow.webContents.on('did-fail-load', (event, code, description, url) => log.info(`[main-window] did-fail-load: ${code} ${description} ${url}`))
+    this.mainWindow.webContents.on('did-finish-load', () => log.info('[main-window] did-finish-load'))
     if (development) this.mainWindow.once('ready-to-show', () => this.showAndFocus(true))
-    else ipcMain.once('main-ready', () => this.showAndFocus(true)) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
+    else {
+      ipcMain.once('main-ready', () => { log.info('[main-window] main-ready received'); this.showAndFocus(true) }) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
+      const showFallback = setTimeout(() => {
+        this.timeouts.delete(showFallback)
+        if (!this.ready) {
+          log.warn('[main-window] main-ready was never received, showing window via fallback')
+          this.showAndFocus(true)
+        }
+      }, 20_000)
+      showFallback.unref?.()
+      this.timeouts.add(showFallback)
+    }
     ipcMain.on('torrent-devtools', () => this.webtorrentWindow.webContents.openDevTools({ mode: 'detach' }))
     ipcMain.on('ui-devtools', ({ sender }) => sender.openDevTools({ mode: 'detach' }))
     ipcMain.on('window-hide', () => this.mainWindow.hide())
@@ -178,12 +191,17 @@ export default class App {
       process.on('message', data => {
         if (data === 'graceful-exit') this.destroy()
       })
-      electronShutdownHandler.setWindowHandle(this.mainWindow.getNativeWindowHandle())
-      electronShutdownHandler.blockShutdown('Saving torrent data...')
-      electronShutdownHandler.on('shutdown', async () => {
-        await this.destroy()
-        electronShutdownHandler.releaseShutdown()
-      })
+      try {
+        const electronShutdownHandler = require('@paymoapp/electron-shutdown-handler')
+        electronShutdownHandler.setWindowHandle(this.mainWindow.getNativeWindowHandle())
+        electronShutdownHandler.blockShutdown('Saving torrent data...')
+        electronShutdownHandler.on('shutdown', async () => {
+          await this.destroy()
+          electronShutdownHandler.releaseShutdown()
+        })
+      } catch (error) {
+        log.warn('[win32] Shutdown handler unavailable, skipping graceful shutdown handling:', error)
+      }
     } else {
       process.on('SIGTERM', () => this.destroy())
     }
@@ -202,6 +220,8 @@ export default class App {
           app.relaunch()
         }
         app.quit()
+      } else {
+        log.warn(`[main-window] render-process-gone: ${reason}`)
       }
     })
 
@@ -288,7 +308,7 @@ export default class App {
         allowRunningInsecureContent: false,
         nodeIntegration: true,
         contextIsolation: false,
-        backgroundThrottling: true,
+        backgroundThrottling: false,
         spellcheck: false,
         v8CacheOptions: 'code'
       },
