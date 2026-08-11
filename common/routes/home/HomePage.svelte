@@ -295,6 +295,7 @@
   let muted = settings.value.autoMuteTrailers
   let trailerLoaded = false
   const toggleMute = () => { muted = !muted }
+  $: if (trailerId) trailerLoaded = false
 
   // ─── Shelf scroll-to-active ──────────────────────────────────────────────────
 
