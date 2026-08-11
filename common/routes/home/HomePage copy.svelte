@@ -14,7 +14,7 @@
   import { prefetchTorrent } from '@/modals/torrent/components/TorrentResults.svelte'
   import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
-  import { Play, ChevronLeft, ChevronRight, VolumeX, Volume2 } from 'lucide-svelte'
+  import { VolumeX, Volume2 } from 'lucide-svelte'
 
   export const filterMode = writable('section')
   export const refreshTrigger = writable(0)
@@ -263,10 +263,13 @@
   $: selectedAnime = animeList?.[$selectedIndex] || null
 
   $: banner      = selectedAnime?.bannerImage || selectedAnime?.coverImage?.extraLarge || ''
-  $: bannerColor = selectedAnime?.coverImage?.color || '#ff9f1c'
+  $: bannerColor = selectedAnime?.coverImage?.color || '#bc0000'
   $: trailerId   = selectedAnime?.trailer?.id || selectedAnime?.trailer?.youtube_id || ''
 
   $: title      = selectedAnime?.title?.userPreferred || selectedAnime?.title?.romaji || ''
+  $: titleWords = title.split(' ')
+  $: titleFirst = titleWords.slice(0, Math.ceil(titleWords.length / 2)).join(' ')
+  $: titleRest  = titleWords.slice(Math.ceil(titleWords.length / 2)).join(' ')
 
   $: description = selectedAnime?.description
     ? selectedAnime.description.replace(/<[^>]*>/g, '').slice(0, 160) + '...'
@@ -274,7 +277,6 @@
   $: studioNode = selectedAnime?.studios?.nodes?.[0] || null
   $: studio     = studioNode?.name || ''
   $: year       = selectedAnime?.seasonYear || ''
-  $: genres     = selectedAnime?.genres?.slice(0, 3) || []
   $: progress   = selectedAnime?.mediaListEntry?.progress || 0
   $: watchBtnText = selectedAnime?.mediaListEntry?.status === 'COMPLETED' 
     ? 'Rewatch Now' 
@@ -290,10 +292,10 @@
     prefetchTorrent({ media: anime, episode })
   }
 
-  // ─── Trailer ─────────────────────────────────────────────────────────────────
+  // ─── Trailer mute ────────────────────────────────────────────────────────────
 
   let muted = settings.value.autoMuteTrailers
-  let trailerLoaded = false
+  let trailerHide = true
   const toggleMute = () => { muted = !muted }
 
   // ─── Shelf scroll-to-active ──────────────────────────────────────────────────
@@ -370,24 +372,14 @@
     selectedIndex.set(0)
   }
 
-  // ─── Carousel step (shared by arrow buttons + keyboard) ───────────────────────
-
-  function stepCard(delta) {
-    if (!animeList?.length) return
-    playSfx(sfx.nav)
-    selectedIndex.update(n => Math.min(Math.max(n + delta, 0), animeList.length - 1))
-  }
-
   // ─── Keyboard handler ────────────────────────────────────────────────────────
 
   function handleKeydown(e) {
     if (modal.length) return
     if (!animeList?.length) return
     switch (e.key) {
-      case 'ArrowRight':  e.preventDefault(); e.stopPropagation(); stepCard(1); break
-      case 'ArrowLeft':   e.preventDefault(); e.stopPropagation(); stepCard(-1); break
-      case 'x':           e.preventDefault(); e.stopPropagation(); stepCard(1); break
-      case 'z':           e.preventDefault(); e.stopPropagation(); stepCard(-1); break
+      case 'ArrowRight':  e.preventDefault(); e.stopPropagation(); playSfx(sfx.nav); selectedIndex.update(n => Math.min(n + 1, animeList.length - 1)); break
+      case 'ArrowLeft':   e.preventDefault(); e.stopPropagation(); playSfx(sfx.nav); selectedIndex.update(n => Math.max(n - 1, 0)); break
       case 'ArrowUp':     e.preventDefault(); e.stopPropagation(); playSfx(sfx.section); currentSectionIndex.update(n => (n - 1 + $cycleList.length) % $cycleList.length); break
       case 'ArrowDown':   e.preventDefault(); e.stopPropagation(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
       case 'r':           e.preventDefault(); playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length); break
@@ -418,30 +410,32 @@
 
 <div class="home-theater" style="--accent-dynamic: {bannerColor};">
 
-  {#if banner && !(trailerId && trailerLoaded)}
+  {#if banner}
     {#key banner}
       <div in:fade={{duration: 120}} class="theater-bg" style="background-image: url({banner}); background-color: {bannerColor}40"></div>
     {/key}
   {/if}
 
-  {#if selectedAnime && trailerId}
-    {#await ELECTRON.getYouTube() then youtubeServer}
-      <div class="trailer-viewport">
-        <iframe
-          title={title}
-          loading="lazy"
-          src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
-          on:load={() => { trailerLoaded = true }}
-        ></iframe>
-        {#if !trailerLoaded}
-          <div class="trailer-cover" out:fade={{ duration: 400 }}></div>
-        {/if}
-      </div>
-    {/await}
+  {#if selectedAnime}
+    <div class="media-aside">
+      <div class="curse-overlay"></div>
+      <img class="bg-image" src={selectedAnime.bannerImage || selectedAnime.coverImage?.extraLarge || ''} alt="" />
+      {#if trailerId}
+        {#await ELECTRON.getYouTube() then youtubeServer}
+          <div class="trailer-viewport" class:transparent={trailerHide}>
+            <iframe
+              title={title}
+              loading="lazy"
+              src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailerId}`}
+              on:load={() => { trailerHide = false }}
+            ></iframe>
+          </div>
+        {/await}
+      {/if}
+    </div>
   {/if}
 
   <div class="vignette"></div>
-  <div class="radial-glow"></div>
 
   <header class="header">
     <div class="nav-cluster">
@@ -453,12 +447,8 @@
         <button class="nav-item section-toggle" on:click={() => { playSfx(sfx.section); currentSectionIndex.update(n => (n + 1) % $cycleList.length) }}>
           {sectionName?.toUpperCase()}
         </button>
+
       </nav>
-      {#if trailerId}
-        <button class="icon-btn header-mute" on:click={toggleMute}>
-          {#if muted}<VolumeX size="1.1rem"/>{:else}<Volume2 size="1.1rem"/>{/if}
-        </button>
-      {/if}
     </div>
   </header>
 
@@ -466,32 +456,43 @@
     {#if selectedAnime}
       {#key selectedAnime.id}
         <div class="meta-block" in:fade={{ duration: 120 }}>
-          <div class="hero-icon" style="background: var(--accent-dynamic);">
-            <Play size="1.4rem" fill="#fff" color="#fff" />
+        <h1 class="hero-title">{titleFirst}<br/><span class="accent">{titleRest}</span></h1>
+
+        <div class="action-row">
+          <button class="icon-btn" on:click={toggleMute}>
+            {#if muted}<VolumeX size="1.3rem"/>{:else}<Volume2 size="1.3rem"/>{/if}
+          </button>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <span class="label">PROGRESS</span>
+            <span class="value">{progress}<small>/{selectedAnime.episodes || '?'}</small></span>
           </div>
-
-          <h1 class="hero-title">{title}</h1>
-
-          <p class="hero-subtitle">
-            {#if studio}{studio}{/if}{#if studio && year} &middot; {/if}{#if year}{year}{/if}
-          </p>
-
-          {#if progress > 0}
-            <div class="stat-pill">
-              <span>PROGRESS {progress}<small>/{selectedAnime.episodes || '?'}</small></span>
+          {#if studio}
+            <div class="stat">
+              <span class="label">STUDIO</span>
+              <button
+                class="value studio-btn"
+                class:studio-active={studioFilterId === studioNode?.id}
+                on:click={handleStudioClick}
+              >{studio}</button>
             </div>
           {/if}
-
-          <div class="cta-row">
-            <button
-              class="btn-play"
-              on:click={handleWatch}
-              on:mouseenter={() => maybePrefetch(selectedAnime)}
-            >{watchBtnText}</button>
-          </div>
-
-          <p class="synopsis">{description}</p>
+          {#if year}<div class="stat"><span class="label">YEAR</span><span class="value">{year}</span></div>{/if}
         </div>
+
+        <p class="synopsis">{description}</p>
+
+        <div class="cta-row">
+          <button
+            class="btn-play"
+            on:click={handleWatch}
+            on:mouseenter={() => maybePrefetch(selectedAnime)}
+          >{watchBtnText}</button>
+          <button class="btn-ghost" on:click={() => { playSfx(sfx.details); handleDetails() }}>DETAILS</button>
+        </div>
+      </div>
       {/key}
     {:else}
       <div class="loading-wrap">
@@ -502,10 +503,6 @@
   </main>
 
   <section class="horizontal-shelf">
-    <button class="shelf-arrow shelf-arrow-left" on:click={() => stepCard(-1)} disabled={$selectedIndex <= 0} aria-label="Previous">
-      <ChevronLeft size="1.6rem" />
-    </button>
-
     <div class="scroll-wrapper" bind:this={shelfContainer} use:dragScroll>
       {#each animeList as anime, i (anime.id)}
         {@const progress = anime.mediaListEntry?.progress ?? 0}
@@ -552,172 +549,133 @@
         </button>
       {/each}
     </div>
-
-    <button class="shelf-arrow shelf-arrow-right" on:click={() => stepCard(1)} disabled={$selectedIndex >= animeList.length - 1} aria-label="Next">
-      <ChevronRight size="1.6rem" />
-    </button>
   </section>
-
-  {#if selectedAnime}
-    <div class="shelf-caption">
-      <button class="caption-title" style="color: var(--accent-dynamic);" on:click={() => { playSfx(sfx.details); handleDetails() }}>{title}</button>
-      {#if studio}
-        <p class="caption-byline">
-          By: <button class="caption-studio" class:studio-active={studioFilterId === studioNode?.id} on:click={handleStudioClick}>{studio}</button>
-        </p>
-      {/if}
-      {#if genres.length}
-        <p class="caption-genres">
-          {#each genres as genre, i}
-            <span class="caption-genre-link">{genre}</span>{#if i < genres.length - 1}<span class="caption-sep"> &middot; </span>{/if}
-          {/each}
-        </p>
-      {/if}
-    </div>
-  {/if}
 
 </div>
 
 <style>
-  :global(body) { background: #14141a; overflow: hidden; margin: 0; color: #fff; font-family: system-ui, sans-serif; }
+  :global(body) { background: #2b2b2b; overflow: hidden; margin: 0; color: #fff; font-family: system-ui, sans-serif; }
   :global(*:focus:not(:focus-visible)) { outline: none; }
   :global(*:focus-visible) { outline: 4px solid #00c3e3; outline-offset: 2px; border-radius: 8px; }
 
-  .home-theater { position: fixed; inset: 0; color: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; }
+  .home-theater { position: fixed; inset: 0; color: #fff; font-family: system-ui, sans-serif; }
 
   /* ── Background ── */
-  .theater-bg { position: absolute; inset: 0; background-size: cover; background-position: center top; background-repeat: no-repeat; opacity: 0.14; z-index: -2; pointer-events: none; filter: blur(2px); }
-  .radial-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, var(--accent-dynamic) 0%, transparent 55%); opacity: 0.16; z-index: -1; pointer-events: none; }
-  .vignette { position: absolute; inset: 0; background: linear-gradient(to bottom, #14141a 0%, transparent 30%, transparent 60%, #14141a 100%); z-index: 0; pointer-events: none; }
+  .theater-bg { position: absolute; inset: 0; background-size: auto 80%; background-position: 15% top; background-repeat: no-repeat; opacity: 0.1; z-index: -1; pointer-events: none; }
+  .vignette { position: absolute; inset: 0; background: linear-gradient(to top, #2b2b2b 15%, transparent 100%), linear-gradient(to right, #2b2b2b 10%, transparent 60%); z-index: 0; }
 
-  /* ── Trailer (kept subtle, sits behind everything now) ── */
-  .trailer-viewport { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 177.77vh; min-width: 100%; height: 56.25vw; min-height: 100%; z-index: -3; }
-  .trailer-viewport iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
-  .trailer-cover { position: absolute; inset: 0; background: #14141a; z-index: 1; }
+  /* ── Media aside / trailer ── */
+  .media-aside { position: absolute; right: 0; top: 0; width: 60%; height: 100%; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); z-index: 1; background: #2b2b2b; overflow: hidden; }
+  .bg-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(20%) opacity(0.5); }
+  .curse-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, #2b2b2b 15%, rgba(43,43,43,0.5) 40%, transparent 100%); z-index: 3; }
+  .trailer-viewport { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; min-width: 177.77vh; min-height: 100%; z-index: 2; }
+  .trailer-viewport iframe { width: 100%; height: 100%; border: 0; }
+  .trailer-viewport.transparent { opacity: 0; transition: opacity 0.5s; }
 
   /* ── Header ── */
-  .header { position: relative; z-index: 100; display: flex; justify-content: center; padding: 1.5rem 4% 0; align-items: center; }
-  .nav-cluster { display: flex; align-items: center; gap: 1rem; }
-  .nav-links { display: flex; gap: 2rem; align-items: center; background: rgba(255,255,255,0.06); padding: 10px 24px; border-radius: 50px; backdrop-filter: blur(6px); }
+  .header { position: relative; z-index: 100; display: flex; justify-content: space-between; padding: 2rem 4%; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.05); }
+  .nav-cluster { display: flex; align-items: center; gap: 3rem; }
+  .nav-links { display: flex; gap: 2rem; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 24px; border-radius: 50px; }
   .nav-item { background: none; border: none; color: #fff; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.1em; opacity: 0.5; cursor: pointer; text-transform: uppercase; }
   .nav-item.active { opacity: 1; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
   .section-toggle { opacity: 1; padding-left: 1.5rem; border-left: 2px solid rgba(255,255,255,0.2); color: #fff; }
-
-  /* ── Content / centered hero ── */
-  .content-gate { position: relative; z-index: 10; padding: 1.5rem 5% 0; width: 100%; box-sizing: border-box; display: flex; justify-content: center; flex: 0 0 auto; }
-  .meta-block { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 620px; }
-
-  .hero-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.2rem; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
-
-  .hero-title { font-size: clamp(2rem, 4.2vw, 3rem); font-weight: 900; line-height: 1; letter-spacing: -1px; margin: 0 0 0.6rem; }
-  .hero-subtitle { font-size: 1.05rem; opacity: 0.7; font-weight: 600; margin: 0 0 1.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
-
-  .stat-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); border-radius: 50px; padding: 0.4rem 1.2rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; margin-bottom: 1.4rem; }
-
-  .cta-row { display: flex; justify-content: center; margin-bottom: 1.2rem; }
-  .btn-play { background: var(--accent-dynamic) !important; color: #14141a; border: 3px solid transparent; border-radius: 50px; padding: 0.95rem 2.6rem; font-weight: 900; font-size: 1rem; letter-spacing: 0.05em; cursor: pointer; transition: transform 0.1s, border 0.1s; }
-  .btn-play:hover { transform: scale(1.05); border-color: #fff; }
-
-  .synopsis { font-size: 0.95rem; line-height: 1.5; opacity: 0.6; max-width: 520px; margin: 0; }
-
-  .icon-btn { background: #fff; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: #14141a; opacity: 0.9; padding: 0; transition: transform 0.1s; }
+  /* ── Content / meta ── */
+  .content-gate { position: relative; z-index: 10; padding: 0 5%; margin-top: 5vh; min-height: 400px; width: 55%; }
+  .hero-title { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 900; line-height: 0.95; letter-spacing: -2px; margin: 0 0 1.5rem; text-transform: uppercase; }
+  .hero-title .accent { color: var(--accent-dynamic) !important; }
+  .action-row { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .icon-btn { background: #fff; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: #2b2b2b; opacity: 0.9; padding: 0; transition: transform 0.1s; }
   .icon-btn:hover { transform: scale(1.1); color: #e60012; }
+  .stat-grid { display: flex; gap: 3rem; margin-bottom: 1.8rem; background: rgba(0,0,0,0.4); padding: 1.2rem 2rem; border-radius: 12px; width: fit-content; border: 1px solid rgba(255,255,255,0.05); }
+  .stat { display: flex; flex-direction: column; }
+  .stat .label { font-size: 0.7rem; font-weight: 800; opacity: 0.6; letter-spacing: 0.12em; margin-bottom: 0.3rem; text-transform: uppercase; }
+  .stat .value { font-size: 1.4rem; font-weight: 800; }
+
+  .studio-btn {
+    background: none; border: none; color: inherit;
+    font-size: 1.4rem; font-weight: 800;
+    cursor: pointer; padding: 0; text-align: left;
+    transition: color 0.15s;
+  }
+  .studio-btn:hover { color: var(--accent-dynamic); }
+  .studio-active { color: var(--accent-dynamic) !important; text-decoration: underline; }
+
+  .synopsis {
+    font-size: 1.15rem; line-height: 1.6; opacity: 0.95; max-width: 650px; margin-bottom: 2.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1.5rem 2rem; border-radius: 16px;
+  }
+
+  .cta-row { display: flex; gap: 1.5rem; }
+  .btn-play { background: var(--accent-dynamic) !important; color: #fff; border: 3px solid transparent; border-radius: 50px; padding: 1.1rem 3rem; font-weight: 900; font-size: 1rem; letter-spacing: 0.05em; cursor: pointer; transition: transform 0.1s, border 0.1s; }
+  .btn-play:hover { transform: scale(1.05); border-color: #fff; }
+  .btn-ghost { background: rgba(255,255,255,0.1); color: #fff; border: 3px solid transparent; border-radius: 50px; padding: 1.1rem 3rem; font-weight: 900; font-size: 1rem; cursor: pointer; transition: background 0.1s; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.2); border-color: #00c3e3; }
+
   /* ── Loading ── */
-  .loading-wrap { display: flex; flex-direction: column; gap: 1.2rem; padding-top: 3rem; opacity: 0.8; align-items: center; }
+  .loading-wrap { display: flex; flex-direction: column; gap: 1.5rem; padding-top: 6rem; opacity: 0.8; align-items: flex-start; }
   .spinner { width: 30px; height: 30px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--accent-dynamic); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Horizontal shelf (carousel with arrows) ── */
-  .horizontal-shelf {
-    position: relative;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 1.5rem 0 0.5rem;
-    flex: 1 1 auto;
-    min-height: 0;
+  /* ── Horizontal shelf ── */
+  .horizontal-shelf { 
+    position: absolute; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    padding: 0 0 2rem; 
+    z-index: 20; 
   }
-  .shelf-arrow {
-    flex: 0 0 auto;
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    margin: 0 1.2rem;
-    transition: background 0.15s, transform 0.1s;
-  }
-  .shelf-arrow:hover:not(:disabled) { background: var(--accent-dynamic); color: #14141a; transform: scale(1.08); }
-  .shelf-arrow:disabled { opacity: 0.25; cursor: default; }
-
-  .scroll-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    overflow-x: auto;
-    overflow-y: visible;
-    scrollbar-width: none;
-    padding: 100px 5% 30px;
+  .scroll-wrapper { 
+    display: flex; 
+    gap: 2rem; 
+    overflow-x: auto; 
+    scrollbar-width: none; 
+    padding: 40px 5%; /* Padding here prevents cards from touching edges */
     scroll-padding: 5%;
-    flex: 1 1 auto;
   }
   .scroll-wrapper::-webkit-scrollbar { display: none; }
-
-  .card-unit {
-    flex: 0 0 220px;
-    height: 300px;
-    border: 4px solid transparent;
-    cursor: pointer;
-    padding: 0;
-    background: #232329;
-    border-radius: 14px;
-    overflow: hidden;
-    transition: border-color 0.15s, transform 0.15s, opacity 0.15s;
-    outline: none;
-    position: relative;
+  
+  .card-unit { 
+    flex: 0 0 280px; 
+    height: 380px; 
+    border: 5px solid transparent; 
+    cursor: pointer; 
+    padding: 0; 
+    background: #3c3c3c; 
+    border-radius: 16px; 
+    overflow: hidden; 
+    transition: border-color 0.15s, transform 0.15s, opacity 0.15s; 
+    outline: none; 
+    position: relative; 
     box-sizing: border-box;
-    opacity: 0.55;
-    transform: scale(1);
-    transform-origin: center bottom;
   }
-  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; transition: opacity 0.2s; display: block; }
-
-  .card-unit.is-active {
-    border-color: var(--card-color) !important;
-    transform: scale(1.18) translateY(-14px);
-    z-index: 5;
-    box-shadow: 0 14px 24px rgba(0,0,0,0.7), 0 0 12px var(--card-color);
+  .card-unit img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; transition: opacity 0.2s; display: block; }
+  
+  .card-unit.is-active { 
+    border-color: var(--card-color) !important; 
+    transform: scale(1.08) translateY(-10px); 
+    z-index: 5; 
+    box-shadow: 0 10px 15px rgba(0,0,0,0.8), 0 0 10px var(--card-color); 
     opacity: 1;
   }
   .card-unit.is-active img { opacity: 1; }
-  .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 3rem 1rem 1rem; background: linear-gradient(to top, rgba(0,0,0,0.95) 30%, transparent); pointer-events: none; opacity: 0; transition: opacity 0.15s; }
-  .card-unit.is-active .card-info { opacity: 1; }
-  .card-title { font-size: 1.05rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; text-transform: uppercase; }
-  .card-progress { height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.6rem 0; overflow: hidden; }
+  .card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 4rem 1.2rem 1.2rem; background: linear-gradient(to top, rgba(0,0,0,0.98) 30%, transparent); pointer-events: none; }
+  .card-title { font-size: 1.3rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; text-transform: uppercase; }
+  .card-progress { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin: 0.8rem 0; overflow: hidden; }
   .card-progress-bar { height: 100%; border-radius: 10px; background: var(--card-color) !important; opacity: 0.8; }
-  .card-ep { font-size: 0.8rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
-  .card-air { font-size: 0.75rem; font-weight: 900; margin: 0.6rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
+  .card-ep { font-size: 0.9rem; font-weight: 900; color: var(--card-color); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
+  .card-air { font-size: 0.85rem; font-weight: 900; margin: 0.8rem 0 0; letter-spacing: 0.05em; text-transform: uppercase; }
 
-  .card-badges { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
-  .badge { font-size: 0.65rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  .card-badges { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+  .badge { font-size: 0.7rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
   .badge-upcoming { background: var(--badge-color); color: #000; }
   .badge-new { background: var(--badge-color); color: #fff; }
   .badge-behind { background: var(--badge-color); color: #000; }
 
   /* ── Pinned parent card ── */
-  .card-pinned:not(.is-active) { opacity: 0.4; }
-  .card-label { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.18em; color: var(--card-color); margin: 0 0 0.3rem; text-transform: uppercase; opacity: 0.9; }
+  .card-pinned:not(.is-active) { opacity: 0.55; }
+  .card-pinned:not(.is-active) img { opacity: 0.6; }
+  .card-label { font-size: 0.65rem; font-weight: 900; letter-spacing: 0.18em; color: var(--card-color); margin: 0 0 0.3rem; text-transform: uppercase; opacity: 0.9; }
 
-  /* ── Caption under carousel ── */
-  .shelf-caption { position: relative; z-index: 20; text-align: center; padding: 0 5% 2rem; flex: 0 0 auto; }
-  .caption-title { display: block; margin: 0 auto 0.3rem; font-weight: 800; font-size: 1.05rem; background: none; border: none; cursor: pointer; padding: 0; }
-  .caption-byline { margin: 0 0 0.3rem; font-size: 0.9rem; opacity: 0.85; }
-  .caption-studio { background: none; border: none; color: #fff; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
-  .caption-studio.studio-active { color: var(--accent-dynamic); }
-  .caption-genres { margin: 0; font-size: 0.85rem; opacity: 0.6; }
-  .caption-genre-link { }
-  .caption-sep { opacity: 0.5; }
 </style>

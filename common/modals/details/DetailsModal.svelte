@@ -733,7 +733,7 @@
   }
   .SynopsisStrip:not(.expanded) .SynopsisText {
     display: -webkit-box;
-    /* -webkit-line-clamp: 10; */
+    -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
