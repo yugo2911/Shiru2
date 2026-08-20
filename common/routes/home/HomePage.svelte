@@ -448,6 +448,7 @@
     <div class="nav-cluster">
       <nav class="nav-links">
         <button class="nav-item" class:active={$filterMode === 'section'} on:click={() => { playSfx(sfx.menu); filterMode.set('section'); pinnedAnime = null; selectedIndex.set(savedSectionIndex) }}>HOME</button>
+        <button class="nav-item" on:click={() => { playSfx(sfx.details); handleDetails() }}>DETAILS</button>
         <button class="nav-item" on:click={() => { playSfx(sfx.menu); page.navigateTo(page.SEARCH) }}>LIBRARY</button>
         <button class="nav-item" class:active={$filterMode === 'relations'} on:click={() => { playSfx(sfx.menu); enterMode('relations') }}>RELATIONS</button>
         <button class="nav-item" class:active={$filterMode === 'recommendations'} on:click={() => { playSfx(sfx.menu); enterMode('recommendations') }}>RECS</button>
@@ -615,7 +616,7 @@
 
   .stat-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); border-radius: 50px; padding: 0.4rem 1.2rem; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; margin-bottom: 1.4rem; }
 
-  .cta-row { display: flex; justify-content: center; margin-bottom: 1.2rem; }
+  .cta-row { display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.2rem; }
   .btn-play { background: var(--accent-dynamic) !important; color: #14141a; border: 3px solid transparent; border-radius: 50px; padding: 0.95rem 2.6rem; font-weight: 900; font-size: 1rem; letter-spacing: 0.05em; cursor: pointer; transition: transform 0.1s, border 0.1s; }
   .btn-play:hover { transform: scale(1.05); border-color: #fff; }
 

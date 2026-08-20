@@ -268,6 +268,7 @@ export default new class AnimeResolver {
       if (name.match(/Hero/i) && name.match(/Academia/i) && !name.match(/FINAL/i) && name.match(/S8|S08|Season 8|Season 08/i)) name = name.replace(/Academia/i, 'Academia FINAL SEASON').replace(/S8|S08|Season 8|Season 08/i, '') // My Hero Academia FINAL SEASON fix...
       if (name.match(/Intai Shitai (Part|Cour) 2/i)) name = name.replace(/Intai Shitai (Part|Cour) 2/i, 'Intai Shitai 2') // Let This Grieving Soul Retire Cour 2 fix...
       if (name.match(/Soul Retire Part 2/i)) name = name.replace(/Soul Retire Part 2/i, 'Soul Retire Cour 2') // Let This Grieving Soul Retire Cour 2 fix...
+      if (name.match(/Buchigire|Livid.*Lady.*Guide.*Getting.*Even/i) && name.match(/Multi[-\s]?Subs?\b/i)) name = name.replace(/,?\s*Multi[-\s]?Subs?\b/gi, '') // Strip Multi-Subs from parenthetical release info that pollutes alt title matching.
 
       // fix incorrect marker patterns to prevent them from being detected as episode count...
       name = name
@@ -506,8 +507,9 @@ export default new class AnimeResolver {
     const root = prequel && (await this.resolveSeason({ media: await this.getAnimeById(prequel.id), force: true, offset })).media
     debug(`Root ${root?.id}:${root?.title?.userPreferred}`)
     // check that anime_title is similar to the resolved media title, if it's not then we likely already are at the root level... resolves issues with niche series like MF GHOST.
+    // Use a more lenient threshold for root detection — we only need to verify this is roughly the right root, not the exact show.
     let isRoot = false
-    if (!root || (root && !this.isVerified(root, parseObj, titleKeys, threshold))) {
+    if (!root || (root && !this.isVerified(root, parseObj, titleKeys, Math.min(threshold + 0.15, 0.4)))) {
       debug(`Detected incorrect Root for ${parseObj?.anime_title}, assuming the title is already root from ${media.id}:${media.title?.userPreferred}`)
       isRoot = true
     }
@@ -572,7 +574,7 @@ export default new class AnimeResolver {
     }
     titles.add(parseObj.anime_title)
     for (const title of titles) {
-      const search = await anilistClient.search({ search: title, ...(media ? { id_not: media.id } : {}), ...(parseObj.anime_season ? { format_not: ['OVA', ...((Number(parseObj.anime_season) > 1) ? ['MOVIE'] : [])] } : { }) })
+      const search = await anilistClient.search({ search: title, ...(media && this.isVerified(media, parseObj, titleKeys, threshold) ? { id_not: media.id } : {}), ...(parseObj.anime_season ? { format_not: ['OVA', ...((Number(parseObj.anime_season) > 1) ? ['MOVIE'] : [])] } : { }) })
       if (search?.data?.Page?.media) {
         for (const searchMedia of search.data.Page.media) {
           if (this.isVerified(searchMedia, {...parseObj, anime_title: title}, titleKeys, threshold)) {
