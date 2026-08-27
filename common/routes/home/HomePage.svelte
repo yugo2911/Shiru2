@@ -11,7 +11,6 @@
   import { fade } from 'svelte/transition'
 
   import { playActive } from '@/components/TorrentButton.svelte'
-  import { prefetchTorrent } from '@/modals/torrent/components/TorrentResults.svelte'
   import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
   import { Play, ChevronLeft, ChevronRight, VolumeX, Volume2 } from 'lucide-svelte'
@@ -282,14 +281,6 @@
       ? 'Continue Now' 
       : 'Watch Now'
 
-  // ─── Prefetch helper ─────────────────────────────────────────────────────────
-
-  function maybePrefetch(anime) {
-    if (!settings.value.rssAutoSelect || !anime?.id) return
-    const episode = (anime.mediaListEntry?.progress ?? 0) + 1
-    prefetchTorrent({ media: anime, episode })
-  }
-
   // ─── Trailer ─────────────────────────────────────────────────────────────────
 
   let muted = settings.value.autoMuteTrailers
@@ -488,7 +479,6 @@
             <button
               class="btn-play"
               on:click={handleWatch}
-              on:mouseenter={() => maybePrefetch(selectedAnime)}
             >{watchBtnText}</button>
           </div>
 
@@ -523,7 +513,6 @@
           class:is-active={i === $selectedIndex}
           class:card-pinned={isParent}
           on:click={() => { playSfx(sfx.nav); selectedIndex.set(i) }}
-          on:mouseenter={() => maybePrefetch(anime)}
           style="--card-color: {color}"
         >
           <img
