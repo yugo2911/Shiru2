@@ -570,6 +570,7 @@ export function createListener(triggerClasses = []) {
 }
 
 export const defaults = {
+  sfxVolume: 0.5,
   volume: 1,
   uiScale: 1,
   presetTheme: 'default-dark',

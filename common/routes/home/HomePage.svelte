@@ -150,23 +150,32 @@
     return behind > 0 ? behind : null
   }
 
-  // ─── SFX ────────────────────────────────────────────────────────────────────────
+// ─── SFX ────────────────────────────────────────────────────────────────────────
 
-const SFX_VOLUME = 0.4
+const SFX_VOLUME_DEFAULT = 0.5
 
 function makeSfx(src) {
   const audio = new Audio(src)
-  audio.volume = SFX_VOLUME
+  audio.volume = SFX_VOLUME_DEFAULT
   return audio
 }
 
 const sfx = {
-  nav: makeSfx('./audio/カーソル移動9.mp3'),
+  nav:     makeSfx('./audio/カーソル移動9.mp3'),
   section: makeSfx('./audio/決定ボタンを押す22.mp3'),
-  play: makeSfx('./audio/決定ボタンを押す33.mp3'),
-  menu: makeSfx('./audio/カーソル移動6.mp3'),
+  play:    makeSfx('./audio/決定ボタンを押す33.mp3'),
+  menu:    makeSfx('./audio/カーソル移動6.mp3'),
   details: makeSfx('./audio/カーソル移動12.mp3'),
 }
+
+function applySfxVolume() {
+  const raw = Number(settings.value.sfxVolume)
+  const vol = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), 1) : SFX_VOLUME_DEFAULT
+  for (const key in sfx) sfx[key].volume = vol
+}
+
+// Applies the saved volume immediately and again whenever the setting changes.
+settings.subscribe(applySfxVolume)
 
   function playSfx(sound) {
     sound.currentTime = 0

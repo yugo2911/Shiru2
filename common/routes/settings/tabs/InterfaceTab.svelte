@@ -106,6 +106,23 @@
     <input type='checkbox' id='auto-mute-trailers' bind:checked={settings.autoMuteTrailers} />
     <label for='auto-mute-trailers'>{settings.autoMuteTrailers ? 'On' : 'Off'}</label>
   </div>
+{#if matches('SFX Volume', 'volume of interface sound effects', 'Interface Settings')}
+<SettingCard title='SFX Volume' description='Volume of interface sound effects.'>
+  <div class='form-group w-160 flex-shrink-0 my-auto'>
+    <input class='w-full p-2 bg-dark-light' type='range' id='sfx-volume' min='0' max='1' step='0.05' bind:value={settings.sfxVolume} />
+    <div class='d-flex align-items-center justify-content-center gap-2 position-relative'>
+      <strong>{Math.round((settings.sfxVolume ?? 0.5) * 100)}%</strong>
+      <button
+        type='button'
+        use:click={() => { settings.sfxVolume = 0.5 }}
+        class='btn btn-danger btn-square px-5 d-flex align-items-center position-absolute right-0'
+        data-toggle='tooltip' data-placement='left' data-title='Reset To Default (50%)'
+        disabled={settings.sfxVolume === 0.5}
+      ><RotateCcw size='1.8rem' /></button>
+    </div>
+  </div>
+</SettingCard>
+{/if}
 </SettingCard>
 {/if}
 {#if matches('Card Audio', 'sub, dub, partial dub, and age rating icons', 'Interface Settings')}
