@@ -152,13 +152,21 @@
 
   // ─── SFX ────────────────────────────────────────────────────────────────────────
 
-  const sfx = {
-    nav: new Audio('./audio/カーソル移動9.mp3'),
-    section: new Audio('./audio/決定ボタンを押す22.mp3'),
-    play: new Audio('./audio/決定ボタンを押す33.mp3'),
-    menu: new Audio('./audio/カーソル移動6.mp3'),
-    details: new Audio('./audio/カーソル移動12.mp3'),
-  }
+const SFX_VOLUME = 0.4
+
+function makeSfx(src) {
+  const audio = new Audio(src)
+  audio.volume = SFX_VOLUME
+  return audio
+}
+
+const sfx = {
+  nav: makeSfx('./audio/カーソル移動9.mp3'),
+  section: makeSfx('./audio/決定ボタンを押す22.mp3'),
+  play: makeSfx('./audio/決定ボタンを押す33.mp3'),
+  menu: makeSfx('./audio/カーソル移動6.mp3'),
+  details: makeSfx('./audio/カーソル移動12.mp3'),
+}
 
   function playSfx(sound) {
     sound.currentTime = 0
