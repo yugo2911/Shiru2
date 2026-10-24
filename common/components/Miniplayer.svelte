@@ -1,5 +1,8 @@
 <script context='module'>
-  import { readable } from 'simple-store-svelte'
+  import { writable, readable } from 'simple-store-svelte'
+  import { cache, caches } from '@/modules/cache.js'
+
+  export const position = writable(cache.getEntry(caches.GENERAL, 'posMiniplayer') || 'bottom right')
 
   const mql = matchMedia('(min-width: 769px)')
   const isMobile = readable(!mql.matches, set => {
@@ -16,7 +19,7 @@
   })
 
   const lgmql = matchMedia('(min-width: 993px)')
-  const isLg = readable(lgmql.matches, set => {
+  export const isLg = readable(lgmql.matches, set => {
     const check = ({ matches }) => set(matches)
     lgmql.addEventListener('change', check)
     return () => lgmql.removeEventListener('change', check)
@@ -25,11 +28,11 @@
 
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { cache, caches } from '@/modules/cache.js'
   import { page, modal } from '@/modules/navigation.js'
+  import { baseFontSize } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
 
   export let playbackPaused = true
   export let active = false
@@ -50,6 +53,7 @@
   let top = '0px'
   let container = null
   let dragging = false
+  let draggingPos = ''
   let resizing = false
   let dragId = 1
   let shelveLeft = false
@@ -59,24 +63,26 @@
   let shelvingTime = 0
   let windowFocused = document.hasFocus()
 
-  $: draggingPos = ''
   $: resize = !$isMobile
-  $: position = cache.getEntry(caches.GENERAL, 'posMiniplayer') || 'bottom right'
-  $: if (!dragging) cache.setEntry(caches.GENERAL, 'posMiniplayer', position)
+  $: if (!dragging) cache.setEntry(caches.GENERAL, 'posMiniplayer', $position)
   $: minWidthRatio = $isSuperSmall ? 0.25 : 0.15
   $: playerPage = $page === page.PLAYER && (!$modal || !modal.length || !modal.exists(modal.ANIME_DETAILS))
-  $: shelveTabLeft = shelved ? shelveLeft : !!(position + draggingPos).match(/left/i)
+  $: shelveTabLeft = shelved ? shelveLeft : !!($position + draggingPos).match(/left/i)
   $: {
+    // eslint-disable-next-line svelte/infinite-reactive-loop
     if (active && !dragging && !resizing) idleShelve(playbackPaused, $settings.autoHideMiniplayer)
     else if (shelved && playerPage && (!$modal || !modal.length)) unshelve()
   }
   $: paddingTop = (() => {
-    if (!active || (!position.match(/top/i) && !draggingPos.match(/top/i))) return padding
-    if ($page === page.SETTINGS && (!$modal || !modal.length)) return $isLg ? SUPPORTS.isAndroid ? padding : '4rem' : SUPPORTS.isAndroid ? '9rem' : '13rem'
-    return SUPPORTS.isAndroid ? padding : '4rem'
+    const base = (() => {
+      if (!active || (!$position.match(/top/i) && !draggingPos.match(/top/i))) return padding
+      if ($page === page.SETTINGS && (!$modal || !modal.length)) return $isLg ? SUPPORTS.isAndroid ? padding : '4rem' : SUPPORTS.isAndroid ? '9rem' : '13rem'
+      return SUPPORTS.isAndroid ? padding : '4rem'
+    })()
+    return `calc(${base} + ${(!$position.match(/top/i) && !draggingPos.match(/top/i)) ? '0px' : 'var(--safe-area-top)'})`
   })()
   $: paddingLeft = (() => {
-    if (!active || (!position.match(/left/i) && !draggingPos.match(/left/i))) return padding
+    if (!active || (!$position.match(/left/i) && !draggingPos.match(/left/i))) return padding
     if ($page === page.SETTINGS && (!$modal || !modal.length) && $isLg) return '32rem'
     return padding
   })()
@@ -91,7 +97,7 @@
       dragging = true
       touchShelveTime = 0
       padding = '0rem'
-      position = ''
+      $position = ''
       if (paddingLeft === '32rem') clampedLeft = remToPixels(parseFloat('30'))
       const bounds = container.getBoundingClientRect()
       const relativeBounds = container.offsetParent.getBoundingClientRect() ?? { left: 0, top: 0 }
@@ -124,11 +130,11 @@
       draggingPos = istop ? ' top' : ' bottom'
       draggingPos += isleft ? ' left' : ' right'
       dragId++
-      let currentDragId = dragId
+      const currentDragId = dragId
       timeout = setTimeout(() => {
         if (currentDragId === dragId) {
-          position += istop ? ' top' : ' bottom'
-          position += isleft ? ' left' : ' right'
+          $position += istop ? ' top' : ' bottom'
+          $position += isleft ? ' left' : ' right'
           draggingPos = ''
         }
       }, 600)
@@ -168,7 +174,7 @@
 
     function handleResize({ clientX }) {
       if (clientX == null) return
-      widthRatio = startRatio + ((clientX - startX) / window.innerWidth * (position?.match(/left/i) ? 1 : -1))
+      widthRatio = startRatio + ((clientX - startX) / window.innerWidth * ($position?.match(/left/i) ? 1 : -1))
       widthRatio = Math.max(minWidthRatio, Math.min(maxWidthRatio, widthRatio))
       width = `${pixelsToRem(widthRatio * window.innerWidth)}rem`
     }
@@ -219,7 +225,7 @@
   }
   async function calculateWidth() {
     await new Promise(resolve => setTimeout(resolve))
-    rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+    rootFontSize = baseFontSize.value
     if ($isMobile) {
       width = `${fixedMobileWidth}rem`
       minWidth = `${fixedMobileWidth}rem`
@@ -249,13 +255,15 @@
     clearTimeout(shelveTimeout)
     if (isPaused && !hovered && autoHide) {
       shelveTimeout = setTimeout(() => {
+        // eslint-disable-next-line svelte/infinite-reactive-loop
         if (playbackPaused && !hovered && active && !dragging && !resizing) triggerShelve()
       }, 100)
     } else if (!isPaused) unshelve()
   }
   function triggerShelve() {
-    const posStr = position + draggingPos
+    const posStr = $position + draggingPos
     shelveLeft = !!(posStr.match(/left/i))
+    // eslint-disable-next-line svelte/infinite-reactive-loop
     shelved = true
     shelvingTime = Date.now()
   }
@@ -287,6 +295,17 @@
       }, 200)
     }
   }
+<<<<<<< HEAD
+=======
+  function handleShelfTap() {
+    if (Date.now() - lastEdgeEnterUnshelve < 300) return
+    if (shelved) {
+      unshelve()
+      hovered = true
+      setTimeout(() => (hovered = false), 3_000)
+    } else manualShelve()
+  }
+>>>>>>> shiru-base-copy
   function swipeShelve(node) {
     let startX = 0
     let startY = 0
@@ -307,7 +326,7 @@
       if (Math.abs(dx) < 10) return
       if (Math.abs(touch.clientY - startY) > Math.abs(dx)) return
       const swipedRight = dx > 0
-      const posStr = position + draggingPos
+      const posStr = $position + draggingPos
       if (!shelved) {
         if (!playbackPaused) return
         const shelveToRight = !posStr.match(/left/i) && swipedRight
@@ -326,8 +345,48 @@
     }
   }
 
+<<<<<<< HEAD
   const onFocus = () => requestAnimationFrame(() => windowFocused = true)
   const onBlur = () => windowFocused = false
+=======
+  function resetIdleBounce() {
+    clearTimeout(idleTimeout)
+    if (!shelved) return
+    idleTimeout = setTimeout(() => {
+      if (!shelved || hovered) return
+      triggerBounce()
+    }, 15_000)
+  }
+  function triggerBounce() {
+    const _bounceId = ++bounceId
+    peekActive = true
+    bouncing = true
+    setTimeout(() => {
+      if (bounceId !== _bounceId) return
+      bouncing = false
+      peekActive = false
+      resetIdleBounce()
+    }, 1_200)
+  }
+  function cancelBounce() {
+    if (!container) return
+    bounceId++
+    bouncing = false
+    peekActive = false
+    container.style.transform = `translateX(${(new DOMMatrix(window.getComputedStyle(container).transform)).m41}px)`
+    requestAnimationFrame(() => (container.style.transform = ''))
+    resetIdleBounce()
+  }
+  function onGlobalActivity() {
+    if (!shelved) return
+    if (peekActive) {
+      cancelBounce()
+    } else resetIdleBounce()
+  }
+
+  const onFocus = () => requestAnimationFrame(() => (windowFocused = true))
+  const onBlur = () => (windowFocused = false)
+>>>>>>> shiru-base-copy
   onMount(() => {
     calculateWidth()
     window.addEventListener('blur', onBlur)
@@ -343,10 +402,14 @@
 </script>
 
 <div
+<<<<<<< HEAD
   class='miniplayer-container z-55 pointer-events-auto {position} {$$restProps.class}'
+=======
+  class='miniplayer-container z-55 {$position} {$$restProps.class}'
+>>>>>>> shiru-base-copy
   class:active
   class:animate={!dragging && !shelved}
-  class:custompos={!position}
+  class:custompos={!$position}
   class:shelved
   class:shelved-left={shelved && shelveLeft}
   class:shelved-right={shelved && !shelveLeft}
@@ -370,7 +433,30 @@
   on:mouseenter={handleEdgeEnter}
   on:mouseleave={handleEdgeLeave}
   on:focusout={event => { if (!container.contains(event.relatedTarget)) handleEdgeLeave() }}>
+<<<<<<< HEAD
   <div class='resize resize-{position ? (position.match(/top/i) ? `b` : `t`) + (position.match(/left/i) ? `r` : `l`) : `tl`}' class:d-none={!resize || !active || shelved} use:resizable/>
+=======
+  {#if active}
+    <div
+      class='shelf-tab position-absolute top-0 bottom-0 d-flex z-5 align-items-center justify-content-center not-reactive'
+      class:pointer-events-none={!playbackPaused}
+      class:shelf-tab-left={shelveTabLeft}
+      class:shelf-tab-right={!shelveTabLeft}
+      class:shelf-tab-visible={shelved}
+      class:shelf-tab-ghost={!shelved}
+      class:shelf-pointer-left={((shelved && !shelveTabLeft) || (!shelved && shelveTabLeft)) && playbackPaused}
+      class:shelf-pointer-right={((shelved && shelveTabLeft) || (!shelved && !shelveTabLeft)) && playbackPaused}
+      role='button'
+      tabindex='0'
+      aria-label={shelved ? 'Show miniplayer' : 'Shelve miniplayer'}
+      on:focus={handleEdgeEnter}
+      use:click|stopPropagation={handleShelfTap}
+      on:keydown={event => event.key === 'Enter' && handleShelfTap()}>
+      <div class='shelf-grip d-flex flex-column align-items-center justify-content-center pointer-events-none'/>
+    </div>
+  {/if}
+  <div class='resize resize-{$position ? ($position.match(/top/i) ? `b` : `t`) + ($position.match(/left/i) ? `r` : `l`) : `tl`}' class:d-none={!resize || !active || shelved} use:resizable/>
+>>>>>>> shiru-base-copy
   <slot/>
   <div class='miniplayer-footer touch-none' class:dragging use:draggable tabindex='-1'>::::</div>
   <div class='h-20 w-full position-absolute mt--10 z--1'/>

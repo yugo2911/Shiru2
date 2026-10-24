@@ -1,8 +1,9 @@
 <script>
   import { settings } from '@/modules/settings.js'
-  import { cache, caches } from '@/modules/cache.js'
+  import { cache, caches, mediaCache } from '@/modules/cache.js'
   import { page, modal, playPage } from '@/modules/navigation.js'
   import { getAnimeProgress, setAnimeProgress } from '@/modules/anime/animeprogress.js'
+<<<<<<< HEAD
   import { playAnime, autoStageNext } from '@/modals/torrent/TorrentModal.svelte'
   import { anilistClient } from '@/modules/anilist.js'
   import { episodesList } from '@/modules/episodes.js'
@@ -15,32 +16,58 @@
   import { toast } from 'svelte-sonner'
   import { getChaptersAniSkip } from '@/modules/anime/anime.js'
   import { mediaCache } from '@/modules/cache.js'
+=======
+  import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
+  import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+  import { episodesList } from '@/modules/episodes.js'
+  import AnimeResolver from '@/modules/anime/animeresolver.js'
+  import { durationMap, getMediaMaxEp } from '@/modules/anime/anime.js'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import Subtitles from '@/modules/player/subtitles.js'
+  import PiP from '@/modules/player/pip.js'
+  import HoldSpeed from '@/modules/player/holdspeed.js'
+  import Thumbnails from '@/modules/player/thumbnails.js'
+  import Chapters from '@/modules/player/chapters.js'
+  import Volume from '@/modules/player/volume.js'
+  import { updateDiscordRPC, screenshot, trackLabel } from '@/modules/player/util.js'
+  import { toTS, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
+  import { toast } from '@/modules/lib/toast.js'
+>>>>>>> shiru-base-copy
   import Seekbar from '@/routes/player/components/Seekbar.svelte'
-  import { click } from '@/modules/click.js'
+  import Stats, { stats, toggleStats } from '@/routes/player/components/Stats.svelte'
+  import TorrentStats from '@/routes/player/components/TorrentStats.svelte'
+  import { click } from '@/modules/lib/click.js'
   import VideoDeband from 'video-deband'
-  import Helper from '@/modules/helper.js'
+  import NestedDropdown from '@/components/overlays/NestedDropdown.svelte'
+  import Helper from '@/modules/providers/helper.js'
 
   import { w2gEmitter, state } from '@/routes/w2g/WatchTogetherPage.svelte'
   import ManagerModal from '@/modals/manager/ManagerModal.svelte'
   import Keybinds, { loadWithDefaults, condition } from 'svelte-keybinds'
   import { SUPPORTS } from '@/modules/support.js'
   import 'rvfc-polyfill'
+<<<<<<< HEAD
   import { IPC, ELECTRON, ANDROID } from '@/modules/bridge.js'
   import WPC from '@/modules/wpc.js'
   import { X, Minus, ArrowDown, ArrowUp, Captions, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, EyeOff, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Users, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp,FolderOpen, Download } from 'lucide-svelte'
   import { jimakuClient } from '@/modules/jimaku.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import EpisodePanel from '@/components/EpisodePanel.svelte'
+=======
+  import { ELECTRON, ANDROID, TORRENT } from '@/modules/bridge.js'
+  import { unload } from '@/modules/torrent.js'
+  import { Settings, Gauge, Timer, X, Minus, Captions, CaptionsOff, CircleHelp, Contrast, FastForward, Keyboard, EllipsisVertical, SquareArrowOutUpRight, List, Eye, FilePlus2, ListMusic, ListVideo, Maximize, Minimize, Pause, PictureInPicture, PictureInPicture2, Play, Proportions, RefreshCcw, Rewind, RotateCcw, RotateCw, ScreenShare, SkipBack, SkipForward, Volume1, Volume2, VolumeX, SlidersVertical, SquarePen, Milestone, ClockArrowDown, ClockArrowUp } from 'lucide-svelte'
+>>>>>>> shiru-base-copy
   import Debug from 'debug'
   const debug = Debug('ui:player')
 
   const emit = createEventDispatcher()
 
-  w2gEmitter.on('playerupdate', detail => {
+  w2gEmitter.addEventListener('playerupdate', ({ detail }) => {
     currentTime = detail.time
     paused = detail.paused
   })
-  w2gEmitter.on('setindex', detail => {
+  w2gEmitter.addEventListener('setindex', ({ detail }) => {
     playFile(detail)
   })
 
@@ -51,12 +78,12 @@
 
   function updatew2g () {
     saveAnimeProgress()
-    w2gEmitter.emit('player', { time: Math.floor(currentTime), paused })
+    w2gEmitter.dispatchEvent(new CustomEvent('player', { detail: { time: Math.floor(currentTime), paused } }))
   }
 
   export let miniplayer = false
   $: viewAnime = $modal[modal.ANIME_DETAILS]
-  $condition = () => SUPPORTS.keybinds && $page === page.PLAYER && ((!miniplayer && (!$modal || !modal.length) && !document.querySelector('.modal.show')) || viewAnime)
+  $condition = () => SUPPORTS.keybinds && $page === page.PLAYER && (((!miniplayer && (!$modal || !modal.length) && !document.querySelector('.modal.show') && (!SUPPORTS.isAndroid || immersed))) || viewAnime)
 
   export let files = []
   export let playableFiles = []
@@ -68,9 +95,10 @@
   let video = null
   let container = null
   let current = null
+  const errorToasts = new Set()
   let subs = null
+  let chapters = null
   let duration = 0.1
-  let muted = false
   let wasPaused = null
   let seeking = false
   let videos = []
@@ -79,6 +107,7 @@
   let immerseTimeout = null
   let bufferTimeout = null
   let subHeaders = null
+<<<<<<< HEAD
   let jimakuShow = false
   let jimakuFiles = []
   let pip = false
@@ -103,17 +132,29 @@
   let audioCtx = null
   let source = null
   let gainNode = null
+=======
+  let appActive = true
+  let isFullscreen = false
+  let ended = false
+>>>>>>> shiru-base-copy
   let playbackRate = 1
   let showEpisodes = false
   let externalPlayerReady = false
-  $: cache.setEntry(caches.GENERAL, 'volume', String(volume || 0))
-  $: launchedExternal = false
+  let launchedExternal = false
   $: externalPlayback = ($settings.enableExternal || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath)
   $: safeduration = externalPlayback ? ((current?.media?.media?.duration || (current?.media?.media?.format && durationMap[current?.media?.media?.format]) || 24) * 60) : (isFinite(duration) ? duration : currentTime)
   $: {
     if (hidden) setDiscordRPC(media, video?.currentTime)
     else setDiscordRPC(media, (paused && ($page !== page.PLAYER)))
   }
+  function setDiscordRPC (np = media, browsing) {
+    updateDiscordRPC(np, browsing, { hidden, safeduration, targetTime, paused, w2g: state.value?.code })
+  }
+
+  const pictureInPicture = new PiP(resetImmerse)
+  const holdSpeed = new HoldSpeed(playPause)
+  const thumbnails = new Thumbnails()
+  const volume = new Volume()
 
   window.addEventListener('fileEdit', () => {
     if (current) {
@@ -124,34 +165,20 @@
     }
   })
 
-  function setupAudio() {
-    if (!audioCtx) {
-      audioCtx = new AudioContext()
-      source = audioCtx.createMediaElementSource(video)
-      gainNode = audioCtx.createGain()
-      source.connect(gainNode)
-      gainNode.connect(audioCtx.destination)
-    }
+  function dismissErrorToasts() {
+    for (const id of errorToasts) toast.dismiss(id, { silent: true })
+    errorToasts.clear()
   }
 
   function checkAudio () {
-    volumeBoosted = cache.getEntry(caches.HISTORY, 'lastBoosted')?.[`${media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name}`]?.boosted || false
-    if (volumeBoosted) {
-      setupAudio()
-      gain = cache.getEntry(caches.HISTORY, 'lastBoosted')?.[`${media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name}`]?.gain || 0
-      gainNode.gain.value = gain
-    } else {
-      if (gainNode?.gain) gainNode.gain.value = volume
-      gain = 0
-      boostScrollCount = 0
-      clearTimeout(boostResetTimer)
-    }
+    volume.restore(video, media)
     if ('audioTracks' in HTMLVideoElement.prototype) {
-      if (!video.audioTracks.length) {
-        toast.error('Audio Codec Unsupported', {
-          description: "This torrent's audio codec is not supported, try a different release by disabling Autoplay Torrents in RSS settings."
-        })
-      } else if (video.audioTracks.length > 1) {
+      if (src && !video.audioTracks.length) {
+        errorToasts.add(toast.error('Audio Codec Unsupported', {
+          description: "This torrent's audio codec is not supported, try a different release by disabling Autoplay Torrents in RSS settings.",
+          force: true
+        }))
+      } else if (src && video.audioTracks.length > 1) {
         const preferredTrack = [...video.audioTracks].find(({ language }) => language === $settings.audioLanguage)
         if (preferredTrack) return selectAudio(preferredTrack.id)
 
@@ -161,16 +188,14 @@
     }
   }
 
-  const updateSubs = debounce(() => {
+  const updateSubs = debounce((delayChanged = false) => {
     if (!subs?.renderer) return
     subs.renderer.resize()
-    if (paused) {
-      seek(-0.001)
-      requestAnimationFrame(() => {
-        if (video.currentTime !== 0) seek(0.001)
-      })
-    }
+    if (delayChanged) subs.renderer._timeupdate({ type: 'seeking' })
   }, 200) // stupid fix (resize) because video metadata doesn't update for multiple frames
+  function setLastSubtitle(label) {
+    cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: label })
+  }
   function checkSubtitle() {
     const lastSubtitle = cache.getEntry(caches.HISTORY, 'lastSubtitle')?.[`${media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name}`]
     if (subHeaders?.length && lastSubtitle) {
@@ -179,7 +204,8 @@
         updateSubs()
       } else {
         for (const track of subHeaders) {
-          const trackName = (track?.language || (!Object.values(subs?.headers).some(header => header?.language === 'eng' || header?.language === 'en') ? 'eng' : track?.type)) + (track?.name ? ' - ' + track?.name : '')
+          if (!track) continue
+          const trackName = trackLabel(track, subHeaders)
           if (matchPhrase(lastSubtitle, trackName, trackName?.length > 10 ? 3 : 2, true) && track?.number) {
             subs.selectCaptions(track.number)
             updateSubs()
@@ -190,6 +216,7 @@
     }
   }
 
+<<<<<<< HEAD
   async function exploreJimaku () {
     if (!media?.media?.id) {
       toast.error('No Media ID', { description: 'Unable to find media ID for Jimaku search' })
@@ -246,20 +273,21 @@
   //   })
   // }
 
+=======
+>>>>>>> shiru-base-copy
   // document.fullscreenElement isn't reactive
   let orientationLockable = true // might as well stop trying to lock the orientation when the device doesn't support it.
   document.addEventListener('fullscreenchange', () => {
     isFullscreen = !!document.fullscreenElement
-    if (document.fullscreenElement && orientationLockable) {
+    if (document.fullscreenElement) {
       if (SUPPORTS.isAndroid) window.AndroidFullScreen?.immersiveMode()
-      screen.orientation.lock('landscape').then(success => debug(success), failure => { if (!failure?.toString()?.includes('NotSupportedError')) { debug(failure) } else { orientationLockable = false } })
-    } else if (orientationLockable) {
+      if (orientationLockable) screen.orientation.lock('landscape').then(success => debug(success), failure => { if (!failure?.toString()?.includes('NotSupportedError')) { debug(failure) } else { orientationLockable = false } })
+    } else {
       if (SUPPORTS.isAndroid) {
         window.AndroidFullScreen?.showSystemUI()
-        window.Capacitor.Plugins.StatusBar.setOverlaysWebView({overlay: true})
-        window.Capacitor.Plugins.StatusBar.hide()
+        ANDROID.hideStatusBar()
       }
-      screen.orientation.unlock()
+      if (orientationLockable) screen.orientation.unlock()
     }
   })
 
@@ -276,6 +304,8 @@
         }
       }
     } else {
+      dismissErrorToasts()
+      holdSpeed.reset()
       src = ''
       buffering = true
       current = null
@@ -285,14 +315,13 @@
         subs.destroy()
         subs = null
       }
+      if (chapters) {
+        chapters.destroy()
+        chapters = null
+      }
     }
   }
 
-  let loadInterval
-
-  function clearLoadInterval () {
-    clearInterval(loadInterval)
-  }
   /**
    * @type {VideoDeband}
    */
@@ -312,24 +341,19 @@
   }
   $: loadDeband($settings.playerDeband, video)
 
-  let externalReadyListener
   async function handleCurrent (file) {
+    dismissErrorToasts()
+    holdSpeed.reset()
     paused = true
     canPlay = false
     video?.pause?.()
     externalPlayerReady = false
     showBuffering()
     if (file) {
-      if (thumbnailData.video?.src) URL.revokeObjectURL(video?.src)
-      Object.assign(thumbnailData, {
-        thumbnails: [],
-        interval: undefined,
-        video: undefined
-      })
+      thumbnails.clear()
       currentTime = 0
       targetTime = 0
-      chapters = []
-      embeddedChapters = []
+      skipNextProgress = false
       currentSkippable = null
       completed = false
       subDelay = 0
@@ -338,35 +362,43 @@
         subs.destroy()
         subs = null
       }
+      if (chapters) {
+        chapters.destroy()
+        chapters = null
+      }
       current = file
       setCurrent(file)
     }
   }
 
   async function setCurrent(file, launchExternal = false) {
+    if ((externalPlayback || launchExternal) && document.fullscreenElement) document.exitFullscreen()
     if (!externalPlayback) {
       src = file.url
-      subs = new Subtitles(video, files, current, handleHeaders)
-      video.load()
-      await loadAnimeProgress()
+      if (!launchExternal) {
+        chapters = new Chapters()
+        subs = new Subtitles(video, files, current, handleHeaders)
+        video.load()
+        await loadAnimeProgress()
+      } else video.load()
     } else externalPlaying = false
     emit('current', current) // #handleCurrent in MediaHandler
     if (externalPlayback) {
-      WPC.clear('externalReady', externalReadyListener)
-      externalReadyListener = () => {
+      TORRENT.onExternalReady(() => {
         hideBuffering()
         externalPlayerReady = true
         setTimeout(() => {
           if (externalPlayerReady && !externalPlaying) autoPlay()
         }, 1_500)
-      }
-      WPC.listen('externalReady', externalReadyListener)
+      })
     }
     paused = true
-    currentTime = 0
-    targetTime = 0
+    if (!launchExternal) {
+      currentTime = 0
+      targetTime = 0
+    }
     launchedExternal = launchExternal
-    WPC.send('current', { current: file, external: settings.value.enableExternal || launchExternal })
+    TORRENT.setPlayback(file, settings.value.enableExternal || launchExternal)
   }
 
   export let media
@@ -390,12 +422,18 @@
     else animeProgress = await getAnimeProgress({ name: current?.media?.parseObject?.anime_title ? (current?.media?.parseObject?.anime_title + ((media?.season || current?.media?.parseObject?.anime_season ? ` S${media?.season || current?.media?.parseObject?.anime_season}` : '') + ((media?.episode || current?.media?.parseObject?.episode_number ? ` E${media?.episode || current?.media?.parseObject?.episode_number}` : '')))) : current?.name, mediaId: current.media.media.id, episode: current.media.episode })
     if (!animeProgress) return
 
+    skipNextProgress = true
     const currentTime = Math.max(animeProgress.currentTime - 5, 0) // Load 5 seconds before
     seek(currentTime - video.currentTime)
   }
 
+  let skipNextProgress = false
   function saveAnimeProgress (error = false) {
     if (!error && (buffering || video.readyState < 4)) return
+    if (skipNextProgress) {
+      skipNextProgress = false
+      return
+    }
     if (error) {
       currentTime = 0
       targetTime = 0
@@ -412,6 +450,7 @@
     if (current && subs?.headers) {
       const tracks = subs.headers.filter(header => header)
       const index = tracks.indexOf(subs.headers[subs.current]) + 1
+<<<<<<< HEAD
       const selectedIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
       subs.selectCaptions(selectedIndex)
       updateSubs()
@@ -420,6 +459,12 @@
       subVisible = true
       clearTimeout(subTimeout)
       subTimeout = setTimeout(() => subVisible = false, 1500)
+=======
+      const newIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
+      subs.selectCaptions(newIndex)
+      updateSubs()
+      setLastSubtitle(newIndex === -1 ? 'OFF' : trackLabel(subs.headers[newIndex], subs.headers))
+>>>>>>> shiru-base-copy
     }
   }
 
@@ -431,7 +476,7 @@
   function updateDelay(delay) {
     if (subs?.renderer) {
       subs.renderer.timeOffset = Number(delay)
-      updateSubs()
+      updateSubs(true)
     }
   }
   function setSubDelay(delay) {
@@ -439,11 +484,11 @@
     subDelayText = subDelay > 0 ? `+${subDelay}s` : `${subDelay}s`;
     subDelayVisible = true;
     clearTimeout(subDelayTimeout);
-    subDelayTimeout = setTimeout(() => subDelayVisible = false, 600)
+    subDelayTimeout = setTimeout(() => (subDelayVisible = false), 600)
   }
 
   let currentTime = 0
-  $: progress = currentTime / safeduration * 100
+  let targetTime = 0
   $: targetTime = (!paused && currentTime) || targetTime
   function handleMouseDown ({ detail }) {
     seeking = true
@@ -473,16 +518,16 @@
     const viewDetails = Object.keys(_modal).length === 1 && _modal[modal.ANIME_DETAILS]
     const overlayCount = Object.keys(_modal).length
     if (!video?.ended) {
-      if ((!playerPage || viewDetails || updateRequest) && !paused && playPage && !pip) {
+      if ((!playerPage || viewDetails || updateRequest) && !paused && playPage && !$pictureInPicture) {
         pagePaused = 2
         playPause()
-      } else if (playerPage && paused && pagePaused === 2 && !overlayCount && playPage && !pip) {
+      } else if (playerPage && paused && pagePaused === 2 && !overlayCount && playPage && !$pictureInPicture) {
         pagePaused = 1
         playPause()
-      } else if (overlayCount && ((!viewDetails && !updateRequest && !playerPage) || overlayCount > 1) && !paused && !playPage && !pip) {
+      } else if (overlayCount && ((!viewDetails && !updateRequest && !playerPage) || overlayCount > 1) && !paused && !playPage && !$pictureInPicture) {
         pagePaused = 2
         playPause()
-      } else if ((!overlayCount || viewDetails || updateRequest) && paused && pagePaused === 2 && !playPage && !pip) {
+      } else if ((!overlayCount || viewDetails || updateRequest) && paused && pagePaused === 2 && !playPage && !$pictureInPicture) {
         pagePaused = 1
         playPause()
       } else if ((!playerPage || overlayCount) && paused && pagePaused && pagePaused !== 2) {
@@ -499,9 +544,9 @@
     resolvePrompt = current?.failed || current?.media?.failed || current?.parseObject?.failed
     skipPrompt = filler || recap
   }
-  async function autoPlay () {
-    await promptFiller()
-    if ((($page === page.PLAYER && modal.length === 0) || pip) && !resolvePrompt && !skipPrompt) {
+  async function autoPlay (promptSkip = false) {
+    if (!promptSkip) await promptFiller()
+    if ((($page === page.PLAYER && modal.length === 0) || $pictureInPicture) && !resolvePrompt && !skipPrompt) {
       if (externalPlayback) playPause()
       else if (!hidden) {
         video.play()
@@ -511,40 +556,36 @@
     } else if (!externalPlayback) video.pause()
   }
 
-  let watchedListener
-  let androidListener
   let externalPlaying = false
   function playPause () {
     if (hidden) return
     if (externalPlayback) {
       const duration = current.media?.media?.duration || durationMap[current.media?.media?.format]
       if (duration) {
-        WPC.clear('externalWatched', watchedListener)
-        watchedListener = (detail) => {
-          checkCompletionByTime(detail, duration * 60)
-          currentTime = detail
-          targetTime = detail
+        TORRENT.onExternalWatched(watchTime => {
+          const watchDuration = duration * 60
+          checkCompletionByTime(watchTime, watchDuration)
+          currentTime = watchTime > watchDuration ? watchDuration : watchTime
+          targetTime = watchTime > watchDuration ? watchDuration : watchTime
           launchedExternal = false
-        }
-        WPC.listen('externalWatched', watchedListener)
+        })
       }
       externalPlaying = true
       if (SUPPORTS.isAndroid) {
-        WPC.clear('androidExternal', androidListener)
-        androidListener = (url) => {
+        TORRENT.onAndroidExternal(url => {
           const startTime = Date.now()
           const externalWatched = () => {
             const watchTime = (Date.now() - startTime) / 1_000
-            checkCompletionByTime(watchTime, duration * 60)
-            currentTime = watchTime
-            targetTime = watchTime
+            const watchDuration = duration * 60
+            checkCompletionByTime(watchTime, watchDuration)
+            currentTime = watchTime > watchDuration ? watchDuration : watchTime
+            targetTime = watchTime > watchDuration ? watchDuration : watchTime
             launchedExternal = false
           }
           ANDROID.launchExternal?.(url)?.then?.(() => externalWatched())
-        }
-        WPC.listen('androidExternal', androidListener)
+        })
       }
-      WPC.send('externalPlay', { current })
+      TORRENT.launchExternal(current)
     } else paused = !paused
     resetImmerse()
     updateSubs()
@@ -552,10 +593,11 @@
   let hidden = false
   let visibilityPaused = true
   const handleVisibility = visible => {
-    if ($settings.playerPause && !pip) {
+    if ($settings.playerPause && !$pictureInPicture) {
       hidden = !visible
       if (!video?.ended) {
         if (hidden) {
+          holdSpeed.cancelHold()
           visibilityPaused = paused
           paused = true
         } else if (!visibilityPaused) paused = false
@@ -576,7 +618,7 @@
       if (index + 1 < videos.length) {
         const target = (index + 1) % videos.length
         handleCurrent(videos[target])
-        w2gEmitter.emit('index', { index: target })
+        w2gEmitter.dispatchEvent(new CustomEvent('index', { detail: target }))
       } else if (media?.media?.nextAiringEpisode?.episode - 1 || ((media?.media?.episodes || getMediaMaxEp(media?.media)) > media?.episode)) {
         playAnime(media.media, media.episode + 1)
       }
@@ -587,105 +629,33 @@
       const index = videos.indexOf(current)
       if (index > 0) {
         handleCurrent(videos[index - 1])
-        w2gEmitter.emit('index', { index: index - 1 })
+        w2gEmitter.dispatchEvent(new CustomEvent('index', { detail: index - 1 }))
       } else if (media?.episode > 1 || (media?.zeroEpisode && media?.episode === 1)) {
         playAnime(media.media, media.episode - 1)
       }
     }
   }
-  function setGain(event) {
-    let value = parseFloat(event.target.value)
-    if (value <= 1) {
-      gainNode.gain.value = 1
-      volume = value
-    } else {
-      volume = 1
-      gainNode.gain.value = value
-    }
-    gain = value
-    cache.setEntry(caches.HISTORY, 'lastBoosted', { ...(cache.getEntry(caches.HISTORY, 'lastBoosted') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: { boosted: volumeBoosted, gain } })
-  }
-  function toggleGain () {
-    setupAudio()
-    if (volumeBoosted) {
-      volume = gain <= 1 ? gain : 1
-      gain = 1
-      if (audioCtx) gainNode.gain.value = 1
-    } else {
-      setGain({ target: { value: volume } })
-      boostScrollCount = 0
-      clearTimeout(boostResetTimer)
-    }
-    volumeBoosted = !volumeBoosted
-    cache.setEntry(caches.HISTORY, 'lastBoosted', { ...(cache.getEntry(caches.HISTORY, 'lastBoosted') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: { boosted: volumeBoosted, gain } })
-    return true
-  }
-  function toggleMute () {
-    muted = !muted
-  }
   function handleWheel(event) {
+<<<<<<< HEAD
     if (viewAnime) return
     if (event.target.closest?.('.episodes-panel')) return
+=======
+    const onPlayerPage = $page === page.PLAYER
+    const onDropdown = event.target?.closest('.dropdown') || event.target?.closest('.nd-panel') // checks for dropdowns like subtitles or audio tracks as they can be scrollable.
+    const onOverflow = event.target?.closest('.overflow-auto') || event.target?.closest('.overflow-y-auto') || event.target?.closest('.overflow-y-scroll') // checks for potentially scrollable containers
+    const hasFileModal = modal.exists(modal.FILE_MANAGER) || modal.exists(modal.FILE_EDITOR)
+    if (onPlayerPage ? hasFileModal || onDropdown || onOverflow || (modal.length && miniplayerShelved) : !miniplayer || miniplayerShelved) return
+>>>>>>> shiru-base-copy
     event.preventDefault()
-    // make trackpad type device scroll more gradual
-    wheelAccumulator += event.deltaY
-    if (Math.abs(wheelAccumulator) < 100) return
-
-    const direction = wheelAccumulator < 0 ? 'up' : 'down'
-    const delta = direction === 'up' ? 0.05 : -0.05
-    wheelAccumulator = 0
-
-    const combined = (volumeBoosted && gain > 1) ? gain : volume
-    let next = Math.max(0, Math.min(3, combined + delta))
-    // If crossing 100% on the way up, snap to exactly 100% and stop
-    if (direction === 'up' && combined < 1 && next > 1) next = 1
-    // limit guard at 100%
-    if (!volumeBoosted && combined >= 1 && next > 1 && direction === 'up' && boostScrollCount < 5) {
-      boostScrollCount++
-      const superscripts = ['⁵','⁴','³','²','¹']
-      volumeText = `${(combined * 100).toFixed(0)}%${superscripts[boostScrollCount - 1]}`
-      showVolumeTemporarily(false)
-      // Reset boostScrollCount after 2s of inactivity
-      clearTimeout(boostResetTimer)
-      boostResetTimer = setTimeout(() => { boostScrollCount = 0 }, 2_000)
-      boostResetTimer.unref?.()
-      return
-    }
-    // Reset guard if we go back down
-    if (next <= 1) {
-      boostScrollCount = 0
-      clearTimeout(boostResetTimer)
-    }
-    // --- STATE APPLICATION ---
-    if (next <= 1) {
-      volume = next
-      gain = 1
-      volumeBoosted = false
-      muted = volume === 0
-    } else {
-      setupAudio()
-      volume = 1
-      gain = next
-      volumeBoosted = true
-    }
-
-    if (audioCtx) gainNode.gain.value = volumeBoosted ? gain : volume
-    showVolumeTemporarily()
-  }
-  function showVolumeTemporarily(updateText = true) {
-    if (updateText) volumeText = volume === 0 || muted ? 'Muted' : `${((gain > 1 ? gain : volume) * 100).toFixed(0)}%`
-    volumeVisible = true
-    clearTimeout(volumeTimeout)
-    volumeTimeout = setTimeout(() => volumeVisible = false, 600)
-    volumeTimeout.unref?.()
+    volume.handleWheel(event, video, media)
   }
   function toggleFullscreen () {
     if (!externalPlayback) document.fullscreenElement ? document.exitFullscreen() : document.querySelector('.page-wrapper').requestFullscreen()
   }
   function skip () {
-    const current = findChapter(currentTime)
+    const current = chapters?.findChapter(currentTime)
     if (current) {
-      if (!isChapterSkippable(current) && ((current.end - current.start) / 1_000) > 100) {
+      if (!chapters?.isChapterSkippable(current) && ((current.end - current.start) / 1_000) > 100) {
         currentTime = currentTime + 85
       } else {
         const endtime = current.end / 1_000
@@ -717,113 +687,45 @@
   }
   function selectAudio (id) {
     if (id != null) {
-      for (const track of video.audioTracks) {
-        track.enabled = track.id === id
-      }
+      if (Array.from(video.audioTracks).find(track => track.enabled)?.id === id) return
+      for (const track of video.audioTracks) track.enabled = track.id === id
       seek(-0.2) // stupid fix because video freezes up when changing tracks
     }
   }
   function selectVideo (id) {
     if (id != null) {
-      for (const track of video.videoTracks) {
-        track.selected = track.id === id
-      }
+      if (Array.from(video.videoTracks).find(track => track.selected)?.id === id) return
+      for (const track of video.videoTracks) track.selected = track.id === id
       updateSubs()
     }
   }
-  // function toggleCast () {
-  //   if (video.readyState) {
-  //     if (presentationConnection) {
-  //       presentationConnection?.terminate()
-  //     } else {
-  //       presentationRequest.start()
-  //     }
-  //   }
-  // }
-  async function screenshot () {
-    if ('clipboard' in navigator && video.readyState) {
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context.drawImage(video, 0, 0)
-      if (subs?.renderer) {
-        subs.renderer.resize(video.videoWidth, video.videoHeight)
-        await new Promise(resolve => setTimeout(resolve, 500)) // this is hacky, but TLDR wait for canvas to update and re-render, in practice this will take at MOST 100ms, but just to be safe
-        context.drawImage(subs.renderer._canvas, 0, 0, canvas.width, canvas.height)
-        subs.renderer.resize(0, 0, 0, 0) // undo resize
-      }
-      const blob = await new Promise(resolve => canvas.toBlob(resolve))
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob
-        })
-      ])
-      canvas.remove()
-      toast.success('Screenshot', {
-        description: 'Saved screenshot to clipboard.'
-      })
-    }
+  let fitWidth = settings.value.playerCoverVideo ?? false
+  function toggleFitWidth(value = fitWidth) {
+    fitWidth = !value
+    $settings.playerCoverVideo = fitWidth
+    return value
   }
-  function updatePiPState (paused) {
-    const element = /** @type {HTMLVideoElement | undefined} */ (document.pictureInPictureElement)
-    if (!element || element.id) return
-    if (paused) element.pause()
-    else element.play()
+
+  function handlePlayerClick(event) {
+    if (holdSpeed.consumeClick(event.currentTarget)) return
+    if ($page === page.PLAYER && modal.length === 0) playPause()
+    else if (!miniplayerShelved) page.navigateTo(page.PLAYER)
   }
-  $: updatePiPState(paused)
-  function togglePopout () {
-    if (video.readyState) {
-      if (!subs?.renderer) {
-        if (video !== document.pictureInPictureElement) {
-          video.requestPictureInPicture()
-          resetImmerse()
-          pip = true
-        } else {
-          document.exitPictureInPicture()
-          pip = false
-        }
-      } else {
-        if (document.pictureInPictureElement && !document.pictureInPictureElement.id) {
-          // only exit if pip is the custom one, else overwrite existing pip with custom
-          document.exitPictureInPicture()
-          pip = false
-        } else {
-          const canvasVideo = document.createElement('video')
-          const { stream, destroy } = getBurnIn()
-          const cleanup = () => {
-            pip = false
-            destroy()
-            canvasVideo.remove()
-          }
-          pip = true
-          resetImmerse()
-          canvasVideo.srcObject = stream
-          canvasVideo.onloadedmetadata = () => {
-            canvasVideo.play()
-            if (pip) {
-              if (paused) canvasVideo.pause()
-              canvasVideo.requestPictureInPicture().then(pipwindow => {
-                pipwindow.onresize = () => {
-                  const { width, height } = pipwindow
-                  if (isNaN(width) || isNaN(height)) return
-                  if (!isFinite(width) || !isFinite(height)) return
-                  subs.renderer.resize(width, height)
-                }
-              }).catch(e => {
-                cleanup()
-                debug('Failed To Burn In Subtitles ' + e)
-              })
-            } else {
-              cleanup()
-            }
-          }
-          canvasVideo.onleavepictureinpicture = cleanup
-        }
-      }
-    }
+
+  function handleMobilePlayerClick(event) {
+    if (holdSpeed.consumeClick(event.currentTarget)) return
+    toggleImmerse()
   }
+<<<<<<< HEAD
   let fitWidth = cache.getEntry(caches.GENERAL, 'fitWidth') === 'true'
+=======
+
+  function handleMiniplayerClick(event) {
+    if (holdSpeed.consumeClick(event.currentTarget)) return
+    page.navigateTo(page.PLAYER)
+  }
+
+>>>>>>> shiru-base-copy
   let showKeybinds = false
   let showTorrentStats = false
   let contextMenu = false
@@ -841,7 +743,7 @@
 
   loadWithDefaults({
     KeyX: {
-      fn: () => !viewAnime && screenshot(),
+      fn: () => !viewAnime && screenshot(video, subs),
       id: 'screenshot_monitor',
       icon: ScreenShare,
       type: 'icon',
@@ -881,11 +783,11 @@
       desc: 'Toggle Keybinds'
     },
     Space: {
-      fn: () => !viewAnime && playPause(),
+      fn: event => !viewAnime && holdSpeed.handleKeyDown(event),
       id: 'play_arrow',
-      play: Play,
+      icon: Play,
       type: 'icon',
-      desc: 'Play/Pause'
+      desc: 'Play/Pause / Hold to Speed Up'
     },
     KeyN: {
       fn: () => !viewAnime && playNext(),
@@ -909,14 +811,14 @@
       desc: 'Toggle Video Debanding'
     },
     KeyM: {
-      fn: () => !viewAnime && (muted = !muted) && showVolumeTemporarily(),
+      fn: () => !viewAnime && volume.toggleMute() && volume.showTemporarily(),
       id: 'volume_off',
       icon: VolumeX,
       type: 'icon',
       desc: 'Toggle Mute'
     },
     KeyP: {
-      fn: () => !viewAnime && togglePopout(),
+      fn: () => !viewAnime && pictureInPicture.togglePopout(),
       id: 'picture_in_picture',
       icon: PictureInPicture2,
       type: 'icon',
@@ -935,19 +837,16 @@
       desc: 'Skip Intro/90s'
     },
     KeyW: {
+<<<<<<< HEAD
       fn: () => !viewAnime && (fitWidth = !fitWidth, cache.setEntry(caches.GENERAL, 'fitWidth', String(fitWidth))),
+=======
+      fn: () => !viewAnime && toggleFitWidth(),
+>>>>>>> shiru-base-copy
       id: 'fit_width',
       icon: Proportions,
       type: 'icon',
       desc: 'Toggle Video Cover'
     },
-    // KeyD: {
-    //   fn: () => !viewAnime && toggleCast(),
-    //   id: 'cast',
-    //   icon: Cast,
-    //   type: 'icon',
-    //   desc: 'Toggle Cast [broken]'
-    // },
     KeyC: {
       fn: () => !viewAnime && cycleSubtitles(),
       id: 'subtitles',
@@ -956,7 +855,7 @@
       desc: 'Cycle Subtitles'
     },
     KeyV: {
-      fn: () => !viewAnime && toggleGain() && showVolumeTemporarily(),
+      fn: () => !viewAnime && volume.toggleGain(video, media) && volume.showTemporarily(),
       id: 'toggle_gain',
       icon: SlidersVertical,
       type: 'icon',
@@ -991,10 +890,7 @@
         if (viewAnime) return
         e.stopImmediatePropagation()
         e.preventDefault()
-        if (volumeBoosted) setGain({ target: { value: Math.min(3, gain + 0.05) } })
-        else volume = Math.min(1, volume + 0.05)
-        muted = volume === 0
-        showVolumeTemporarily()
+        volume.adjust(0.05, media)
       },
       id: 'volume_up',
       icon: Volume2,
@@ -1006,10 +902,7 @@
         if (viewAnime) return
         e.stopImmediatePropagation()
         e.preventDefault()
-        if (volumeBoosted) setGain({ target: { value: Math.max(0, gain - 0.05) } })
-        else volume = Math.max(0, volume - 0.05)
-        muted = volume === 0
-        showVolumeTemporarily()
+        volume.adjust(-0.05, media)
       },
       id: 'volume_down',
       icon: Volume1,
@@ -1017,21 +910,21 @@
       desc: 'Volume Down'
     },
     BracketLeft: {
-      fn: () => !viewAnime && !externalPlayback && (playbackRate = video.defaultPlaybackRate -= 0.1),
+      fn: () => !viewAnime && !externalPlayback && (playbackRate = (video.defaultPlaybackRate = Math.max(0.1, Number((video.defaultPlaybackRate - 0.1).toFixed(1))))),
       id: 'history',
       icon: RotateCcw,
       type: 'icon',
       desc: 'Decrease Playback Rate'
     },
     BracketRight: {
-      fn: () => !viewAnime && !externalPlayback && (playbackRate = video.defaultPlaybackRate += 0.1),
+      fn: () => !viewAnime && !externalPlayback && (playbackRate = (video.defaultPlaybackRate = Math.min(16, Number((video.defaultPlaybackRate + 0.1).toFixed(1))))),
       id: 'update',
       icon: RotateCw,
       type: 'icon',
       desc: 'Increase Playback Rate'
     },
     Backslash: {
-      fn: () => !viewAnime && !externalPlayback && (playbackRate = video.defaultPlaybackRate = 1),
+      fn: () => !viewAnime && !externalPlayback && (playbackRate = (video.defaultPlaybackRate = 1)),
       icon: RefreshCcw,
       id: 'schedule',
       type: 'icon',
@@ -1052,85 +945,6 @@
       desc: 'Subtitle Delay +0.1s / +1.0s'
     }
   })
-
-  function getBurnIn (noSubs) {
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    let loop = null
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    if (!noSubs) subs.renderer.resize(video.videoWidth, video.videoHeight)
-    const renderFrame = () => {
-      context.drawImage(deband ? deband.canvas : video, 0, 0)
-      if (!noSubs && canvas.width && canvas.height) context.drawImage(subs.renderer?._canvas, 0, 0, canvas.width, canvas.height)
-      loop = video.requestVideoFrameCallback(renderFrame)
-    }
-    renderFrame()
-    const destroy = () => {
-      if (!noSubs) subs.renderer.resize()
-      video.cancelVideoFrameCallback(loop)
-      canvas.remove()
-    }
-    container.append(canvas)
-    return { stream: canvas.captureStream(), destroy }
-  }
-
-  // function initCast (event) {
-  //   // these quality settings are likely to make cast overheat, oh noes!
-  //   let peer = new Peer({
-  //     polite: true,
-  //     quality: {
-  //       audio: {
-  //         stereo: 1,
-  //         'sprop-stereo': 1,
-  //         maxaveragebitrate: 510000,
-  //         maxplaybackrate: 510000,
-  //         cbr: 0,
-  //         useinbandfec: 1,
-  //         usedtx: 1,
-  //         maxptime: 20,
-  //         minptime: 10
-  //       },
-  //       video: {
-  //         bitrate: 2000000,
-  //         codecs: ['VP9', 'VP8', 'H264']
-  //       }
-  //     }
-  //   })
-
-  //   presentationConnection = event.connection
-  //   presentationConnection.addEventListener('terminate', () => {
-  //     presentationConnection = null
-  //     peer = null
-  //   })
-
-  //   peer.signalingPort.onmessage = ({ data }) => {
-  //     presentationConnection.send(data)
-  //   }
-
-  //   presentationConnection.addEventListener('message', ({ data }) => {
-  //     peer.signalingPort.postMessage(data)
-  //   })
-
-  //   peer.dc.onopen = () => {
-  //     if (peer && presentationConnection) {
-  //       const tracks = []
-  //       const videostream = video.captureStream()
-  //       if (true) {
-  //         // TODO: check if cast supports codecs
-  //         const { stream, destroy } = getBurnIn(!subs?.renderer)
-  //         tracks.push(stream.getVideoTracks()[0], videostream.getAudioTracks()[0])
-  //         presentationConnection.addEventListener('terminate', destroy)
-  //       } else {
-  //         tracks.push(videostream.getVideoTracks()[0], videostream.getAudioTracks()[0])
-  //       }
-  //       for (const track of tracks) {
-  //         peer.pc.addTrack(track, videostream)
-  //       }
-  //       paused = false // video pauses for some reason
-  //     }
-  //   }
-  // }
 
   function immersePlayer () {
     if ((safeduration - currentTime) !== 0) {
@@ -1169,14 +983,17 @@
     if (bufferTimeout) {
       clearTimeout(bufferTimeout)
       bufferTimeout = null
-      buffering = false
     }
+    buffering = false
   }
 
-  function showBuffering () {
+  function showBuffering (skipCheck = false) {
+    if (bufferTimeout) clearTimeout(bufferTimeout)
     bufferTimeout = setTimeout(() => {
-      buffering = true
-      resetImmerse()
+      if (((skipCheck || video?.readyState < 3) && !externalPlayback) || (externalPlayback && !externalPlayerReady)) {
+        buffering = true
+        resetImmerse()
+      }
     }, 150)
   }
   $: navigator.mediaSession?.setPositionState({
@@ -1184,6 +1001,22 @@
     playbackRate: 1,
     position: Math.max(0, Math.min(safeduration || 0, currentTime || 0))
   })
+  $: updateAndroidMediaSession(media, !!src && !externalPlayback && (((!$playPage || $page === page.PLAYER) && appActive) || $pictureInPicture), paused, safeduration, playbackRate, hasLast, hasNext)
+
+  function updateAndroidMediaSession(np = media, active = !!src && !externalPlayback && (((!$playPage || $page === page.PLAYER) && appActive) || $pictureInPicture), isPaused = paused, mediaDuration = safeduration, rate = playbackRate, last = hasLast, next = hasNext) {
+    ANDROID.setMediaSession?.({
+      active,
+      playing: active && !isPaused,
+      title: np?.title || 'Shiru',
+      subtitle: np?.media?.format === 'MOVIE' && (np.media?.episodes ?? 0) <= 1 ? 'The Movie' : [np?.episode === 0 || np?.episode ? `Episode ${np.episode}${np.media?.episodes ? ` of ${np.media.episodes}` : ''}` : '', np?.episodeTitle].filter(Boolean).join(' - ') || 'Streaming the Universe',
+      artwork: np?.artwork || np?.thumbnail || '',
+      position: currentTime,
+      duration: mediaDuration,
+      playbackRate: rate || 1,
+      hasLast: last,
+      hasNext: next
+    })
+  }
 
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', playPause)
@@ -1199,88 +1032,22 @@
   function skipResponse (skip) {
     skipPrompt = false
     if (skip) playNext()
-    else {
-      video.play()
-      updateSubs()
-    }
+    else autoPlay(true)
   }
   let resolvePrompt = false
   function resolveResponse (resolve) {
     resolvePrompt = false
     if (resolve) modal.open(modal.FILE_MANAGER)
-    else {
-      video.play()
-      updateSubs()
-    }
-  }
-  let stats = null
-  let requestCallback = null
-  function toggleStats () {
-    if (requestCallback) {
-      stats = null
-      video.cancelVideoFrameCallback(requestCallback)
-      requestCallback = null
-    } else {
-      requestCallback = video.requestVideoFrameCallback((a, b) => {
-        stats = {}
-        handleStats(a, b, b)
-      })
-      if (paused) {
-        seek(-0.001) // stupid hack because the initial request doesn't trigger canvas to re-render, stats won't appear unless the current time changes.
-        requestAnimationFrame(() => {
-          if (video.currentTime !== 0) seek(0.001)
-        })
-      }
-    }
-  }
-  async function handleStats (now, metadata, lastmeta) {
-    if (stats) {
-      const msbf = (metadata.mediaTime - lastmeta.mediaTime) / (metadata.presentedFrames - lastmeta.presentedFrames)
-      const fps = (1 / msbf).toFixed(3)
-      stats = {
-        fps,
-        presented: metadata.presentedFrames,
-        dropped: video.getVideoPlaybackQuality()?.droppedVideoFrames,
-        processing: metadata.processingDuration + ' ms',
-        viewport: video.clientWidth + 'x' + video.clientHeight,
-        resolution: videoWidth + 'x' + videoHeight,
-        buffer: getBufferHealth(metadata.mediaTime) + ' s',
-        speed: video.playbackRate || 1
-      }
-      setTimeout(() => video.requestVideoFrameCallback((n, m) => handleStats(n, m, metadata)), 200)
-    }
-  }
-  function getBufferHealth (time) {
-    for (let index = video.buffered.length; index--;) {
-      if (time < video.buffered.end(index) && time >= video.buffered.start(index)) {
-        return (video.buffered.end(index) - time) | 0
-      }
-    }
-    return 0
+    else autoPlay(true)
   }
   let buffer = 0
-  WPC.listen('progress', (detail) => {
-    buffer = detail * 100
+  TORRENT.onProgress(progress => {
+    buffer = progress * 100
   })
-
-  let chapters = []
-  let embeddedChapters = []
-  WPC.listen('chapters', (detail) => {
-    if (detail.length) {
-      chapters = detail
-      embeddedChapters = detail
-    }
-  })
-  async function findChapters () {
-    if ((!chapters.length || settings.value.playerChapterSkip.match(/aniskip/i)) && current?.media?.media) {
-      const _chapters = await getChaptersAniSkip(current, safeduration)
-      if (_chapters?.length) chapters = _chapters
-    }
-  }
 
   let currentSkippable = null
-  $: currentSkippable && $settings.playerAutoSkip && skip()
   function checkSkippableChapters () {
+<<<<<<< HEAD
     const current = findChapter(currentTime)
     if (current) {
       currentSkippable = isChapterSkippable(current)
@@ -1524,6 +1291,11 @@
   function toggleDropdown ({ target }) {
     target.classList.toggle('active')
     target.closest('.dropdown').classList.toggle('show')
+=======
+    const current = chapters?.findChapter(currentTime)
+    currentSkippable = current ? chapters?.isChapterSkippable(current) : null
+    if (currentSkippable && $settings.playerAutoSkip) skip()
+>>>>>>> shiru-base-copy
   }
 
   let completed = false
@@ -1547,15 +1319,14 @@
       if (externalPlayback) tryPlayNext()
     }
   }
-  const torrent = {}
-  WPC.listen('stats', updateStats)
-  function updateStats (detail) {
-    torrent.peers = detail.numPeers || 0
-    torrent.up = detail.uploadSpeed || 0
-    torrent.down = detail.downloadSpeed || 0
-  }
   function checkError ({ target }) {
+    // nothing is playing... skip showing a toast.
+    if (!current || !src) {
+      debug('Ignoring video error after playback was cleared.', target.error)
+      return
+    }
     // video playback failed - show a message saying why
+    let toastId
     switch (target.error?.code) {
       case target.error.MEDIA_ERR_ABORTED:
         debug('You aborted the video playback.')
@@ -1563,35 +1334,45 @@
       case target.error.MEDIA_ERR_NETWORK:
         debug('A network error caused the video download to fail part-way.', target.error)
         saveAnimeProgress(true)
-        toast.error('Video Network Error', {
+        toastId = toast.error('Video Network Error', {
           description: 'A network error caused the video download to fail part-way. Dismiss this toast to reload the video.',
           duration: Infinity,
-          onDismiss: () => target.load()
+          force: true,
+          onDismiss: () => {
+            errorToasts.delete(toastId)
+            target.load()
+          }
         })
         break
       case target.error.MEDIA_ERR_DECODE:
         debug('The video playback was aborted due to a corruption problem or because the video used features your browser did not support.', target.error)
         saveAnimeProgress(true)
-        toast.error('Video Decode Error', {
+        toastId = toast.error('Video Decode Error', {
           description: 'The video playback was aborted due to a corruption problem. Dismiss this toast to reload the video.',
           duration: Infinity,
-          onDismiss: () => target.load()
+          force: true,
+          onDismiss: () => {
+            errorToasts.delete(toastId)
+            target.load()
+          }
         })
         break
       case target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
         if (target.error.message !== 'MEDIA_ELEMENT_ERROR: Empty src attribute') {
           debug('The video could not be loaded, either because the server or network failed or because the format is not supported.', target.error)
           saveAnimeProgress(true)
-          toast.error('Video Codec Unsupported', {
+          errorToasts.add(toast.error('Video Codec Unsupported', {
             description: 'The video could not be loaded, either because the server or network failed or because the format is not supported. Try a different release by disabling Autoplay Torrents in RSS settings.',
-            duration: 30_000
-          })
+            duration: 30_000,
+            force: true
+          }))
         }
         break
       default:
         debug('An unknown video playback error occurred.')
         break
     }
+    if (toastId) errorToasts.add(toastId)
   }
 
   function handleSeekbarKey (e) {
@@ -1622,79 +1403,36 @@
     window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dataTransfer }))
   }
 
-  function setDiscordRPC (np = media, browsing) {
-    if ((!np || Object.keys(np).length === 0) && !browsing) return
-    if (hidden) {
-      IPC.emit('discord-clear')
-      return
+  onMount(() => {
+    let destroyed = false
+    let mediaActionListener
+    let appStateListener
+    ANDROID.onAppStateChange?.(isActive => (appActive = isActive))?.then?.(listener => {
+      if (destroyed) listener?.remove()
+      else appStateListener = listener
+    })
+    ANDROID.onMediaAction?.((action, position) => {
+      if (!src || externalPlayback) return
+      if (action === 'last') playLast()
+      else if (action === 'next') playNext()
+      else if (action === 'seek' && isValidNumber(position)) {
+        currentTime = Math.max(0, Math.min(safeduration || position, position))
+        targetTime = currentTime
+        video.currentTime = targetTime
+        updateAndroidMediaSession()
+      }
+      else if ((action === 'play' && paused) || (action === 'pause' && !paused)) playPause()
+    })?.then?.(listener => {
+      if (destroyed) listener?.remove()
+      else mediaActionListener = listener
+    })
+    return () => {
+      destroyed = true
+      appStateListener?.remove()
+      mediaActionListener?.remove()
+      ANDROID.setMediaSession?.({ active: false })
     }
-    let activity
-    if (!browsing) {
-      const w2g = state.value?.code
-      const details = np.title || undefined
-      const timeLeft = safeduration - targetTime
-      const timestamps = !paused ? {
-        start: Date.now() - (targetTime > 0 ? targetTime * 1_000 : 0),
-        end: Date.now() + timeLeft * 1_000
-      } : undefined
-       activity = {
-        details,
-        state: (details && (np.media?.format === 'MOVIE' && (np.media?.episodes ?? 0) <= 1 ? 'The Movie' : (np.episode ? 'Episode: ' + np.episode + (np.media?.episodes ? ' of ' + np.media.episodes : '') : 'Streaming the Universe'))),
-        timestamps,
-        party: {
-          size: (np.episode && np.media?.episodes && [np.episode, np.media.episodes]) || undefined
-        },
-        assets: {
-          large_text: np.title,
-          large_image: np.thumbnail,
-          small_image: !paused ? 'playing' : 'paused',
-          small_text: !paused ? 'Playing' : 'Paused'
-        },
-        instance: true,
-        type: 3
-      }
-      // cannot have buttons and secrets at once
-      if (w2g) {
-        activity.secrets = {
-          join: w2g,
-          match: w2g + 'm'
-        }
-        activity.party.id = w2g + 'p'
-      } else {
-        activity.buttons = [
-          {
-            label: 'Watch on Shiru',
-            url: `shiru://anime/${np.media?.id}`
-          },
-          {
-            label: 'Download Shiru',
-            url: 'https://github.com/RockinChaos/Shiru/releases/latest'
-          }
-        ]
-      }
-    } else {
-      activity = {
-        timestamps: { start: Date.now() },
-        details: 'Streaming anime instantly',
-        state: 'Exploring the anime library...',
-        assets: {
-          large_image: 'icon',
-          large_text: 'https://github.com/RockinChaos/Shiru',
-          small_image: 'searching',
-          small_text: 'Browsing anime on Shiru',
-        },
-        buttons: [
-          {
-            label: 'Download Shiru',
-            url: 'https://github.com/RockinChaos/Shiru/releases/latest'
-          }
-        ],
-        instance: true,
-        type: 3
-      }
-    }
-    IPC.emit('discord', { activity })
-  }
+  })
 </script>
 
 <div
@@ -1703,7 +1441,7 @@
   class:pointer={miniplayer}
   class:rounded-top-10={miniplayer}
   class:miniplayer
-  class:pip
+  class:pip={$pictureInPicture && !SUPPORTS.isAndroid}
   class:immersed={immersed}
   class:buffering={($page === page.PLAYER || miniplayer) && buffering}
   class:fitWidth
@@ -1735,24 +1473,26 @@
   <video
     crossorigin='anonymous'
     class='position-absolute h-full w-full'
-    style={`margin-top: ${menubarOffset}px`}
     preload='auto'
     {src}
-    bind:videoHeight
-    bind:videoWidth
     bind:this={video}
-    bind:volume
+    use:pictureInPicture={{ subs, deband, container, paused }}
+    use:holdSpeed={{ src, externalPlayback, miniplayer }}
+    use:thumbnails={{ current, safeduration, externalPlayback, buffer }}
+    bind:volume={$volume.level}
     bind:duration
     bind:currentTime
     bind:paused
     bind:ended
-    bind:muted
+    bind:muted={$volume.muted}
     bind:playbackRate
     on:error={checkError}
     on:pause={updatew2g}
+    on:pause={holdSpeed.stopHold}
     on:play={updatew2g}
     on:seeked={updatew2g}
-    on:timeupdate={() => createThumbnail()}
+    on:seeked={() => updateAndroidMediaSession()}
+    on:timeupdate={() => thumbnails.capture()}
     on:timeupdate={checkCompletion}
     on:timeupdate={checkSkippableChapters}
     on:waiting={showBuffering}
@@ -1761,43 +1501,21 @@
     on:canplay={hideBuffering}
     on:playing={hideBuffering}
     on:loadedmetadata={hideBuffering}
+    on:ended={holdSpeed.stopHold}
     on:ended={tryPlayNext}
-    on:loadedmetadata={initThumbnails}
-    on:loadedmetadata={findChapters}
-    on:loadedmetadata={autoPlay}
+    on:loadedmetadata={thumbnails.start}
+    on:loadedmetadata={() => chapters?.load(current, safeduration)}
+    on:loadedmetadata={() => autoPlay()}
     on:loadedmetadata={checkAudio}
     on:loadedmetadata={checkSubtitle}
-    on:loadedmetadata={clearLoadInterval}
     on:loadedmetadata={loadAnimeProgress}
-    on:leavepictureinpicture={() => { pip = false }}
   ><track kind='captions' src='' srclang='en' label='English'/></video>
-  {#if stats && !miniplayer}
-    <div class='position-absolute top-0 bg-tp p-10 ml-20 mt-100 text-monospace rounded z-50'>
-      <button class='close btn btn-square mt-5' type='button' use:click={toggleStats}>
-        <X size='1.4rem' strokeWidth='3'/>
-      </button>
-      <div>FPS: {stats.fps}</div>
-      <div>Presented frames: {stats.presented}</div>
-      <div>Dropped frames: {stats.dropped}</div>
-      <div>Frame time: {stats.processing}</div>
-      <div>Viewport: {stats.viewport}</div>
-      <div>Resolution: {stats.resolution}</div>
-      <div>Buffer health: {stats.buffer}</div>
-      <div>Playback speed: x{stats.speed?.toFixed(1)}</div>
-      <div>Name: {current.name || ''}</div>
-      {#if playableFiles?.length > 1}
-        <div class='mt-10'>All files in this batch:</div>
-        <div class='overflow-auto ml-10 mt-5' style='max-height: 200px;'>
-          {#each playableFiles as file}
-            <div class='ctrl rounded-10 pl-5 pr-5 pbf' title={file.name} use:click={() => playFile(file)}>
-              {file.name || 'UNK'}
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/if}
+  <div class='buffering-position position-absolute top-0 left-0 w-full h-full d-none align-items-center justify-content-center pointer-events-none z-10' class:d-flex={SUPPORTS.isAndroid && $pictureInPicture}>
+    <div class='bufferingDisplay'/>
+  </div>
+  <Stats {video} {paused} {miniplayer} {current} {playableFiles} {playFile} />
   <ManagerModal playing={current} files={playableFiles} {playFile} />
+<<<<<<< HEAD
 <div class='top z-40 d-title' style='position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;'>
   
   <div class:hidden={!showTorrentStats} style='display: flex; justify-content: center; align-items: center; padding-top: 20px; pointer-events: auto; gap: 20px;'>
@@ -1812,6 +1530,64 @@
     <div class='d-flex align-items-center'>
       <ArrowUp class='block-scale-30' />
       <span class='stats font-scale-24 ml-10'>{fastPrettyBytes(torrent.up)}/s</span>
+=======
+  <div class='top z-40 row d-title' class:justify-content-center={!$settings.playerTitleTop} class:align-items-center={!$settings.playerTitleTop}>
+    {#if $settings.playerTitleTop && (!SUPPORTS.isAndroid || !$pictureInPicture)}
+      <div class='stats pl-20 col-4 d-title'>
+        <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
+          {#if media?.title}
+            {media?.title}
+          {:else if media?.media?.title} <!-- useful when a torrent is EXTREMELY slow at loading... -->
+            {anilistClient.title(media?.media)}
+          {:else if current}
+            {AnimeResolver.cleanFileName(current?.name)}
+          {/if}
+        </div>
+        <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
+            {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
+            Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
+            {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if} <!-- for when the media fails to resolve, we can predict that the file length is likely the episode count. -->
+          {:else if current && (videos?.length > 1)}
+            Episode {videos.indexOf(current) + 1} of {videos.length} <!-- fallback for when the media fails to resolve and we also fail to resolve the episode numbers, best to indicate what file we are currently on. -->
+          {/if}
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)} - {/if}
+          {#if media?.episodeTitle}{media.episodeTitle}{/if}
+        </div>
+      </div>
+    {/if}
+    <div class='d-flex justify-content-center bottom-0 d-title d-filler' class:col-4={$settings.playerTitleTop}>
+      <TorrentStats visible={!SUPPORTS.isAndroid || !$pictureInPicture} />
+      {#if resolvePrompt}
+        <div class='position-absolute text-monospace rounded skipPrompt d-flex flex-column align-items-center text-center bg-dark-light p-20 z-50 mt-60' class:w-500={SUPPORTS.isAndroid}>
+          <div class='skipFont'>
+            Failed to <b>identify</b> the media from the file name, would you like to fix it?
+          </div>
+          <div class='d-flex justify-content-center mt-20'>
+            <button class='btn btn-primary mx-2 mr-20 d-flex align-items-center justify-content-center' type='button' use:click={() => resolveResponse(true)}>
+              <span>Yes</span>
+            </button>
+            <button class='btn btn-secondary mx-2 ml-20 d-flex align-items-center justify-content-center' type='button' use:click={() => resolveResponse(false)}>
+              <span>No</span>
+            </button>
+          </div>
+        </div>
+      {:else if skipPrompt}
+        <div class='position-absolute text-monospace rounded skipPrompt d-flex flex-column align-items-center text-center bg-dark-light p-20 z-50 mt-60' class:w-500={SUPPORTS.isAndroid}>
+          <div class='skipFont'>
+            This episode has been marked as a <b>{filler || recap}</b>, do you want to skip?
+          </div>
+          <div class='d-flex justify-content-center mt-20'>
+            <button class='btn btn-primary mx-2 mr-20 d-flex align-items-center justify-content-center' type='button' use:click={() => skipResponse(true)}>
+              <span>Yes</span>
+            </button>
+            <button class='btn btn-secondary mx-2 ml-20 d-flex align-items-center justify-content-center' type='button' use:click={() => skipResponse(false)}>
+              <span>No</span>
+            </button>
+          </div>
+        </div>
+      {/if}
+>>>>>>> shiru-base-copy
     </div>
   </div>
   {#if paused && !seeking}
@@ -1861,6 +1637,7 @@
   {/if}
 </div>
   <div class='middle d-flex align-items-center justify-content-center flex-grow-1 position-relative'>
+<<<<<<< HEAD
     <div aria-hidden='true' class='w-full h-full position-absolute toggle-fullscreen' on:dblclick={toggleFullscreen} on:click|self={() => { if ($page === page.PLAYER && modal.length === 0) { playPause(); } else if (!miniplayerShelved) { page.navigateTo(page.PLAYER) } }} />
     <div aria-hidden='true' class='w-full h-full position-absolute toggle-immerse d-none' on:dblclick={toggleFullscreen} on:click|self={toggleImmerse} />
     <div class='w-full h-full position-absolute mobile-focus-target d-none' use:click={() => { page.navigateTo(page.PLAYER) }} />
@@ -1887,12 +1664,50 @@
         {#if hasNext}
           <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `right: 5%` : `right: 15%`} title='Next' data-name='playPause' use:click={playNext}>
             <SkipForward size='3rem' />
-          </span>
+=======
+    <div aria-hidden='true' class='w-full h-full position-absolute toggle-fullscreen' on:dblclick={toggleFullscreen} use:holdSpeed on:click|self={handlePlayerClick} />
+    <div aria-hidden='true' class='w-full h-full position-absolute toggle-immerse d-none' on:dblclick={toggleFullscreen} use:holdSpeed on:click|self={handleMobilePlayerClick} />
+    <div aria-hidden='true' class='w-full h-full position-absolute mobile-focus-target d-none' use:holdSpeed on:click|self={handleMiniplayerClick} />
+    <span aria-hidden='true' class='icon ctrl align-items-center justify-content-end w-150 mw-full mr-auto' class:hidden={externalPlayback || (SUPPORTS.isAndroid && $pictureInPicture)} class:mb-50={!miniplayer} on:click={rewind}><Rewind size='3rem' /></span>
+    <!-- miniplayer buttons -->
+    {#if miniplayer && !miniplayerShelved}
+      <span class='position-absolute rounded-10 top-0 right-0 m-10 btn-shadow button' class:ctrl={!SUPPORTS.isAndroid} class:mr-40={!SUPPORTS.isAndroid} class:mr-50={SUPPORTS.isAndroid} title='Minimize' data-name='playPause' use:click={() => (playPage.set(!playPage.value))}>
+        <Minus size='1.9rem' strokeWidth='3'/>
+      </span>
+      <span class='position-absolute rounded-10 top-0 right-0 m-10 btn-shadow button' class:ctrl={!SUPPORTS.isAndroid} title='Exit' data-name='playPause' use:click={() => { unload(null, null, true); if ($page === page.PLAYER) page.navigateTo(page.HOME)}}>
+        <X size='1.9rem' strokeWidth='3'/>
+      </span>
+    {/if}
+    {#if !miniplayer || !miniplayerShelved}
+      <div class='d-flex align-items-center position-relative' class:mb-50={!miniplayer} style='width: 100%;' title='Play/Pause'>
+        <div class='position-absolute bufferingDisplay' style='left: 50%; margin-left: -2.5rem;' class:d-none={SUPPORTS.isAndroid && $pictureInPicture}/>
+        <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `left: 5%` : `left: 15%`} title='{hasLast ? `Last` : `No Previous Episode`}' data-name='playPause' disabled={!hasLast} class:not-allowed={!hasLast} class:text-very-muted={!hasLast} class:hidden={SUPPORTS.isAndroid && $pictureInPicture} use:click={playLast}>
+          <SkipBack size='3rem' fill='currentColor' />
+        </span>
+        <span class='icon ctrl position-absolute rounded-10 text-white' data-name='playPause' style='left: 50%; margin-left: -3rem;' class:hidden={SUPPORTS.isAndroid && $pictureInPicture} use:click={playPause}>
+          {#if ended}
+            <RotateCw size='3rem' />
+          {:else}
+            {#if paused}
+              <Play size='3rem' fill='currentColor' />
+            {:else}
+              <Pause size='3rem' fill='currentColor' />
+            {/if}
+          {/if}
+        </span>
+        <span class='ui-volume position-absolute z-10 font-weight-bold font-scale-40 rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' style='left: 50%; margin-left: -3rem;' class:transparent={!$volume.visible} class:text-white={$volume.boosted || !$volume.boostCount} class:boosting={!$volume.boosted && $volume.boostCount} class:muted={$volume.level === 0}>{$volume.text}</span>
+        {#if subDelayText}
+          <span class='position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' style='left: 50%; margin-left: -3rem;' class:transparent={!subDelayVisible}>{subDelayText}</span>
         {/if}
+        <span class='playback-rate-display position-absolute z-10 font-weight-bold font-scale-40 text-white rounded-10 pointer-events-none bg-blur py-6px opacity-90 opacity-ts-3' style='left: 50%; margin-left: -3rem;' class:transparent={!$holdSpeed}>{$holdSpeed}</span>
+        <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `right: 5%` : `right: 15%`} title='{hasNext ? `Next` : `No Next Episode`}' data-name='playPause' disabled={!hasNext} class:not-allowed={!hasNext} class:text-very-muted={!hasNext} class:hidden={SUPPORTS.isAndroid && $pictureInPicture} use:click={playNext}>
+            <SkipForward size='3rem' fill='currentColor' />
+>>>>>>> shiru-base-copy
+          </span>
       </div>
-      <span aria-hidden='true' class='icon ctrl align-items-center w-150 mw-full ml-auto' class:hidden={externalPlayback} class:mb-50={!miniplayer} on:click={forward}><FastForward size='3rem' /></span>
-      <div class='position-absolute bufferingDisplay' class:bufferingPos={SUPPORTS.isAndroid && !miniplayer}/>
+      <span aria-hidden='true' class='icon ctrl align-items-center w-150 mw-full ml-auto' class:hidden={externalPlayback || (SUPPORTS.isAndroid && $pictureInPicture)} class:mb-50={!miniplayer} on:click={forward}><FastForward size='3rem' /></span>
       {#if currentSkippable}
+<<<<<<< HEAD
         <button class='skip position-absolute bottom-0 right-0 mr-20 mb-5 z-30 d-flex align-items-center justify-content-center' use:click={skip}>
           <FastForward size='1.8rem' /><span class='ml-5'>Skip {currentSkippable}</span>
         </button>
@@ -1920,19 +1735,50 @@
     {#if subDelayText}
       <span class='position-absolute z-10 font-weight-bold font-scale-50 text-white pointer-events-none icon-shadow opacity-90 opacity-ts-3' class:transparent={!subDelayVisible}>{subDelayText}</span>
     {/if}
+=======
+        <button type='button' class='skip btn text-dark position-absolute bottom-0 right-0 mr-20 mb-5 font-weight-bold z-30 d-flex align-items-center justify-content-center' class:hidden={SUPPORTS.isAndroid && $pictureInPicture} use:click={skip}>
+          <FastForward size='1.8rem' fill='currentColor' /><span class='ml-5'>Skip {currentSkippable}</span>
+        </button>
+      {/if}
+    {/if}
+>>>>>>> shiru-base-copy
   </div>
-  <div class='bottom d-flex z-40 flex-column px-20'>
-    <div class='w-full d-flex align-items-center h-20 mb-5 seekbar' tabindex='-1' role='button' on:keydown={handleSeekbarKey}>
+  <div class='bottom d-flex z-40 flex-column px-20' class:hidden={SUPPORTS.isAndroid && $pictureInPicture}>
+    {#if !$settings.playerTitleTop}
+      <div class='stats pl-5 d-title'>
+        <div class='font-weight-bold overflow-hidden text-truncate font-scale-23'>
+          {#if media?.title}
+            {media?.title}
+          {:else if media?.media?.title} <!-- useful when a torrent is EXTREMELY slow at loading... -->
+            {anilistClient.title(media?.media)}
+          {:else if current}
+            {AnimeResolver.cleanFileName(current?.name)}
+          {/if}
+        </div>
+        <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.episodes !== 1 && media?.media?.format !== 'MOVIE' && (!media?.episodeTitle || !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle))}
+            {@const maxEpisodes = getMediaMaxEp(media.media) - (media.zeroEpisode ? 1 : 0)}
+            Episode {media.episodeRange ? `${media.episodeRange.first} ~ ${media.episodeRange.last}` : media.episode}
+            {#if maxEpisodes && (Number(maxEpisodes) > 1)} of {maxEpisodes}{:else if !maxEpisodes && videos && (videos.length > 1)} of {videos.length}{/if} <!-- for when the media fails to resolve, we can predict that the file length is likely the episode count. -->
+          {:else if current && (videos?.length > 1)}
+            Episode {videos.indexOf(current) + 1} of {videos.length} <!-- fallback for when the media fails to resolve and we also fail to resolve the episode numbers, best to indicate what file we are currently on. -->
+          {/if}
+          {#if (media?.episode === 0 || media?.episode) && media?.media?.format !== 'MOVIE' && (media?.episodeTitle && !new RegExp(`(?<![\\d.])${media.episode}(?![\\d.])`).test(media.episodeTitle) && media?.media?.episodes !== 1)} - {/if}
+          {#if media?.episodeTitle}{media.episodeTitle}{/if}
+        </div>
+      </div>
+    {/if}
+    <div class='w-full d-flex align-items-center h-20 mb-5 seekbar' tabindex='0' role='button' on:keydown={handleSeekbarKey}>
       <Seekbar
         accentColor='{completed || (media?.media && ((($mediaCache[media.media.id] || media.media)?.mediaListEntry?.progress - (media?.zeroEpisode ? 1 : 0)) >= (media.episodeRange ? media.episodeRange.last : media.episode))) ? `var(--completed-color-dim)` : animeAccent}'
         class='font-size-20'
         length={safeduration}
         {buffer}
-        bind:progress={progress}
+        progress={currentTime / safeduration * 100}
         on:seeking={handleMouseDown}
         on:seeked={handleMouseUp}
-        chapters={sanitiseChapters(chapters, safeduration)}
-        {getThumbnail}
+        chapters={chapters?.sanitise($chapters, safeduration) || []}
+        getThumbnail={thumbnails.get}
       />
     </div>
     <div class='d-flex'>
@@ -1947,6 +1793,7 @@
           {/if}
         {/if}
       </span>
+<<<<<<< HEAD
       {#if hasLast}
         <span class='icon ctrl m-5 d-btn text-white' title='Last [B]' use:click={playLast}>
           <SkipBack size='2rem' />
@@ -1961,26 +1808,45 @@
         <span class='icon ctrl m-5 text-white' title='Mute [M]' data-name='toggleMute' use:click={toggleMute}>
           {#if muted}
             <VolumeX size='2rem' />
+=======
+      <button type='button' class='icon ctrl m-5 d-btn text-white bg-transparent border-0 no-scale' title='{hasLast ? `Last [B]` : `No Previous Episode`}' disabled={!hasLast} class:not-allowed={!hasLast} class:text-very-muted={!hasLast} use:click={playLast}>
+        <SkipBack size='2rem' fill='currentColor' />
+      </button>
+      <button type='button' class='icon ctrl m-5 d-btn text-white bg-transparent border-0 no-scale' title='{hasNext ? `Next [N]` : `No Next Episode`}' disabled={!hasNext} class:not-allowed={!hasNext} class:text-very-muted={!hasNext} use:click={playNext}>
+        <SkipForward size='2rem' fill='currentColor' />
+      </button>
+      <div class='d-none w-auto volume' class:d-flex={!externalPlayback}>
+        <span class='icon ctrl m-5 text-white' title='Mute [M]' data-name='toggleMute' use:click={() => volume.toggleMute()}>
+          {#if $volume.muted}
+            <VolumeX size='2rem' fill='currentColor' />
+>>>>>>> shiru-base-copy
           {:else}
             <Volume2 size='2rem' />
           {/if}
         </span>
-        {#if !volumeBoosted}
-          <input class='ctrl h-full custom-range' tabindex='-1' type='range' min='0' max='1' step='any' data-name='setVolume' bind:value={volume} />
+        {#if !$volume.boosted}
+          <input class='ctrl h-full custom-range' tabindex='-1' type='range' min='0' max='1' step='any' data-name='setVolume' bind:value={$volume.level} />
         {:else}
-          <input class='ctrl h-full custom-range' class:boost-color={gain > 1} tabindex='-1' type='range' min='0' max='3' step='any' data-name='setVolume' bind:value={gain} on:input={setGain}/>
+          <input class='ctrl h-full custom-range' class:boost-color={$volume.gain > 1} tabindex='-1' type='range' min='0' max='3' step='any' data-name='setVolume' bind:value={$volume.gain} on:input={event => volume.setGain(event, media)}/>
         {/if}
+<<<<<<< HEAD
         {#if (volume === 1) || volumeBoosted}
           <span class='icon ctrl boost p-0 mt-15 d-flex align-items-center justify-content-center text-white' class:boost-color={volumeBoosted} title='Increase Volume Limit [V]' data-name='toggleGain' use:click={toggleGain}>
             <SlidersVertical size='1.4rem' />
+=======
+        {#if ($volume.level === 1) || $volume.boosted}
+          <span class='icon ctrl boost p-0 mt-15 d-flex align-items-center justify-content-center text-white' class:boost-color={$volume.boosted} title='Increase Volume Limit [V]' data-name='toggleGain' use:click={() => volume.toggleGain(video, media)}>
+            <SlidersVertical size='1.4rem' fill='currentColor' />
+>>>>>>> shiru-base-copy
           </span>
         {/if}
       </div>
       <div class='ts font-scale-20' class:mr-auto={playbackRate === 1}>{toTS(targetTime, safeduration > 3600 ? 2 : 3)} / {toTS(safeduration - targetTime, safeduration > 3600 ? 2 : 3)}</div>
       {#if playbackRate !== 1}
-        <div class='ts mr-auto font-scale-20'>x{playbackRate.toFixed(1)}</div>
+        <div class='ts mr-auto font-scale-20'>{playbackRate.toFixed(1)}x</div>
       {/if}
       <input type='file' class='d-none' id='search-subtitle' accept='.srt,.vtt,.ass,.ssa,.sub,.txt' on:input|preventDefault|stopPropagation={handleFile} bind:this={fileInput}/>
+<<<<<<< HEAD
       <span class='icon text-white ctrl d-flex align-items-center h-full' title='More' use:click={openContextMenuFromButton}>
         <EllipsisVertical size='2.5rem' strokeWidth={2.5} />
       </span>
@@ -1993,21 +1859,119 @@
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1}
         <div class='dropdown dropup with-arrow' use:click={toggleDropdown}>
           <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Audio Tracks'>
+=======
+      <NestedDropdown direction='top' panelHeightPadding={6} panelColor='var(--dark-color-glass)' containerEl={container} items={[
+          ...(!externalPlayback ? [{
+            icon: Gauge,
+            label: 'Playback speed',
+            value: playbackRate === 1 ? 'Normal' : `${playbackRate.toFixed(1)}x`,
+            children: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8].map(rate => ({
+              label: rate === 1 ? 'Normal' : `${rate}x`,
+              value: playbackRate === rate ? '✓' : undefined,
+              valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+              onSelect: () => (playbackRate = (video.defaultPlaybackRate = rate))
+            }))
+          }] : []),
+          ...(!externalPlayback ? [{
+            icon: Milestone,
+            label: 'Chapter Source',
+            value: $settings.playerChapterSkip === 'embedded' ? 'Embedded' : 'Aniskip',
+            children: [
+              {
+                label: 'Embedded',
+                value: $settings.playerChapterSkip === 'embedded' ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => { $settings.playerChapterSkip = 'embedded'; chapters?.useEmbedded(); }
+              },
+              {
+                label: 'Aniskip',
+                value: $settings.playerChapterSkip === 'aniskip' ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => { $settings.playerChapterSkip = 'aniskip'; chapters?.load(current, safeduration); }
+              }
+            ]
+          }] : []),
+          ...(!externalPlayback ? [{
+            icon: Proportions,
+            label: 'Video Fit',
+            value: fitWidth ? 'Fill' : 'Best fit',
+            children: [
+              {
+                label: 'Fill',
+                value: fitWidth ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => { toggleFitWidth(false) }
+              },
+              {
+                label: 'Best fit',
+                value: !fitWidth ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => { toggleFitWidth(true) }
+              }
+            ]
+          }] : []),
+          ...(!externalPlayback ? [{
+            icon: FilePlus2,
+            label: 'Add Subtitles',
+            close: true,
+            onSelect: () => fileInput.click()
+          }] : []),
+          ...(!externalPlayback ? [{
+            icon: ScreenShare,
+            label: 'Screenshot',
+            onSelect: () => screenshot(video, subs)
+          }] : []),
+          {
+            icon: SquarePen,
+            label: 'File Manager',
+            close: true,
+            onSelect: () => { resolvePrompt = false; modal.toggle(modal.FILE_MANAGER) }
+          },
+          ...((!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath) ? [{
+            icon: SquareArrowOutUpRight,
+            label: 'External Player',
+            close: true,
+            onSelect: () => setCurrent(current, true)
+          }] : []),
+          ...(!externalPlayback ? [{
+            icon: Contrast,
+            label: 'Video Debanding',
+            value: $settings.playerDeband ? 'On' : 'Off',
+            onSelect: () => { $settings.playerDeband = !$settings.playerDeband }
+          }] : []),
+          {
+            icon: List,
+            label: 'Stats',
+            value: $stats ? 'On' : 'Off',
+            onSelect: () => toggleStats()
+          }
+        ]}>
+        <span class='icon text-white ctrl d-flex align-items-center h-full' title='More'>
+          <EllipsisVertical size='2.5rem' strokeWidth={2.5} />
+        </span>
+      </NestedDropdown>
+      <span class='icon text-white ctrl d-flex align-items-center keybinds' title='Keybinds [`]' use:click={() => (showKeybinds = true)}>
+        <Keyboard size='2.5rem' strokeWidth={2.5} />
+      </span>
+      {#if $playPage && media?.media}
+        <span class='icon text-white ctrl d-flex align-items-center' title='Now Playing [O]' use:click={() => modal.toggle(modal.ANIME_DETAILS, media.media)}>
+          <Eye size='2.5rem' strokeWidth={2.5} />
+        </span>
+      {/if}
+      {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1 && !externalPlayback}
+        <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor='var(--dark-color-glass)' containerEl={container} items={Object.values(video.audioTracks).map((track, _, allTracks) => ({
+          label: trackLabel(track, allTracks, 'label'),
+          value: track.enabled ? '✓' : undefined,
+          valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+          onSelect: () => selectAudio(track.id)
+        }))}>
+          <span class='icon text-white ctrl d-flex align-items-center h-full' title='Audio Tracks'>
+>>>>>>> shiru-base-copy
             <ListMusic size='2.5rem' strokeWidth={2.5} />
           </span>
-          <div class='dropdown-menu dropdown-menu-right ctrl p-10 pb-0 mr-15 text-capitalize text-nowrap'>
-            <div class='custom-radio overflow-y-auto overflow-x-hidden hm-400'>
-              {#each video.audioTracks as track}
-                <input name='audio-radio-set' type='radio' id='audio-{track.id}-radio' value={track.id} checked={track.enabled} />
-                <label for='audio-{track.id}-radio' use:click={() => selectAudio(track.id)} class='pb-5'>
-                  {(track.language || (!Object.values(video.audioTracks).some(track => track.language === 'eng' || track.language === 'en') ? 'eng' : track.label)) + (track.label ? ' - ' + track.label : '')}
-                </label>
-              {/each}
-              <div class='mb-5 invisible'></div>
-            </div>
-          </div>
-        </div>
+        </NestedDropdown>
       {/if}
+<<<<<<< HEAD
       {#if $playPage && media?.media}
         <span class='icon text-white ctrl mr-5 d-flex align-items-center' title='Now Playing [O]' use:click={() => modal.toggle(modal.ANIME_DETAILS, media.media)}>
           <Eye size='2.5rem' strokeWidth={2.5} />
@@ -2016,50 +1980,79 @@
       {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1}
         <div class='dropdown dropup with-arrow' use:click={toggleDropdown}>
           <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Video Tracks'>
+=======
+      {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1 && !externalPlayback}
+        <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor='var(--dark-color-glass)' containerEl={container} items={Object.values(video.videoTracks).map((track, _, allTracks) => ({
+          label: trackLabel(track, allTracks, 'label'),
+          value: track.selected ? '✓' : undefined,
+          valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+          onSelect: () => selectVideo(track.id)
+        }))}>
+          <span class='icon text-white ctrl d-flex align-items-center h-full' title='Video Tracks'>
+>>>>>>> shiru-base-copy
             <ListVideo size='2.5rem' strokeWidth={2.5} />
           </span>
-          <div class='dropdown-menu dropdown-menu-right ctrl p-10 pb-0 mr-15 text-capitalize text-nowrap'>
-            <div class='custom-radio overflow-y-auto overflow-x-hidden hm-400'>
-              {#each video.videoTracks as track}
-                <input name='video-radio-set' type='radio' id='video-{track.id}-radio' value={track.id} checked={track.selected} />
-                <label for='video-{track.id}-radio' use:click={() => selectVideo(track.id)} class='pb-5'>
-                  {(track.language || (!Object.values(video.videoTracks).some(track => track.language === 'eng' || track.language === 'en') ? 'eng' : track.label)) + (track.label ? ' - ' + track.label : '')}
-                </label>
-              {/each}
-              <div class='mb-5 invisible'></div>
-            </div>
-          </div>
-        </div>
+        </NestedDropdown>
       {/if}
       {#if subHeaders?.length && !externalPlayback}
-        <div class='subtitles dropdown dropup with-arrow' use:click={toggleDropdown}>
-          <span class='icon text-white ctrl mr-5 d-flex align-items-center h-full' title='Subtitles [C]'>
+        <NestedDropdown title='Subtitles/CC' direction='top' panelWidth={25} panelHeightPadding={3} panelColor='var(--dark-color-glass)' containerEl={container} items={[
+            {
+              icon: Settings,
+              label: 'Options',
+              children: [
+                {
+                  type: 'input',
+                  icon: Timer,
+                  label: 'Offset',
+                  inputmode: 'numeric',
+                  pattern: '-?[0-9]*.?[0-9]*',
+                  step: '0.1',
+                  min: -9999,
+                  max: 9999,
+                  value: subDelay,
+                  onInput: (/** @type {number} */ value) => (subDelay = value)
+                },
+                {
+                  icon: FilePlus2,
+                  label: 'Add Subtitles',
+                  close: true,
+                  onSelect: () => fileInput.click()
+                }
+              ]
+            },
+            {
+              label: 'Off',
+              icon: CaptionsOff,
+              value: subHeaders && subs?.current === -1 ? '✓' : undefined,
+              valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+              onSelect: () => {
+                subs.selectCaptions(-1)
+                updateSubs()
+                setLastSubtitle('OFF')
+              }
+            },
+            { type: 'separator' },
+            ...subHeaders.map(track => {
+              if (!track) return null
+              const label = trackLabel(track, subHeaders)
+              return {
+                label,
+                value: track.number === subs.current ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => {
+                  subs.selectCaptions(track.number)
+                  updateSubs()
+                  setLastSubtitle(label)
+                }
+              }
+            }).filter(Boolean)
+          ]}>
+          <span class='icon text-white ctrl d-flex align-items-center h-full' title='Subtitles [C]'>
             <Captions size='2.5rem' strokeWidth={2.5} />
           </span>
-          <div class='dropdown-menu dropdown-menu-right ctrl p-10 pb-5 mr-15 text-capitalize text-nowrap'>
-            <div class='custom-radio overflow-y-auto overflow-x-hidden hm-400'>
-              <input name='subtitle-radio-set' type='radio' id='subtitle-off-radio' value='off' checked={subHeaders && subs?.current === -1} />
-              <label for='subtitle-off-radio' use:click={() => { subs.selectCaptions(-1); updateSubs(); cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: 'OFF' }) }} class='pb-5'> OFF </label>
-              {#each subHeaders as track}
-                {#if track}
-                  {@const trackName = (track.language || (!Object.values(subs.headers).some(header => header.language === 'eng' || header.language === 'en') ? 'eng' : track.type)) + (track.name ? ' - ' + track.name : '')}
-                  <input name='subtitle-radio-set' type='radio' id='subtitle-{track.number}-radio' value={track.number} checked={track.number === subs.current} />
-                  <label for='subtitle-{track.number}-radio' use:click={() => { subs.selectCaptions(track.number); updateSubs(); cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: trackName }) }} class='pb-5'>
-                    {trackName}
-                  </label>
-                {/if}
-              {/each}
-              <div class='mb-5 invisible'></div>
-              <div class='subtitle-offset'>
-                <div role='button' aria-label='Add External Subtitles' class='position-absolute not-reactive' title='Add External Subtitles' style='margin-left: 0.1rem !important; margin-top: 0.3rem !important' use:click={(target) => { fileInput.click(); toggleDropdown(target) }}>
-                  <FilePlus2 size='2rem' strokeWidth={2.5} />
-                </div>
-                <input type='text' inputmode='numeric' pattern='-?[0-9]*.?[0-9]*' step='0.1' title='Subtitle Offset' bind:value={subDelay} on:click|stopPropagation class='form-control text-right form-control-sm not-reactive' />
-              </div>
-            </div>
-          </div>
-        </div>
+        </NestedDropdown>
       {/if}
+<<<<<<< HEAD
 
       <!--{#if 'PresentationRequest' in window && canCast && current}-->
       <!--  <span class='icon text-white ctrl mr-5 d-flex align-items-center text-white' title='Cast Video [D]' data-name='toggleCast' use:click={toggleCast}>-->
@@ -2070,16 +2063,18 @@
       <!--    {/if}-->
       <!--  </span>-->
       <!--{/if}-->
+=======
+>>>>>>> shiru-base-copy
       {#if 'pictureInPictureEnabled' in document}
-        <span class='icon text-white ctrl mr-5 d-none align-items-center' class:d-flex={!externalPlayback} title='Popout Window [P]' data-name='togglePopout' use:click={togglePopout}>
-          {#if pip}
+        <span class='icon text-white ctrl d-none align-items-center' class:d-flex={!externalPlayback} title='Popout Window [P]' data-name='togglePopout' use:click={pictureInPicture.togglePopout}>
+          {#if $pictureInPicture}
             <PictureInPicture size='2.5rem' strokeWidth={2.5} />
           {:else}
             <PictureInPicture2 size='2.5rem' strokeWidth={2.5} />
           {/if}
         </span>
       {/if}
-      <span class='icon text-white ctrl mr-5 d-none align-items-center' class:d-flex={!externalPlayback} title='Fullscreen [F]' data-name='toggleFullscreen' use:click={toggleFullscreen}>
+      <span class='icon text-white ctrl d-none align-items-center' class:d-flex={!externalPlayback} title='Fullscreen [F]' data-name='toggleFullscreen' use:click={toggleFullscreen}>
         {#if isFullscreen}
           <Minimize size='2.5rem' strokeWidth={2.5} />
         {:else}
@@ -2360,18 +2355,6 @@
     border: 1px solid var(--card-line);
     border-radius: 6px;
   }
-  .bg-tp .close {
-    position: absolute;
-    top: 0;
-    right: 0;
-    cursor: pointer;
-    color: inherit;
-    padding: var(--alert-close-padding);
-    line-height: var(--alert-close-line-height);
-    font-size: var(--alert-close-font-size);
-    background-color: transparent;
-    border-color: transparent;
-  }
 
   video {
     transition: margin-top 0.2s ease;
@@ -2457,15 +2440,11 @@
     pointer-events: none;
     opacity: 0;
   }
-  /*:fullscreen .ctrl[data-name='toggleCast'] {*/
-  /*  display: none !important;*/
-  /*}*/
-
   .pip video {
     opacity: 0.1%;
   }
 
-  .middle .bufferingDisplay {
+  .bufferingDisplay {
     border: 4px solid hsla(var(--white-color-hsl), 0);
     border-top: 4px solid var(--white-color);
     border-radius: 50%;
@@ -2479,11 +2458,7 @@
     filter: drop-shadow(0 0 8px var(--black-color));
   }
 
-  .middle .bufferingPos {
-    margin-bottom: 5rem;
-  }
-
-  .buffering .middle .bufferingDisplay {
+  .buffering .bufferingDisplay {
     opacity: 1 !important;
     visibility: visible !important;
   }
@@ -2578,9 +2553,6 @@
   .mb-50 {
     margin-bottom: 5rem !important;
   }
-  .pbf:hover {
-    background: var(--tertiary-color);
-  }
 
   .ctrl {
     cursor: pointer;
@@ -2604,9 +2576,6 @@
     color: var(--white-color) !important;
   }
 
-  .mt-100 {
-    margin-top: 10rem !important;
-  }
   .h-20 {
     height: 2rem;
   }
@@ -2713,7 +2682,7 @@
     }
     @media (orientation: portrait) {
       .top  {
-        padding-top: max(var(--safe-area-top), env(safe-area-inset-top, 0)) !important;
+        padding-top: var(--safe-area-top) !important;
       }
     }
     .middle .ctrl {
@@ -2729,6 +2698,7 @@
       display: none !important;
     }
   }
+<<<<<<< HEAD
 
   /* ── Skip/Resolve prompt action buttons ────────── */
   .skipPrompt :global(.btn-primary) {
@@ -3069,3 +3039,6 @@
   }
 
 </style>
+=======
+</style>
+>>>>>>> shiru-base-copy

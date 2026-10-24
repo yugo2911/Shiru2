@@ -2,11 +2,12 @@ import { getRandomInt, DOMPARSER, base32toHex, isValidNumber } from '@/modules/u
 import { settings } from '@/modules/settings.js'
 import { status } from '@/modules/networking.js'
 import { cache, caches } from '@/modules/cache.js'
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 import { add } from '@/modules/torrent.js'
 import { getEpisodeMetadataForMedia, isSubbedProgress } from '@/modules/anime/anime.js'
 import AnimeResolver from '@/modules/anime/animeresolver.js'
-import { anilistClient } from '@/modules/anilist.js'
+import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+import { queueNotification } from '@/modules/notification/manager.js'
 import { hasNextPage } from '@/modules/sections.js'
 import { malDubs } from '@/modules/anime/animedubs.js'
 import { episodesList } from '@/modules/episodes.js'
@@ -19,13 +20,13 @@ export function parseRSSNodes (nodes) {
     const pubDate = item.querySelector('pubDate')?.textContent
     const torrentLink = item.querySelector('enclosure')?.attributes.url.value || item.querySelector('link')?.textContent || '?'
     const title = item.querySelector('title')?.textContent || '?'
-    let tracker = torrentLink?.includes(atob('bnlhYQ==')) ? encodeURIComponent(atob('aHR0cDovL255YWEudHJhY2tlci53Zjo3Nzc3L2Fubm91bmNl')) : torrentLink?.includes(atob('c3VrZWJlaQ==')) ? encodeURIComponent(atob('aHR0cDovL3N1a2ViZWkudHJhY2tlci53Zjo4ODg4L2Fubm91bmNl')) : ''
+    const tracker = torrentLink?.includes(atob('bnlhYQ==')) ? encodeURIComponent(atob('aHR0cDovL255YWEudHJhY2tlci53Zjo3Nzc3L2Fubm91bmNl')) : torrentLink?.includes(atob('c3VrZWJlaQ==')) ? encodeURIComponent(atob('aHR0cDovL3N1a2ViZWkudHJhY2tlci53Zjo4ODg4L2Fubm91bmNl')) : ''
     let infoHash = item.querySelector('infoHash')?.textContent
     if (!infoHash) {
       try {
         const match = torrentLink.match(/\b([a-fA-F0-9]{40}|[A-Z2-7]{32})\b/)
         if (match) {
-          let foundHash = match[1].toLowerCase()
+          const foundHash = match[1].toLowerCase()
           if (foundHash.length === 32) infoHash = base32toHex(foundHash)
           else infoHash = foundHash
         }
@@ -65,13 +66,14 @@ class RSSMediaManager {
     this.resultMap = {}
   }
 
-  getMediaForRSS (page, perPage, url, ignoreErrors = false, ignoreChanged = false) {
-    const res = this._getMediaForRSS(page, perPage, url, ignoreChanged)
+  getMediaForRSS (page, perPage, url, ignoreErrors = false, ignoreChanged = false, background = false) {
+    const res = this._getMediaForRSS(page, perPage, url, ignoreChanged, background)
     if (!ignoreErrors) {
       res.catch(error => {
-        if ((settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) && !status.value.match(/offline/i)) {
+        if (!status.value.match(/offline/i)) {
           toast.error('Search Failed', {
-            description: 'Failed to load media for home feed!\n' + error.message
+            description: 'Failed to load media for home feed!\n' + error.message,
+            respectLevel: true
           })
         }
         debug('Failed to load media for home feed', error.stack)
@@ -90,7 +92,7 @@ class RSSMediaManager {
     try {
       content = await getRSSContent(url)
     } catch (e) {
-      const cachedEntry = await cache.cachedEntry(caches.RSS, `${btoa(url)}`, true)
+      const cachedEntry = await cache.cachedEntry(caches.QUERY_RSS, `${btoa(url)}`, true)
       if (cachedEntry) {
         debug(`Failed to request RSS feed for ${url}, this is likely due to an outage... falling back to cached data.`)
         content = DOMPARSER(cachedEntry, 'text/xml')
@@ -103,11 +105,11 @@ class RSSMediaManager {
     const pullDate = +(new Date(content.querySelector('pubDate').textContent))
     if (!ignoreChanged && this.resultMap[url]?.date === pubDate) return false
 
-    cache.cacheEntry(caches.RSS, `${btoa(url)}`, { mappings: true }, new XMLSerializer().serializeToString(content), Date.now() + getRandomInt(10, 15) * 60 * 1000)
+    cache.cacheEntry(caches.QUERY_RSS, `${btoa(url)}`, { mappings: true }, new XMLSerializer().serializeToString(content), Date.now() + getRandomInt(10, 15) * 60 * 1000)
     return { content, pubDate, pullDate }
   }
 
-  async _getMediaForRSS (page, perPage, url, ignoreChanged = false) {
+  async _getMediaForRSS (page, perPage, url, ignoreChanged = false, background = false) {
     debug(`Getting media for RSS feed ${url} page ${page} perPage ${perPage}`)
     const changed = await this.getContentChanged(page, perPage, url, ignoreChanged)
     if (!changed) return this.resultMap[url].result
@@ -116,7 +118,7 @@ class RSSMediaManager {
     const index = (page - 1) * perPage
     const targetPage = [...changed.content.querySelectorAll('item')].slice(index, index + perPage)
     const items = parseRSSNodes(targetPage)
-    hasNextPage.value = items.length === perPage
+    if (!background) hasNextPage.value = items.length === perPage
     const result = this.structureResolveResults(items)
 
     const encodedUrl = btoa(url)
@@ -142,32 +144,30 @@ class RSSMediaManager {
         const highestEp = isValidNumber(episode) ? Number(episode) : Number(episodesList.handleArray(episode, episode)?.last)
         const progress = media?.mediaListEntry?.progress
         const behind = progress < (highestEp - 1)
-        window.dispatchEvent(new CustomEvent('notification-app', {
-          detail: {
-            id: media?.id,
-            title: anilistClient.title(media) || parseObject.anime_title,
-            message: `${media?.format === 'MOVIE' && (media?.episodes ?? 0) <= 1 ? `The Movie` : isValidNumber(highestEp) ? `${media?.episodes === highestEp ? `The wait is over! ` : ``}Episode ${highestEp}` : parseObject?.anime_title?.match(/S(\d{2})/) ? `Season ${parseInt(parseObject.anime_title.match(/S(\d{2})/)[1], 10)}` : `Batch`} (${dubbed ? 'Dub' : 'Sub'}) ${isValidNumber(highestEp) || media?.format === 'MOVIE' ? `is out${media?.format !== 'MOVIE' && media?.episodes === highestEp ? `, this season is now ready to binge` : ``}!` : `is now ready to binge!`}`,
-            icon: media?.coverImage.medium,
-            iconXL: media?.coverImage?.extraLarge,
-            heroImg: media?.bannerImage || (media?.trailer?.id && `https://i.ytimg.com/vi/${media?.trailer?.id}/hqdefault.jpg`),
-            episode: isValidNumber(highestEp) ? highestEp : (parseObject?.anime_title?.match(/S(\d{2})/) ? parseInt(parseObject.anime_title.match(/S(\d{2})/)[1], 10) : highestEp),
-            timestamp: Math.floor(new Date(date).getTime() / 1000),
-            format: media?.format,
-            season: !isValidNumber(highestEp) && parseObject.anime_title.match(/S(\d{2})/),
-            dub: dubbed,
-            click_action: 'TORRENT',
-            hash: hash,
-            magnet: link,
-            button: [
-              { text: `${!progress || progress === 0 ? 'Start Watching' : behind ? 'Continue Watching' : 'Watch Now'}`, activation: `${!progress || progress === 0 || behind ? 'shiru://search/' + media?.id : 'shiru://torrent/' + link}` },
-              { text: 'View Anime', activation: `shiru://anime/${media?.id}` }
-            ],
-            activation: {
-              type: 'protocol',
-              launch: `shiru://anime/${media?.id}`
-            }
+        queueNotification({
+          id: media?.id,
+          title: anilistClient.title(media) || parseObject.anime_title,
+          message: `${media?.format === 'MOVIE' && (media?.episodes ?? 0) <= 1 ? `The Movie` : isValidNumber(highestEp) ? `${media?.episodes === highestEp ? `The wait is over! ` : ``}Episode ${highestEp}` : parseObject?.anime_title?.match(/S(\d{2})/) ? `Season ${parseInt(parseObject.anime_title.match(/S(\d{2})/)[1], 10)}` : `Batch`} (${dubbed ? 'Dub' : 'Sub'}) ${isValidNumber(highestEp) || media?.format === 'MOVIE' ? `is out${media?.format !== 'MOVIE' && media?.episodes === highestEp ? `, this season is now ready to binge` : ``}!` : `is now ready to binge!`}`,
+          icon: media?.coverImage.medium,
+          iconXL: media?.coverImage?.extraLarge,
+          heroImg: media?.bannerImage || (media?.trailer?.id && `https://i.ytimg.com/vi/${media?.trailer?.id}/hqdefault.jpg`),
+          episode: isValidNumber(highestEp) ? highestEp : (parseObject?.anime_title?.match(/S(\d{2})/) ? parseInt(parseObject.anime_title.match(/S(\d{2})/)[1], 10) : highestEp),
+          timestamp: Math.floor(new Date(date).getTime() / 1000),
+          format: media?.format,
+          season: !isValidNumber(highestEp) && parseObject.anime_title.match(/S(\d{2})/),
+          dub: dubbed,
+          click_action: 'TORRENT',
+          hash: hash,
+          magnet: link,
+          button: [
+            { text: `${!progress || progress === 0 ? 'Start Watching' : behind ? 'Continue Watching' : 'Watch Now'}`, activation: `${!progress || progress === 0 || behind ? 'shiru://search/' + media?.id : 'shiru://torrent/' + link}` },
+            { text: 'View Anime', activation: `shiru://anime/${media?.id}` }
+          ],
+          activation: {
+            type: 'protocol',
+            launch: `shiru://anime/${media?.id}`
           }
-        }))
+        })
       }
     }
   }

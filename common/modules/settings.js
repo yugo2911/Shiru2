@@ -1,28 +1,27 @@
 import { cache, caches } from '@/modules/cache.js'
+import { persisted } from 'svelte-persisted-store'
 import { writable } from 'simple-store-svelte'
+import { toast } from '@/modules/lib/toast.js'
 import { defaults } from '@/modules/util.js'
-import { toast } from 'svelte-sonner'
-import { IPC } from '@/modules/bridge.js'
+import { COMMON, TORRENT, ANDROID } from '@/modules/bridge.js'
 import Debug from 'debug'
 const debug = Debug('ui:settings')
 
-/** @type {{viewer: import('./al').Query<{Viewer: import('./al').Viewer}>, token: string} | null} */
+/** @type {{viewer: import('./providers/anilist/al.d.ts').Query<{Viewer: import('./providers/anilist/al.d.ts').Viewer}>, token: string, expires_in: number, reauth: boolean } | null} */
 export let alToken = JSON.parse(localStorage.getItem('ALviewer')) || null
-/** @type {{viewer: import('./mal').Query<{Viewer: import('./mal').Viewer}>, token: string, refresh: string, refresh_in: number, reauth: boolean} | null} */
+/** @type {{viewer: import('./providers/myanimelist/mal.d.ts').Query<{Viewer: import('./providers/myanimelist/mal.d.ts').Viewer}>, token: string, refresh: string, refresh_in: number, reauth: boolean} | null} */
 export let malToken = JSON.parse(localStorage.getItem('MALviewer')) || null
+
+export const debugStore = persisted('debug', '', { serializer: { parse: e => e, stringify: e => e }})
 
 /**
  * Ensures that the webtorrent service is reloaded when the app is reloaded.
  * This is triggered by a `location.reload()` or force reload event.
  */
-const _onbeforeunload = window.onbeforeunload
-window.onbeforeunload = function (event) {
-  IPC.emit('webtorrent-reload')
-  if (typeof _onbeforeunload === 'function') {
-    const result = _onbeforeunload(event)
-    if (typeof result === 'string') return result
-  }
-}
+window.addEventListener('unload', () => {
+  ANDROID.showSplash()
+  TORRENT.reload()
+})
 
 let storedSettings = cache.getEntry(caches.GENERAL, 'settings')
 let scopedDefaults
@@ -69,60 +68,90 @@ export function isAuthorized() {
   return alToken || malToken
 }
 
-window.addEventListener('paste', ({ clipboardData }) => {
+window.addEventListener('paste', (event) => {
+  const { clipboardData } = event
   if (clipboardData.items?.[0]) {
     if (clipboardData.items[0].type === 'text/plain' && clipboardData.items[0].kind === 'string') {
-      clipboardData.items[0].getAsString(text => {
-        if (text.includes('access_token=')) { // is an AniList token
-          let token = text.split('access_token=')?.[1]?.split('&token_type')?.[0]
-          if (token) {
-            if (token.endsWith('/')) token = token.slice(0, -1)
-            handleToken(token)
-          }
-        } else if (text.includes('code=') && text.includes('&state')) { // is a MyAnimeList authorization
-          let code = text.split('code=')[1].split('&state')[0]
-          let state = text.split('&state=')[1]
-          if (code && state) {
-            if (code.endsWith('/')) code = code.slice(0, -1)
-            if (state.endsWith('/')) state = state.slice(0, -1)
-            if (state.includes('%')) state = decodeURIComponent(state)
-            // remove linefeed characters from the state
-            code = code.replace(/(\r\n|\n|\r)/gm, '')
-            state = state.replace(/(\r\n|\n|\r)/gm, '')
-            handleMalToken(code, state)
-          }
-        } else {
-          const anilistRegex = /(?:https?:\/\/)?anilist\.co\/anime\/(\d+)/
-          const malRegex = /(?:https?:\/\/)?myanimelist\.net\/anime\/(\d+)/
-          const anilistMatch = text.match(anilistRegex)
-          const malMatch = text.match(malRegex)
-          let protocol = text
-          if (anilistMatch) {
-            protocol = `shiru://anime/${anilistMatch[1]}`
-          } else if (malMatch) {
-            protocol = `shiru://malanime/${malMatch[1]}`
-          }
-          IPC.emit('handle-protocol', protocol)
+      const text = clipboardData.getData('text/plain')
+      if (text.includes('access_token=')) { // is an AniList token
+        let token = text.split('access_token=')?.[1]?.split('&token_type')?.[0]
+        if (token) {
+          if (token.endsWith('/')) token = token.slice(0, -1)
+          event.preventDefault()
+          handleToken(token)
         }
-      })
+      } else if (text.includes('code=') && text.includes('&state')) { // is a MyAnimeList authorization
+        let code = text.split('code=')[1].split('&state')[0]
+        let state = text.split('&state=')[1]
+        if (code && state) {
+          if (code.endsWith('/')) code = code.slice(0, -1)
+          if (state.endsWith('/')) state = state.slice(0, -1)
+          if (state.includes('%')) state = decodeURIComponent(state)
+          // remove linefeed characters from the state
+          code = code.replace(/(\r\n|\n|\r)/gm, '')
+          state = state.replace(/(\r\n|\n|\r)/gm, '')
+          event.preventDefault()
+          handleMalToken(code, state)
+        }
+      } else {
+        const anilistRegex = /(?:https?:\/\/)?anilist\.co\/anime\/(\d+)/
+        const malRegex = /(?:https?:\/\/)?myanimelist\.net\/anime\/(\d+)/
+        const anilistMatch = text.match(anilistRegex)
+        const malMatch = text.match(malRegex)
+        let protocol = text
+        if (anilistMatch || malMatch || text.match('shiru://')) event.preventDefault()
+        if (anilistMatch) {
+          protocol = `shiru://anime/${anilistMatch[1]}`
+        } else if (malMatch) {
+          protocol = `shiru://malanime/${malMatch[1]}`
+        }
+        COMMON.handleProtocol(protocol)
+      }
     }
   }
+}, true)
+
+COMMON.onProviderToken((provider, opts) => {
+  if (provider.match(/anilist/i)) handleToken(opts.token)
+  else if (provider.match(/myanimelist/i)) handleMalToken(opts.code, opts.state)
+  else debug(`onProviderToken: unknown provider ${provider}`)
 })
-IPC.on('altoken', handleToken)
 async function handleToken (token) {
-  const { anilistClient } = await import('./anilist.js')
-  const viewer = await anilistClient.viewer({token})
+  const { anilistClient } = await import('./providers/anilist/anilist.js')
+  const viewer = await anilistClient.viewer({ token })
   if (!viewer.data?.Viewer) {
-    toast.error('Failed to sign in with AniList. Please try again.', {description: JSON.stringify(viewer)})
+    toast.error('Failed to sign in with AniList. Please try again.', { description: JSON.stringify(viewer) })
     debug('Failed to sign in with AniList:', JSON.stringify(viewer))
     return
   }
-  await swapProfiles({token, viewer}, true)
+  // AniList tokens are "long-lived" with no ability to refresh them. Tokens expire ~12 months from when they are issued, so we set our expiry to a month prior.
+  await swapProfiles({ token, expires_in: Math.floor((Date.now() + 335 * 24 * 60 * 60 * 1000) / 1000), reauth: false, viewer }, true)
+}
+export function validateToken (token, error = false) {
+  if (!token) return true
+  const profile = alToken?.token === token ? alToken : profiles.value.find(profile => profile.token === token)
+  const now = Math.floor(Date.now() / 1_000)
+  if (profile && profile.reauth) return false
+  else if (profile && !profile.reauth && ((error && !profile.expires_in) || (profile.expires_in && now >= profile.expires_in))) {
+    // Tokens should function for ~12 months, so it's best to allow a month to "softly" expire.
+    const isExpired = error || now >= (profile.expires_in + 30 * 24 * 60 * 60)
+    if (alToken?.token === token) {
+      alToken.reauth = true
+      localStorage.setItem('ALviewer', JSON.stringify(alToken))
+    } else {
+      profiles.update(profiles => profiles.map(profile => profile.token === token ? { ...profile, reauth: true } : profile))
+    }
+    toast.error(`Login ${isExpired ? 'Expired' : 'Expiring'}`, {
+      description: `Your AniList session for ${profile.viewer.data.Viewer.name} ${isExpired ? 'has expired' : 'is expiring soon'}. Please go to Profiles and log in again to continue syncing.`,
+      duration: Infinity
+    })
+    return false
+  }
+  return true
 }
 
-IPC.on('maltoken', handleMalToken)
 async function handleMalToken (code, state) {
-  const { clientID, malClient } = await import('./myanimelist.js')
+  const { clientID, malClient } = await import('./providers/myanimelist/myanimelist.js')
   if (!state || !code) {
     toast.error('Failed to sign in with MyAnimeList. Please try again.')
     debug(`Failed to get the state and code from MyAnimeList.`)
@@ -156,9 +185,9 @@ async function handleMalToken (code, state) {
 }
 
 export async function refreshMalToken (token) {
-  const { clientID } = await import('./myanimelist.js')
-  const currentProfile = malToken?.token === token
-  const refresh = currentProfile ? malToken.refresh : profiles.value.find(profile => profile.token === token)?.refresh
+  const { clientID } = await import('./providers/myanimelist/myanimelist.js')
+  const profile = malToken?.token === token ? malToken : profiles.value.find(profile => profile.token === token)
+  const refresh = profile?.refresh
   debug(`Attempting to refresh authorization token ${token} with the refresh token ${refresh}`)
   let response
   if (refresh && refresh.length > 0) {
@@ -175,11 +204,14 @@ export async function refreshMalToken (token) {
     })
   }
   if (!refresh || refresh.length <= 0 || !response?.ok) {
-    if (currentProfile && !malToken.reauth) {
-      toast.error('Failed to re-authenticate with MyAnimeList. You will need to log in again.', {description: JSON.stringify(response?.status || response)})
+    if (profile && !profile.reauth) {
+      toast.error('Login Expired', {
+        description: `Your MyAnimeList session for ${profile.viewer.data.Viewer.name} has expired. Please go to Profiles and log in again to continue syncing.\n\n${JSON.stringify(response?.status || response)}`,
+        duration: Infinity
+      })
     }
-    debug(`Failed to refresh MyAnimeList User Token ${ !refresh || refresh.length <= 0 ? 'as the refresh token could not be fetched!' : 'the refresh token has likely expired: ' + JSON.stringify(response)}`)
-    if (currentProfile) {
+    debug(`Failed to refresh MyAnimeList User Token ${!refresh || refresh.length <= 0 ? 'as the refresh token could not be fetched!' : 'the refresh token has likely expired: ' + JSON.stringify(response)}`)
+    if (malToken?.token === token) {
       malToken.reauth = true
       localStorage.setItem('MALviewer', JSON.stringify(malToken))
     } else {
@@ -188,7 +220,7 @@ export async function refreshMalToken (token) {
     return
   }
   const oauth = await response.json()
-  const { malClient } = await import('./myanimelist.js')
+  const { malClient } = await import('./providers/myanimelist/myanimelist.js')
   const viewer = await malClient.viewer(oauth.access_token)
   const refresh_in = Math.floor((Date.now() + 14 * 24 * 60 * 60 * 1000) / 1000)
   if (malToken?.token === token) {

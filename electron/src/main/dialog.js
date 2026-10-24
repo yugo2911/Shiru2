@@ -1,25 +1,17 @@
 import { ipcMain, dialog } from 'electron'
-import { writeFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 
 export default class Dialog {
-  constructor () {
-    ipcMain.on('player', async ({ sender }) => {
-      const { filePaths, canceled } = await dialog.showOpenDialog({
-        title: 'Select video player executable',
-        properties: ['openFile']
-      })
-      if (canceled) return
-      if (filePaths.length) {
-        const path = filePaths[0]
-        sender.send('player', path)
-      }
+
+  constructor (debug) {
+    ipcMain.handle('common:pickFile', async (event, title) => {
+      const { filePaths, canceled } = await dialog.showOpenDialog({ title, properties: ['openFile'] })
+      if (canceled || !filePaths.length) return { cancelled: true }
+      return { path: filePaths[0] }
     })
-    ipcMain.on('dialog', async ({ sender }) => {
-      const { filePaths, canceled } = await dialog.showOpenDialog({
-        title: 'Select torrent download location',
-        properties: ['openDirectory']
-      })
-      if (canceled) return
+    ipcMain.handle('common:pickFolder', async (event, title) => {
+      const { filePaths, canceled } = await dialog.showOpenDialog({ title, properties: ['openDirectory'] })
+      if (canceled || !filePaths.length) return { cancelled: true }
       if (filePaths.length) {
         let path = filePaths[0]
         if (!(path.endsWith('\\') || path.endsWith('/'))) {
@@ -29,23 +21,45 @@ export default class Dialog {
             path += '/'
           }
         }
-        sender.send('path', path)
+        return { path }
       }
     })
-    ipcMain.on('log-contents', async (sender, log) => {
+    ipcMain.handle('common:exportLog', async () => {
       try {
+        const log = await debug.getLogContents()
         const { filePath, canceled } = await dialog.showSaveDialog({
           title: 'Select export location for the log file',
           defaultPath: `shiru-log-${new Date().toISOString().replace(/[:.]/g, '-')}.log`,
           filters: [{ name: 'Log File', extensions: ['log'] }]
         })
-        if (canceled || !filePath) return
+        if (canceled || !filePath) return { error: false, cancelled: true }
         await writeFile(filePath, log, { encoding: 'utf8', mode: 0o644 })
-        sender.send('log-exported', { error: false })
+        return { error: false }
       } catch (error) {
         console.debug(error)
-        sender.send('log-exported', { error: true })
+        return { error: true }
       }
+    })
+    // TODO: Add support for media file selection, currently only supports torrent files
+    ipcMain.handle('common:pickMediaFiles', async () => {
+      const { filePaths, canceled } = await dialog.showOpenDialog({
+        title: 'Select torrent files to import', // 'Select media file(s) or torrent(s), selecting more than one media file creates a batch.'
+        properties: ['openFile', 'multiSelections'],
+        filters: [{
+          name: 'Torrent', // 'Media Files & Torrents'
+          extensions: ['torrent'] // [ '3g2', '3gp', 'asf', 'avi', 'dv', 'flv', 'gxf', 'm2ts', 'm4a', 'm4b', 'm4p', 'm4r', 'm4v', 'mkv', 'mov', 'mp4', 'mpd', 'mpeg', 'mpg', 'mxf', 'nut', 'ogm', 'ogv', 'swf', 'ts', 'vob', 'webm', 'wmv', 'wtv', 'torrent' ]
+        }]
+      })
+      if (canceled || !filePaths.length) return {}
+      const mediaPaths = []
+      const torrents = []
+      for (const path of filePaths) {
+        if (path.toLowerCase().endsWith('.torrent')) {
+          const buffer = await readFile(path)
+          torrents.push(buffer)
+        } else mediaPaths.push(path)
+      }
+      return { paths: mediaPaths, torrents }
     })
   }
 }

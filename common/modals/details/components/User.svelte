@@ -1,59 +1,49 @@
+<script context='module'>
+  import { writable } from 'simple-store-svelte'
+  const activePopover = writable(null)
+</script>
 <script>
   import SmartImage from '@/components/visual/SmartImage.svelte'
-  import Helper from '@/modules/helper.js'
-  import { onMount, onDestroy } from 'svelte'
-  import { writable } from 'simple-store-svelte'
-  import { since, capitalize, fadeIn, fadeOut } from '@/modules/util.js'
-  import { click, hover, focus } from '@/modules/click.js'
-  import { copyToClipboard } from '@/modules/clipboard.js'
-  import { IPC } from '@/modules/bridge.js'
-  import WPC from '@/modules/wpc.js'
+  import Helper from '@/modules/providers/helper.js'
+  import { onDestroy } from 'svelte'
+  import { since, capitalize, fadeIn, fadeOut, getAvatar } from '@/modules/util.js'
+  import { click, hover, focus } from '@/modules/lib/click.js'
+  import { copyToClipboard } from '@/modules/lib/clipboard.js'
+  import { COMMON } from '@/modules/bridge.js'
 
   export let user = {}
   export let style = ''
-  const showUser = writable(false)
+
   const avatar = user.avatar?.large || user.avatar?.medium
+  let hideTimeout
 
   function initials(name) {
     const parts = name.split(/\s+/).filter(Boolean)
     return ((parts[0] ? parts[0][0] : '') + (parts[1] ? parts[1][0] : '')).toUpperCase()
   }
 
-  let hideTimeout
   function handleHover(state) {
     if (state) {
       if (hideTimeout) {
         clearTimeout(hideTimeout)
         hideTimeout = null
       }
-      showUser.set(true)
-      WPC.send('user-popover', user.id)
+      activePopover.set(user.id)
     } else {
       hideTimeout = setTimeout(() => {
-        showUser.set(false)
+        if ($activePopover === user.id) activePopover.set(null)
         hideTimeout = null
       }, 100)
       hideTimeout.unref?.()
     }
   }
 
-  function clearHover(userId) {
-    if (userId !== user.id && $showUser) {
-      showUser.set(false)
-      clearTimeout(hideTimeout)
-    }
-  }
-
-  onMount(() => WPC.listen('user-popover', clearHover))
-  onDestroy(() => {
-    clearTimeout(hideTimeout)
-    WPC.clear('user-popover', clearHover)
-  })
+  onDestroy(() => clearTimeout(hideTimeout))
 </script>
-<div class='popover h-50 w-50 d-inline-block not-reactive rounded-circle {$$restProps.class}' style={style} use:hover={handleHover} use:focus={(state) => showUser.set(state)}>
-  <button class='avatar h-50 w-50 align-items-center justify-content-center p-0 rounded-circle bg-dark-light overflow-hidden pointer not-reactive flex-shrink-0' tabindex='-1' style='border: .3rem solid hsla(var(--dark-color-hsl), 0.9);'>
+<div class='popover h-50 w-50 d-inline-block not-reactive rounded-circle {$$restProps.class}' style={style} use:hover={handleHover} use:focus={(state) => activePopover.set(state ? user.id : null)}>
+  <button type='button' class='avatar h-50 w-50 align-items-center justify-content-center p-0 rounded-circle bg-dark-light overflow-hidden pointer not-reactive flex-shrink-0' tabindex='-1' style='border: .3rem solid hsla(var(--dark-color-hsl), 0.9);'>
     {#if avatar}
-      <SmartImage class='w-full h-full cover-img' images={[avatar, './404_square.png']}/>
+      <SmartImage class='w-full h-full cover-img' images={[avatar, `./${getAvatar(user.id)}`]}/>
     {:else}
       <div class='align-items-center justify-content-center font-weight-bold text-white font-size-16'>{initials(user.name)}</div>
     {/if}
@@ -61,18 +51,18 @@
       <div class='position-absolute text-white font-size-8 font-weight-bold blocked-banner' style='top: 40%; left: -34%;'>BLOCKED</div>
     {/if}
   </button>
-  {#if $showUser}
+  {#if $activePopover === user.id}
     <div class='popover-container position-absolute top-100 left-0 mw-0 z-5 border rounded-10 overflow-hidden test-remove-later fade-change' style:--theme-base-color={user.options?.profileColor ?? `var(--dark-color)`} in:fadeIn={{ duration: 180 }} out:fadeOut={{ duration: 120 }}>
       <div class='popover-card'>
         <div class='position-relative h-140 p-5 d-flex align-items-end'>
           {#if user.bannerImage}
-            <SmartImage class='position-absolute h-full w-full cover-img opacity-55 inset-0' images={[user.bannerImage, './404_banner.png']}/>
+            <SmartImage class='position-absolute h-full w-full cover-img opacity-55 inset-0' images={[user.bannerImage]}/>
           {/if}
           <div class='top-inner d-flex align-items-end w-full z-2'>
-            <div role='button' class='rounded-circle' class:pointer={user.siteUrl} data-toggle='{user.siteUrl ? `tooltip` : ``}' data-placement='top-left' data-title='Share to Clipboard' tabindex='-1' use:click={() => copyToClipboard(user.siteUrl, 'user URL')} on:contextmenu|preventDefault={() => { if (user.siteUrl) IPC.emit('open', user.siteUrl) }}>
+            <div role='button' class='rounded-circle' class:pointer={user.siteUrl} data-toggle='{user.siteUrl ? `tooltip` : ``}' data-placement='top-left' data-title='Share to Clipboard' tabindex='-1' use:click={() => copyToClipboard(user.siteUrl, 'user URL')} on:contextmenu|preventDefault={() => { if (user.siteUrl) COMMON.openURI(user.siteUrl) }}>
               <div class='h-80 w-80 rounded-circle overflow-hidden flex-shrink-0' style='border: .4rem solid hsla(var(--gray-color-hsl), 0.15); clip-path: circle(50% at 50% 50%)'>
                 {#if avatar}
-                  <SmartImage class='w-full h-full cover-img' images={[avatar, './404_square.png']}/>
+                  <SmartImage class='w-full h-full cover-img' images={[avatar, `./${getAvatar(user.id)}`]}/>
                 {:else}
                   <div class='w-full h-full d-flex align-items-center justify-content-center font-weight-bold text-white bg-dark-light font-size-22'>{initials(user.name)}</div>
                 {/if}
@@ -105,7 +95,7 @@
                 </div>
                 {#if user.moderatorRoles}
                   <div class='d-flex flex-wrap gap-5 align-items-center mt-2'>
-                    {#each user.moderatorRoles as moderatorRole}
+                    {#each user.moderatorRoles as moderatorRole, roleIndex (roleIndex)}
                       <div class='badge text-white font-weight-bold px-8 py-2 text-break-word text-truncate' style='border-color: var(--theme-base-color); background-color: var(--theme-base-color)'>
                         {capitalize(moderatorRole.replace('_', ' ').toLowerCase())}
                       </div>

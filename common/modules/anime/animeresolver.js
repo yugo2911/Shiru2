@@ -1,7 +1,8 @@
-import { anilistClient } from '@/modules/anilist.js'
-import { cache } from '@/modules/cache.js'
+import { anilistClient, getDistanceFromTitle } from '@/modules/providers/anilist/anilist.js'
+import { cache, mediaCache } from '@/modules/cache.js'
 import { anitomyscript, hasZeroEpisode } from '@/modules/anime/anime.js'
 import { chunks, matchKeys, isValidNumber } from '@/modules/util.js'
+import { status } from '@/modules/networking.js'
 //import levenshtein from 'js-levenshtein'
 import Debug from 'debug'
 const debug = Debug('ui:animeresolver')
@@ -99,7 +100,7 @@ export default new class AnimeResolver {
     // Detect and add alternate title within parentheses
     const multiTitleMatch = modified.match(/^(.+?)\s*\((.+?)\)$/)
     if (multiTitleMatch) {
-      const [_, mainTitle, altTitle] = multiTitleMatch
+      const [, mainTitle, altTitle] = multiTitleMatch
       titles.add(mainTitle.trim())
       titles.add(altTitle.trim())
     }
@@ -132,8 +133,10 @@ export default new class AnimeResolver {
   /**
    * resolve anime name based on file name and store it
    * @param {import('anitomyscript').AnitomyResult[]} parseObjects
+   * @param retry
+   * @param errorRetry
    */
-  async findAnimesByTitle (parseObjects) {
+  async findAnimesByTitle (parseObjects, retry = false, errorRetry = false) {
     if (!parseObjects.length) return
     const titleObjects = parseObjects.flatMap(obj => {
       const key = this.getCacheKeyForTitle(obj)
@@ -153,32 +156,53 @@ export default new class AnimeResolver {
     })
     debug(`Finding ${titleObjects?.length} titles: ${titleObjects?.map(obj => obj.title).join(', ')}`)
 
-    const missingTitles = titleObjects
+    let missingTitles = titleObjects
+    // Handle resolving titles during AniList API outage and while offline.
     // Works pretty well but has edge cases that cause it to choose incorrect media, primarily issues with sequel series like Shield Hero.
-    // const missingTitles = []
-    // for (const titleObj of titleObjects) {
-    //   let foundInCache = false
-    //   const candidates = []
-    //   for (const media of Object.values(mediaCache.value)) {
-    //     const scoredMedia = getDistanceFromTitle(media, titleObj.title)
-    //     if (scoredMedia?.lavenshtein != null) candidates.push(scoredMedia)
-    //   }
-    //   candidates.sort((a, b) => a.lavenshtein - b.lavenshtein)
-    //   for (const media of candidates.slice(0, 25)) {
-    //     if (!this.animeNameCache?.[titleObj.key] && this.isVerified(media, { anime_title: titleObj.title, anime_year: titleObj.year }, ['title.userPreferred', 'title.english', 'title.romaji', 'title.native', 'synonyms'], titleObj.title.length > 15 ? 0.15 : titleObj.title.length > 9 ? 0.1 : 0.05)) {
-    //       this.animeNameCache[titleObj.key] = media
-    //       debug(`Cache hit: ${titleObj.title} -> ${media?.id}: ${media?.title?.userPreferred}`)
-    //       foundInCache = true
-    //       break
-    //     }
-    //   }
-    //   if (!this.animeNameCache?.[titleObj.key] && !foundInCache) missingTitles.push(titleObj)
-    // }
+    // TODO: Improve accuracy so we can utilize this while online.
+    if (status.value.match(/offline/i) || errorRetry) {
+      debug('Detected that AniList API is down or network is offline, attempting to resolve titles from cache.')
+      missingTitles = []
+      for (const titleObj of titleObjects) {
+        let foundInCache = false
+        const candidates = []
+        for (const media of Object.values(mediaCache.value)) {
+          const scoredMedia = getDistanceFromTitle(media, titleObj.title)
+          if (scoredMedia?.lavenshtein != null) candidates.push(scoredMedia)
+        }
+        candidates.sort((a, b) => a.lavenshtein - b.lavenshtein)
+        for (const media of candidates.slice(0, 25)) {
+          if (!this.animeNameCache?.[titleObj.key] && this.isVerified(media, { anime_title: titleObj.title, anime_year: titleObj.year }, ['title.userPreferred', 'title.english', 'title.romaji', 'title.native', 'synonyms'], titleObj.title.length > 15 ? 0.15 : titleObj.title.length > 9 ? 0.1 : 0.05)) {
+            this.animeNameCache[titleObj.key] = media
+            debug(`Cache hit: ${titleObj.title} -> ${media?.id}: ${media?.title?.userPreferred}`)
+            foundInCache = true
+            break
+          }
+        }
+        if (!this.animeNameCache?.[titleObj.key] && !foundInCache) missingTitles.push(titleObj)
+      }
+    }
 
-    if (missingTitles?.length > 0) debug(`Missing ${missingTitles?.length} titles as they were not found in the media cache, titles: ${missingTitles?.map(obj => obj.title).join(', ')}`)
+    if (missingTitles?.length > 0) debug(`Missing ${missingTitles?.length} titles as they were not found in the media cache, titles: ${missingTitles?.map(obj => `${obj.title} (year: ${obj.year ?? 'N/A'}, isAdult: ${obj.isAdult})`).join(', ')}`)
+    if (errorRetry) return
     for (const chunk of chunks(missingTitles, 55)) {
       // single title has a complexity of 8.1, al limits complexity to 500, so this can be at most 62, undercut it to ~~60~~ 55, al pagination is 50, but at most we'll do 30 titles since isAdult duplicates each title
-      const search = await anilistClient.alSearchCompound(chunk)
+      let search
+      try {
+        search = await anilistClient.alSearchCompound(chunk)
+      } catch (error) {
+        if (status.value.match(/offline/i)) {
+          if (!retry) {
+            debug('Failed to compound search, AniList API is down or network is offline... retrying!')
+            return this.findAnimesByTitle(parseObjects, true)
+          } else {
+            debug('Detected second attempt to compound search and AniList API is down or network is offline... assuming we are missing some series from the cache, these will now be skipped!')
+            return
+          }
+        }
+        debug('Failed to compound search and the network is online, forcing a search using cache...')
+        return this.findAnimesByTitle(parseObjects, true, true)
+      }
       if (!search || search?.errors) return
       for (const [key, media] of search) {
         if (!this.animeNameCache[key]) {
@@ -268,7 +292,14 @@ export default new class AnimeResolver {
       if (name.match(/Hero/i) && name.match(/Academia/i) && !name.match(/FINAL/i) && name.match(/S8|S08|Season 8|Season 08/i)) name = name.replace(/Academia/i, 'Academia FINAL SEASON').replace(/S8|S08|Season 8|Season 08/i, '') // My Hero Academia FINAL SEASON fix...
       if (name.match(/Intai Shitai (Part|Cour) 2/i)) name = name.replace(/Intai Shitai (Part|Cour) 2/i, 'Intai Shitai 2') // Let This Grieving Soul Retire Cour 2 fix...
       if (name.match(/Soul Retire Part 2/i)) name = name.replace(/Soul Retire Part 2/i, 'Soul Retire Cour 2') // Let This Grieving Soul Retire Cour 2 fix...
-      if (name.match(/Buchigire|Livid.*Lady.*Guide.*Getting.*Even/i) && name.match(/Multi[-\s]?Subs?\b/i)) name = name.replace(/,?\s*Multi[-\s]?Subs?\b/gi, '') // Strip Multi-Subs from parenthetical release info that pollutes alt title matching.
+      if (name.match(/Hikuidori: Ushuu Boro Tobi-gumi|Hikuidori Ushuu Boro Tobi-gumi|Hikuidori - Ushuu Boro Tobi-gumi|Hikuidori ~Ushuu Boro Tobi-gumi~/i)) name = name.replace(/Hikuidori: Ushuu Boro Tobi-gumi|Hikuidori Ushuu Boro Tobi-gumi|Hikuidori - Ushuu Boro Tobi-gumi|Hikuidori ~Ushuu Boro Tobi-gumi~/i, 'Hikuidori') // Oedo Fire Slayer The Legend of Phoenix fix...
+      if (name.match(/Toukutsu Ou/i)) name = name.replace(/Toukutsu Ou/i, 'Tomb Raider King') // Tomb Raider King fix...
+      if (name.match(/Yoroi Shin Den Samurai Troopers/i)) name = name.replace(/Yoroi Shin Den Samurai Troopers/i, 'Yoroi-Shinden Samurai Troopers') // Yoroi-Shinden Samurai Troopers fix...
+      if (name.match(/Tai-Ari deshita. Ojousama wa Kakutou Game nante Shinai/i)) name = name.replace(/Tai-Ari deshita. Ojousama wa Kakutou Game nante Shinai/i, 'Young Ladies Don\'t Play Fighting Games') // Young Ladies Don't Play Fighting Games fix...
+      if (name.match(/Suterare Seijo no Isekai/i) && (name.match(/Gohan Tabi/i) || !name.match(/Kakure Skill/i))) name = name.replace(/Gohan Tabi/i, 'Gohantabi').replace('Gohan Tabi', 'Gohan Tabi: Kakure Skill de Camping Car wo Shoukan shimashita') // The Forsaken Saintess and her Foodie Roadtrip in Another World fix...
+      if (name.match(/Futsutsuka na Akujo dewa/i)) name = name.replace(/Futsutsuka na Akujo dewa/i, 'Futsutsuka na Akujo de wa') // Though I Am an Inept Villainess fix...
+      if (name.match(/wa Tensei shitemo Kenka ga Shitai/i)) name = name.replace(/Hanaorisan/i, 'Hanaori-san').replace(/Hanaori san/i, 'Hanaori-san').replace(/Hanaori-san wa Tensei shitemo Kenka ga Shitai/i, 'Hanaori-san Still Wants to Fight in the Next Life') // Hanaori-san Still Wants to Fight in the Next Life fix...
+      if (name.match(/All Works Maid/i) && !name.match(/Heroine/i) && !name.match(/Seijo/i) && !name.match(/Saint/i)) name = name.replace(/All Works Maid/i, 'Heroine? Seijo? Iie, All Works Maid desu (Ko)!') // Heroine? Saint? No, I'm an All-Works Maid fix...
 
       // fix incorrect marker patterns to prevent them from being detected as episode count...
       name = name
@@ -363,7 +394,7 @@ export default new class AnimeResolver {
       let media = this.animeNameCache[this.getCacheKeyForTitle(parseObj)]
       const threshold = parseObj?.anime_title?.length > 15 ? 0.2 : parseObj?.anime_title?.length > 9 ? 0.15 : 0.1 // play nice with small anime titles
       const titleKeys = ['title.userPreferred', 'title.english', 'title.romaji', 'title.native', 'synonyms']
-      let needsVerification = !media || !this.isVerified(media, parseObj, titleKeys, threshold)
+      const needsVerification = !media || !this.isVerified(media, parseObj, titleKeys, threshold)
       // resolve episode, if movie, dont.
       let zeroEpisode = await hasZeroEpisode(media)
       let maxep = (media?.nextAiringEpisode?.episode || media?.episodes) - (zeroEpisode ? 1 : 0)
@@ -434,7 +465,7 @@ export default new class AnimeResolver {
         failed = mediaSearch.failed || (isValidNumber(mediaSearch.episode) && Number(mediaSearch.episode) < 0) || failed
       }
       debug(`${failed || !(media?.title?.userPreferred) ? `Failed to resolve` : `Resolved`} ${parseObj.anime_title} ${parseObj.episode_number} ${episode} ${media?.id}:${media?.title?.userPreferred}`)
-      const guessedEpisode = isValidNumber(episode) ? episode : episode ? episode : isValidNumber(parseObj.episode_number) ? parseObj.episode_number : parseObj.episode_number ? parseObj.episode_number : media?.episodes === 1 ? 1 : media?.format === 'MOVIE' && (media?.episodes ?? 0) <= 1 ? 1 : null
+      const guessedEpisode = isValidNumber(episode) ? episode : episode || (isValidNumber(parseObj.episode_number) ? parseObj.episode_number : parseObj.episode_number ? parseObj.episode_number : media?.episodes === 1 ? 1 : media?.format === 'MOVIE' && (media?.episodes ?? 0) <= 1 ? 1 : null)
       fileAnimes.push({
         episode: isValidNumber(guessedEpisode) ? Math.abs(guessedEpisode) === 0 && media?.episodes === 1 ? 1 : Math.abs(guessedEpisode) : guessedEpisode,
         ...(!media || media?.format !== 'MOVIE' || parseObj?.anime_season ? { season: parseObj?.anime_season ? Number(parseObj.anime_season) : 1 } : {}),
@@ -507,9 +538,8 @@ export default new class AnimeResolver {
     const root = prequel && (await this.resolveSeason({ media: await this.getAnimeById(prequel.id), force: true, offset })).media
     debug(`Root ${root?.id}:${root?.title?.userPreferred}`)
     // check that anime_title is similar to the resolved media title, if it's not then we likely already are at the root level... resolves issues with niche series like MF GHOST.
-    // Use a more lenient threshold for root detection — we only need to verify this is roughly the right root, not the exact show.
     let isRoot = false
-    if (!root || (root && !this.isVerified(root, parseObj, titleKeys, Math.min(threshold + 0.15, 0.4)))) {
+    if (!root || (root && !this.isVerified(root, parseObj, titleKeys, threshold))) {
       debug(`Detected incorrect Root for ${parseObj?.anime_title}, assuming the title is already root from ${media.id}:${media.title?.userPreferred}`)
       isRoot = true
     }
@@ -574,7 +604,7 @@ export default new class AnimeResolver {
     }
     titles.add(parseObj.anime_title)
     for (const title of titles) {
-      const search = await anilistClient.search({ search: title, ...(media && this.isVerified(media, parseObj, titleKeys, threshold) ? { id_not: media.id } : {}), ...(parseObj.anime_season ? { format_not: ['OVA', ...((Number(parseObj.anime_season) > 1) ? ['MOVIE'] : [])] } : { }) })
+      const search = await anilistClient.search({ search: title, ...(media ? { id_not: media.id } : {}), ...(parseObj.anime_season ? { format_not: ['OVA', ...((Number(parseObj.anime_season) > 1) ? ['MOVIE'] : [])] } : { }) })
       if (search?.data?.Page?.media) {
         for (const searchMedia of search.data.Page.media) {
           if (this.isVerified(searchMedia, {...parseObj, anime_title: title}, titleKeys, threshold)) {
@@ -591,7 +621,7 @@ export default new class AnimeResolver {
   }
 
   /**
-   * @param {import('../al.d.ts').Media} media
+   * @param {import('../providers/anilist/al.d.ts').Media} media
    * @param {string} type
    * @param {string[]} [formats]
    * @param {boolean} [skip]
@@ -610,8 +640,8 @@ export default new class AnimeResolver {
 
   // note: this doesn't cover anime which uses partially relative and partially absolute episode number, BUT IT COULD!
   /**
-   * @param {{ media: import('../al.d.ts').Media , episode?:number, force?:boolean, increment?:boolean, offset?: number, rootMedia?: import('./al.js').Media }} opts
-   * @returns {Promise<{ media: import('../al.d.ts').Media, episode: number, offset: number, increment: boolean, rootMedia: import('./al.js').Media, failed?: boolean }>}
+   * @param {{ media: import('../providers/anilist/al.d.ts').Media , episode?:number, force?:boolean, increment?:boolean, offset?: number, rootMedia?: import('./al.js').Media }} opts
+   * @returns {Promise<{ media: import('../providers/anilist/al.d.ts').Media, episode: number, offset: number, increment: boolean, rootMedia: import('./al.js').Media, failed?: boolean }>}
    */
   async resolveSeason (opts) {
     // media, episode, increment, offset, force
@@ -657,7 +687,7 @@ export default new class AnimeResolver {
    * @param parseObj - The parsed object containing details about the anime episode (e.g., title, episode number).
    * @param sequelNumber - How far from root we are.
    * @param root - If we are calculating FROM root.
-   * @returns {Promise<{media: import('../al.d.ts').Media}>}
+   * @returns {Promise<{media: import('../providers/anilist/al.d.ts').Media}>}
    */
   async resolveBySeason(media, parseObj, sequelNumber = 0, root = false) {
     if (!parseObj?.anime_season) return media

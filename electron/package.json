@@ -1,12 +1,14 @@
 {
   "name": "shiru",
-  "version": "6.5.2-beta.1",
+  "version": "6.9.1",
   "license": "GPL-3.0-or-later",
+  "packageManager": "bun@1.3.11",
   "private": true,
-  "author": "RockinChaos <RockinChaos@users.noreply.github.com>",
+  "author": "RockinChaos <maintainer@shiru.app>",
   "description": "A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!",
   "main": "build/main.js",
-  "homepage": "https://github.com/RockinChaos/Shiru#readme",
+  "homepage": "https://shiru.app/",
+  "desktopName": "com.github.rockinchaos.shiru.desktop",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack build && concurrently --kill-others \"npm run web:watch\" \"npm run electron:start\"",
     "web:watch": "webpack serve",
@@ -17,29 +19,19 @@
     "publish": "npm run web:build && electron-builder -p always"
   },
   "devDependencies": {
-    "@electron/notarize": "^3.1.0",
-    "common": "workspace:*",
+    "@electron/notarize": "^3.1.2",
     "client": "workspace:*",
-    "electron": "43.3.0",
-    "electron-builder": "^26.0.12",
-    "electron-log": "^5.4.3",
-    "electron-updater": "^6.8.3",
-    "svelte-loader": "^3.2.4"
+    "common": "workspace:*",
+    "electron": "42.11.0",
+    "electron-builder": "^26.17.0",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.10",
+    "concurrently": "^10.0.6"
   },
   "dependencies": {
-    "@electron/rebuild": "^4.2.0",
-    "@paymoapp/electron-shutdown-handler": "^1.1.2",
-    "@xhayper/discord-rpc": "^1.3.1",
-    "bencode": "^4.0.0",
-    "concurrently": "^9.2.1",
-    "events": "^3.3.0",
-    "jimp": "0.22.12",
-    "ms": "^2.1.3",
-    "node-abi": "^4.33.0",
-    "powertoast": "^3.0.0",
-    "rvfc-polyfill": "^1.0.8",
-    "utp-native": "^2.5.3",
-    "webrtc-polyfill": "^1.2.2"
+    "@paymoapp/electron-shutdown-handler": "^1.2.0",
+    "@xhayper/discord-rpc": "^1.3.4",
+    "utp-native": "^2.5.3"
   },
   "standard": {
     "ignore": [
@@ -50,99 +42,5 @@
       "browser",
       "node"
     ]
-  },
-  "build": {
-    "directories": {
-      "buildResources": "buildResources"
-    },
-    "asarUnpack": "**/*.node",
-    "electronDownload": {
-      "mirror": "https://craftationgaming.com/api/packages/electron/",
-      "customDir": "43.3.0"
-    },
-    "protocols": {
-      "name": "shiru",
-      "schemes": [
-        "shiru",
-        "magnet"
-      ]
-    },
-    "fileAssociations": [
-      {
-        "ext": "torrent",
-        "name": "Torrent File",
-        "description": "Play and manage your personal torrent media",
-        "role": "Viewer"
-      }
-    ],
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "RockinChaos",
-        "repo": "shiru"
-      }
-    ],
-    "appId": "com.github.rockinchaos.shiru",
-    "productName": "Shiru",
-    "files": [
-      "build/**/*",
-      "!node_modules/**/*.{mk,a,o,h}"
-    ],
-    "mac": {
-      "artifactName": "${os}-${productName}-v${version}.${ext}",
-      "singleArchFiles": "node_modules/+(register-scheme|utp-native|fs-native-extensions)/**",
-      "category": "public.app-category.video",
-      "darkModeSupport": true,
-      "icon": "buildResources/icon.icns",
-      "hardenedRuntime": true,
-      "notarize": false,
-      "entitlements": "buildResources/entitlements.mac.plist",
-      "target": [
-        {
-          "arch": "universal",
-          "target": "default"
-        }
-      ]
-    },
-    "win": {
-      "artifactName": "${os}-${productName}-v${version}.${ext}",
-      "icon": "buildResources/icon.ico",
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "linux": {
-      "artifactName": "${os}-${productName}-v${version}.${ext}",
-      "icon": "buildResources/icon.png",
-      "category": "AudioVideo;Video",
-      "description": "A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!",
-      "maintainer": "RockinChaos <RockinChaos@users.noreply.github.com>",
-      "desktop": {
-        "entry": {
-          "Comment": "A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!",
-          "Keywords": "anime",
-          "MimeType": "x-scheme-handler/shiru;"
-        }
-      },
-      "target": [
-        {
-          "arch": "x64",
-          "target": "AppImage"
-        },
-        {
-          "arch": "x64",
-          "target": "deb"
-        }
-      ]
-    },
-    "portable": {
-      "artifactName": "${os}-${productName}-v${version}-portable.${ext}"
-    },
-    "nsis": {
-      "allowToChangeInstallationDirectory": true,
-      "oneClick": false,
-      "artifactName": "${os}-${productName}-v${version}-installer.${ext}"
-    }
   }
 }

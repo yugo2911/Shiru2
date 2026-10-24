@@ -1,30 +1,27 @@
-/* globals AndroidFullScreen, PictureInPicture */
 import { LocalNotifications } from '@capacitor/local-notifications'
-import { StatusBar, Style } from '@capacitor/status-bar'
-import { SafeArea } from 'capacitor-plugin-safe-area'
+import { SystemBars, SystemBarType } from '@capacitor/core'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { Keyboard } from '@capacitor/keyboard'
 import { NodeJS } from 'capacitor-nodejs'
+import { App as Capacitor } from '@capacitor/app'
 
-import Debugger from './debugger.js'
+import '../preload/preload.js'
 import Protocol from './protocol.js'
 import Updater from './updater.js'
+import Debug from './debugger.js'
 import Dialog from './dialog.js'
 
-import { cache, caches } from '@/modules/cache.js'
-import { IPC } from '../preload/preload.js'
-import { loadingClient } from './util.js'
+import { development, loadingClient } from './util.js'
+import { ipcWire } from './ipc.js'
+import './scrollbars.js'
 
 export default class App {
   protocol = new Protocol()
-  debugger = new Debugger()
-  updater = new Updater('RockinChaos', 'Shiru')
-  dialog = new Dialog()
+  updater = new Updater({ provider: atob('Z2l0aHVi'), owner: atob('Um9ja2luQ2hhb3M='), repo: atob('U2hpcnU=') }, [{ provider: atob('Z2VuZXJpYw=='), url: atob('Y2RuLnNoaXJ1LmFwcA==') }])
+  debug = new Debug()
+  dialog = new Dialog(this.debug)
 
   ready = NodeJS.whenReady()
-
-  kbLastScrollY = null
-  kbHideTimeout = null
-  kbScrollContainer = null
 
   canNotify = false
   handleNotify = false
@@ -53,16 +50,22 @@ export default class App {
   ]
 
   constructor() {
-    StatusBar.hide()
-    StatusBar.setStyle({ style: Style.Dark })
-    StatusBar.setOverlaysWebView({ overlay: true })
+    SystemBars.hide({ bar: SystemBarType.StatusBar })
+    Keyboard.addListener('keyboardWillHide', () => SystemBars.hide({ bar: SystemBarType.StatusBar }))
+    Capacitor.addListener('appStateChange', (state) => {
+      if (state.isActive) SystemBars.hide({ bar: SystemBarType.StatusBar })
+    })
+    if (development) SplashScreen.hide()
+    else ipcWire.once('common:windowReady', () => setTimeout(() => SplashScreen.hide({ fadeOutDuration: 600 })).unref?.()) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
 
-    this.updateSafeInsets()
-    SafeArea.addListener('safeAreaChanged', this.updateSafeInsets)
-    screen.orientation.addEventListener('change', this.updateSafeInsets)
+    // Receives log events bridged from webtorrent.js stderr/stdout.
+    NodeJS.addListener('torrent:log', ({ args }) => {
+      const { level, message } = args[0]
+      level === 'error' ? console.error(message) : console.debug(message)
+    })
 
-    IPC.on('portRequest', async () => {
-      window.port = {
+    ipcWire.handle('torrent:portRequest', async (event, settings) => {
+      const port = {
         onmessage: cb => {
           NodeJS.addListener('ipc', ({ args }) => cb(args[0]))
         },
@@ -71,75 +74,37 @@ export default class App {
         }
       }
       await this.ready
-      await cache.isReady
       this.handleNotify = true
       NodeJS.send({ eventName: 'port-init', args: [] })
       let stethoscope = true
-      NodeJS.addListener('webtorrent-heartbeat', () => {
-        if (stethoscope) {
-          stethoscope = false
-          NodeJS.send({ eventName: 'main-heartbeat', args: [{ ...cache.getEntry(caches.GENERAL, 'settings'), userID: cache.cacheID }] })
-          NodeJS.addListener('torrentRequest', () => {
-            NodeJS.send({ eventName: 'torrentPort', args: [] })
-            IPC.emit('port')
-          })
-          loadingClient.resolve()
-        }
+      return new Promise(resolve => {
+        NodeJS.addListener('webtorrent-heartbeat', () => {
+          if (stethoscope) {
+            stethoscope = false
+            NodeJS.send({ eventName: 'main-heartbeat', args: [settings] })
+            NodeJS.addListener('torrentRequest', () => {
+              NodeJS.send({ eventName: 'torrentPort', args: [] })
+              resolve(port)
+            })
+            loadingClient.resolve()
+          }
+        })
       })
     })
-    IPC.on('webtorrent-reload', () => NodeJS.send({eventName: 'webtorrent-reload', args: []}))
-
-    // HACK: recenter and focus active elements (causes keyboardWillShow to trigger)
-    window.addEventListener('orientationchange', () => {
-      const active = document.activeElement
-      if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) {
-        active.blur()
-        requestAnimationFrame(() => setTimeout(() => active.focus(), 800))
-      }
-    })
-    Keyboard.addListener('keyboardWillHide', () => {
-      if (this.kbLastScrollY != null && this.kbScrollContainer) {
-        const scrollableContainer = this.keyboardScrollParent(this.kbScrollContainer)
-        if (scrollableContainer) scrollableContainer.scrollTo({ top: this.kbLastScrollY, behavior: 'smooth' })
-        const _scrollContainer = this.kbScrollContainer
-        this.kbHideTimeout = setTimeout(() => _scrollContainer.style.paddingBottom = '', 250)
-        this.kbLastScrollY = null
-        this.kbScrollContainer = null
-      }
-    })
-    Keyboard.addListener('keyboardWillShow', info => {
-      const active = document.activeElement
-      if (!active || !['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return
-      this.kbScrollContainer = active.closest('.scroll-container')
-      if (!this.kbScrollContainer) return
-      const scrollableContainer = this.keyboardScrollParent(this.kbScrollContainer)
-      if (!scrollableContainer) return
-      const rect = active.getBoundingClientRect()
-      const visibleArea = window.innerHeight - info.keyboardHeight
-      if (rect.bottom > visibleArea) {
-        if (this.kbHideTimeout) {
-          clearTimeout(this.kbHideTimeout)
-          this.kbHideTimeout = null
-        }
-        this.kbLastScrollY = scrollableContainer.scrollTop
-        this.kbScrollContainer.style.paddingBottom = (info.keyboardHeight) + 'px'
-        const visibleHeight = visibleArea
-        if (rect.bottom > visibleHeight) scrollableContainer.scrollBy({ top: (rect.bottom - visibleHeight), behavior: 'smooth' })
-      }
-    })
+    ipcWire.on('torrent:reload', () => NodeJS.send({ eventName: 'torrent:reload', args: [] }))
 
     LocalNotifications.registerActionTypes({ types: this.notifyTypes })
     LocalNotifications.checkPermissions().then(value => {
       if (value?.display !== 'granted') {
         try {
-          LocalNotifications.requestPermissions().then(() => this.canNotify = true)
+          LocalNotifications.requestPermissions().then(() => (this.canNotify = true))
         } catch (error) {
           console.debug(error)
         }
       } else this.canNotify = true
     })
     LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-      const url = notification.actionId === 'watch_anime' || notification.actionId === 'update_now' ? notification.notification.extra?.buttons?.[0]?.activation : notification.notification.extra?.buttons?.[1]?.activation
+      const url = ['watch_anime', 'update_now'].includes(notification.actionId) ? notification.notification.extra?.buttons?.[0]?.activation : notification.notification.extra?.buttons?.[notification.notification.extra?.buttons?.length - 1]?.activation
       if (url) {
         const checkInterval = setInterval(() => {
           if (this.handleNotify) {
@@ -149,7 +114,7 @@ export default class App {
         }, 50)
       }
     })
-    IPC.on('notification', opts => {
+    ipcWire.on('common:notify', (event, opts) => {
       if (!this.canNotify) return
       LocalNotifications.schedule({
         notifications: [{
@@ -160,41 +125,15 @@ export default class App {
           id: this.NOTIFICATION_FG_ID++,
           title: opts.title,
           body: opts.message,
-          actionTypeId: opts.button.length > 1 ? opts.button[0].text?.includes('Start') ? 'start_watching' : (opts.button[0].text?.includes('Continue') ? 'continue_watching' : (opts.button[0].text?.includes('Update') ? 'update_app' : 'watch_now')) : 'view_anime',
+          actionTypeId: opts.button?.length > 1 ? opts.button[0].text?.includes('Start') ? 'start_watching' : (opts.button[0].text?.includes('Continue') ? 'continue_watching' : (opts.button[0].text?.includes('Update') ? 'update_app' : 'watch_now')) : (opts.button?.length ? 'view_anime' : undefined),
           attachments: [{ id: 'my_preview', url: opts.heroImg || opts.iconXL || opts.icon }],
           extra: { buttons: opts.button }
         }]
       })
     })
 
-    IPC.on('quit-and-install', () => {
+    ipcWire.on('common:quitAndInstall', () => {
       if (this.updater.updateAvailable) this.updater.install(true)
     })
-  }
-
-  /**
-   * Updates CSS variables with safe area insets from the device.
-   * @returns {Promise<void>}
-   */
-  async updateSafeInsets() {
-    const { insets } = await SafeArea.getDisplayCutoutInsets()
-    for (const [key, value] of Object.entries(insets)) {
-      document.documentElement.style.setProperty(`--safe-area-${key}`, `${value}px`)
-    }
-  }
-
-  /**
-   * Finds the closest scrollable parent element of a given container.
-   *
-   * @param {HTMLElement} container - Element to start searching from.
-   * @returns {HTMLElement|null} Closest scrollable parent, or null if none found.
-   */
-  keyboardScrollParent(container) {
-    let current = container
-    while (current) {
-      if (/(auto|scroll)/.test(window.getComputedStyle(current)?.overflowY)) return current
-      current = current.parentElement
-    }
-    return null
   }
 }

@@ -1,5 +1,5 @@
 import { SUPPORTS } from '@/modules/support.js'
-import { writable, derived } from 'simple-store-svelte'
+import { writable } from 'simple-store-svelte'
 import { cubicOut, cubicIn } from 'svelte/easing'
 import levenshtein from 'js-levenshtein'
 import Fuse from 'fuse.js'
@@ -32,6 +32,16 @@ export const codes = {
   521: 'Web Server Is Down'
 }
 
+export const equalsIgnoreCase = (a, b) => a != null && b != null && (typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() === b.toLowerCase() : a === b)
+
+/**
+ * Returns a deterministic avatar filename based on the provided seed text.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export const getAvatar = text => `avatar_${((String(text) || 'nan').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 4) + 1}.png`
+
 /**
  * Checks whether a value is a valid finite number.
  *
@@ -58,6 +68,25 @@ export function stringToHex(str) {
 }
 
 /**
+ * Converts text to ASCII-friendly form (fiancée to fiancee).
+ * This shouldn't be needed but as of 5/11/2026 AniList search has become very unusable
+ * even for exact title matching because they no longer support ASCII characters.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function normalizeASCII(text) {
+  return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/\u00A0/g, ' ')
+}
+
+/**
  * Creates a deferred promise that can be resolved or rejected manually.
  * @returns {{ promise: Promise<boolean>, resolve: (value?: boolean) => void, reject: (reason?: any) => void }}
  */
@@ -72,6 +101,57 @@ export function createDeferred() {
     throw new Error('Failed to create deferred promise')
   }
   return { promise, resolve: resolveFn, reject: rejectFn }
+}
+
+/** Reactive root font size in pixels, updates when the document font size changes. */
+export const baseFontSize = (() => {
+  const store = writable(typeof getComputedStyle !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) : 16)
+  const update = () => {
+    const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
+    if (Number.isFinite(fontSize)) store.value = fontSize
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(update)
+    observer.observe(document.documentElement)
+  }
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(update)
+    observer.observe(document.documentElement, { attributes: true })
+  }
+  return store
+})()
+
+/**
+ * Creates a Svelte action that observes DOM mutations on a node.
+ *
+ * @param {(mutations: MutationRecord[]) => void} callback Called whenever matching mutations are observed.
+ * @param {MutationObserverInit} options
+ * @returns {(node: HTMLElement) => { destroy: () => void }}
+ */
+export function mutationObserver(callback, options = {}) {
+  return (node) => {
+    const observer = new MutationObserver(callback)
+    observer.observe(node, options)
+    return { destroy: () => observer.disconnect() }
+  }
+}
+
+/**
+ * Creates a Svelte action that observes resize events on a node.
+ *
+ * @param {(node: HTMLElement, entry: ResizeObserverEntry) => void} callback Called on every resize and on settings update.
+ * @param {ResizeObserverOptions} [options]
+ * @returns {(node: HTMLElement, param?: any) => { update: () => void, destroy: () => void }}
+ */
+export function resizeObserver(callback, options = {}) {
+  return (node, _param) => {
+    const observer = new ResizeObserver(([entry]) => callback(node, entry))
+    observer.observe(node, options)
+    return {
+      update: () => requestAnimationFrame(() => callback(node, { contentRect: node.getBoundingClientRect() })),
+      destroy: () => observer.disconnect()
+    }
+  }
 }
 
 /**
@@ -143,8 +223,7 @@ export function since (date) {
 export function eta(date) {
   const secondsElapsed = (date.getTime() - Date.now()) / 1000
   if (!isFinite(secondsElapsed)) return '∞'
-  for (const key in ranges) {
-    const seconds = ranges[key]
+  for (const [key, seconds] of Object.entries(ranges)) {
     if (Math.abs(secondsElapsed) >= seconds) {
       const delta = secondsElapsed / seconds
       return formatterShort.format(Math.round(delta), key)
@@ -319,7 +398,10 @@ function replaceSeasonWithWords(text) {
 }
 
 const hyphenRegex = /(\w)-(\w)/g
-const regex = !SUPPORTS.isAndroid ? new RegExp('[^\\p{L}\\p{N}\\p{Zs}\\p{Pd}]', 'gu') : /[^a-zA-Z0-9\s\-\u00C0-\u024F\u0400-\u04FF\u0370-\u03FF\u0600-\u06FF\u0900-\u097F\u4E00-\u9FFF]/g
+// eslint-disable-next-line prefer-regex-literals
+const regex = !SUPPORTS.isAndroid ? new RegExp('[^\\p{L}\\p{N}\\p{Zs}\\p{Pd}]', 'gu')
+  // eslint-disable-next-line no-misleading-character-class
+  : /[^a-zA-Z0-9\s\-\u00C0-\u024F\u0400-\u04FF\u0370-\u03FF\u0600-\u06FF\u0900-\u097F\u4E00-\u9FFF]/g
 function cleanText(text) {
   if (typeof text !== 'string') return ''
   return replaceSeasonWithWords(text.replace(hyphenRegex, '$1 $2').replace(regex, ''))
@@ -369,7 +451,7 @@ export function matchPhrase(search, phrase, threshold, strict = false, soft = fa
   if (!search || !phrase) return false
   const normalizedSearch = search.toString().toLowerCase().replace(regex, '')
   phrase = Array.isArray(phrase) ? phrase : [phrase]
-  for (let p of phrase) {
+  for (const p of phrase) {
     if (p) {
       const normalizedPhrase = p.toLowerCase().replace(regex, '')
       if (strict) {
@@ -378,7 +460,7 @@ export function matchPhrase(search, phrase, threshold, strict = false, soft = fa
         if (normalizedSearch.includes(normalizedPhrase)) return true
         const searchWords = normalizedSearch.split(/\s+/)
         if (!soft) {
-          for (let word of searchWords) {
+          for (const word of searchWords) {
             if (levenshtein(word, normalizedPhrase) <= threshold) return true
           }
         } else return new Fuse([normalizedPhrase], { includeScore: true, threshold, ignoreLocation: true, useExtendedSearch: true, isCaseSensitive: false }).search(normalizedSearch)?.length > 0
@@ -413,10 +495,6 @@ export function capitalize(str) {
   return str?.replace(/\b\w/g, char => char.toUpperCase())
 }
 
-export function toFlags(code) {
-  return code.toUpperCase().split('').map(letter => String.fromCodePoint(0x1F1E6 + letter.charCodeAt(0) - 'A'.charCodeAt(0))).join('')
-}
-
 export function throttle (fn, time) {
   let wait = false
   return (...args) => {
@@ -424,14 +502,13 @@ export function throttle (fn, time) {
       fn(...args)
       wait = true
       setTimeout(() => {
-        fn(...args)
         wait = false
       }, time).unref?.()
     }
   }
 }
 
-export function debounce (fn, time) {
+export function debounce (fn, time = 0) {
   let timeout
   return (...args) => {
     const later = () => {
@@ -491,6 +568,81 @@ export function fadeOut(node, { delay = 0, duration = 200, y = 1.2, endScale = 0
         transform: translateY(${u * y}rem) scale(${1 + (endScale - 1) * u});
         transform-origin: bottom center;
         will-change: transform, opacity;`
+  }
+}
+
+/**
+ * Horizontally shifts an element just enough to keep it inside the viewport.
+ * The individual translate property intentionally stays separate from transition transforms.
+ *
+ * @param {HTMLElement} node The element to keep visible.
+ * @param {number} [padding=0] Minimum distance from the viewport edge in pixels.
+ * @returns {{ destroy: () => void }} Svelte action lifecycle methods.
+ */
+export function clampToViewport(node, padding = 0) {
+  let frame
+  let scrollTimeout
+  let transitionTimeout
+  let shift = 0
+  const scrollContainer = node.closest('.gallery')
+  const originalTransition = {
+    value: node.style.getPropertyValue('transition'),
+    priority: node.style.getPropertyPriority('transition')
+  }
+
+  function restoreTransition() {
+    if (originalTransition.value) node.style.setProperty('transition', originalTransition.value, originalTransition.priority)
+    else node.style.removeProperty('transition')
+  }
+
+  function update() {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(() => {
+      const rect = node.getBoundingClientRect()
+      const containerRect = scrollContainer?.getBoundingClientRect()
+      const leftEdge = Math.max(padding, (containerRect?.left ?? 0) + padding)
+      const rightEdge = Math.min(window.innerWidth - padding, (containerRect?.right ?? window.innerWidth) - padding)
+      const baseCenter = ((rect.left + rect.right) / 2) - shift
+      const baseLeft = baseCenter - (node.offsetWidth / 2)
+      const baseRight = baseCenter + (node.offsetWidth / 2)
+
+      if (node.offsetWidth > rightEdge - leftEdge || baseLeft < leftEdge) shift = leftEdge - baseLeft
+      else if (baseRight > rightEdge) shift = rightEdge - baseRight
+      else shift = 0
+
+      node.style.translate = `${shift}px 0`
+    })
+  }
+
+  function handleScroll() {
+    clearTimeout(scrollTimeout)
+    clearTimeout(transitionTimeout)
+    restoreTransition()
+    scrollTimeout = setTimeout(() => {
+      node.style.setProperty('transition', 'translate 120ms ease-out')
+      update()
+      transitionTimeout = setTimeout(restoreTransition, 180)
+      transitionTimeout.unref?.()
+    }, 120)
+    scrollTimeout.unref?.()
+  }
+
+  const resizeObserver = new ResizeObserver(update)
+  resizeObserver.observe(node)
+  window.addEventListener('resize', update)
+  scrollContainer?.addEventListener('scroll', handleScroll, { passive: true })
+  update()
+
+  return {
+    destroy() {
+      cancelAnimationFrame(frame)
+      clearTimeout(scrollTimeout)
+      clearTimeout(transitionTimeout)
+      restoreTransition()
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', update)
+      scrollContainer?.removeEventListener('scroll', handleScroll)
+    }
   }
 }
 
@@ -572,20 +724,20 @@ export function createListener(triggerClasses = []) {
 export const defaults = {
   volume: 1,
   uiScale: 1,
+  customCSS: '',
   presetTheme: 'default-dark',
   updateChannel: 'stable',
+  updateVersion: undefined,
   playerAutoplay: true,
   playerPause: true,
   playerAutocomplete: true,
   playerAutocompleteThreshold: 85,
-  playerAutoDownloadNext: false,
   playerDeband: false,
   preferDubs: false,
   adult: 'none',
   hentaiBanner: false,
   rssAutoplay: true,
   rssAutofile: true,
-  rssAutoSelect: false,
   rssQuality: '1080',
   rssFeedsNew: [],
   rssNotify: ['CURRENT', 'PLANNING'],
@@ -605,6 +757,7 @@ export const defaults = {
   disableStartupTorrent: SUPPORTS.isAndroid,
   torrentPort: 0,
   torrentStreamedDownload: true,
+  stageImportedTorrents: false,
   torrentSort: 'seeders',
   seedingLimit: !SUPPORTS.isAndroid ? 5 : 2,
   dhtPort: 0,
@@ -620,33 +773,36 @@ export const defaults = {
   enableRPC: 'full',
   cards: 'small',
   cardPreview: true,
-  jimakuKey: '',
   cardAudio: false,
-  autoMuteTrailers: true,
   toggleList: !SUPPORTS.isAndroid,
   titleLang: 'romaji',
   hideMyAnime: false,
   toasts: 'All',
   closeAction: 'Prompt',
+  offlineSync: true,
   queryComplexity: 'Complex',
+  showLabels: true,
+  expandingSidebar: false,
+  torrentPathNew: undefined,
+  donate: true,
+  w2g: false,
   font: undefined,
   angle: 'default',
-  sourcesNew: {},
   extensionsNew: {},
-  extensionSources: {},
   disableMiniplayer: false,
   autoHideMiniplayer: true,
   enableExternal: false,
+  autoFullscreen: true,
+  spoilers: 'off',
+  spoilerStatus: [],
   playerPath: '',
   playerSeek: 2,
   playerSkip: false,
+  playerTitleTop: true,
+  playerCoverVideo: false,
   playerChapterSkip: 'embedded',
   configTrackers: false,
   trackers: [
-    atob('d3NzOi8vdHJhY2tlci5vcGVud2VidG9ycmVudC5jb20='),
-    atob('d3NzOi8vdHJhY2tlci53ZWJ0b3JyZW50LmRldg=='),
-    atob('d3NzOi8vdHJhY2tlci5maWxlcy5mbTo3MDczL2Fubm91bmNl'),
-    atob('d3NzOi8vdHJhY2tlci5idG9ycmVudC54eXov'),
     atob('dWRwOi8vb3Blbi5zdGVhbHRoLnNpOjgwL2Fubm91bmNl'),
     atob('dWRwOi8vdHJhY2tlci5vcGVudHJhY2tyLm9yZzoxMzM3L2Fubm91bmNl'),
     atob('dWRwOi8vZXhvZHVzLmRlc3luYy5jb206Njk2OS9hbm5vdW5jZQ=='),
@@ -656,34 +812,39 @@ export const defaults = {
     atob('aHR0cDovL29wZW4uYWNnbnh0cmFja2VyLmNvbTo4MC9hbm5vdW5jZQ=='),
     atob('aHR0cDovL2FuaWRleC5tb2U6Njk2OS9hbm5vdW5jZQ=='),
     atob('aHR0cDovL255YWEudHJhY2tlci53Zjo3Nzc3L2Fubm91bmNl'),
-    atob('aHR0cDovL3RyYWNrZXIuYW5pcmVuYS5jb206ODAvYW5ub3VuY2U=')
+    atob('aHR0cHM6Ly90cmFja2VyLm5la29idC50by9hcGkvdHJhY2tlci9wdWJsaWMvYW5ub3VuY2U='),
+    atob('aHR0cDovL3RyYWNrZXIuYW5pcmVuYS5jb206ODAvYW5ub3VuY2U='),
+    atob('d3NzOi8vdHJhY2tlci5vcGVud2VidG9ycmVudC5jb20='),
+    atob('d3NzOi8vdHJhY2tlci53ZWJ0b3JyZW50LmRldg=='),
+    atob('d3NzOi8vdHJhY2tlci5maWxlcy5mbTo3MDczL2Fubm91bmNl'),
+    atob('d3NzOi8vdHJhY2tlci5idG9ycmVudC54eXov')
   ]
 }
 
 /**
  * @typedef {Object} GeneralDefaults
- * @property {string} theme
- * @property {number} volume
- * @property {string} posMiniplayer
- * @property {string} widthMiniplayer
  * @property {Array<any>} sync
+ * @property {Array<any>} syncQueueAni
+ * @property {Array<any>} syncQueueMal
  * @property {typeof defaults} settings
  * @property {any} [loadedTorrent]
  * @property {any} [stagingTorrents]
  * @property {any} [seedingTorrents]
  * @property {any} [completedTorrents]
+ * @property {string} posMiniplayer
+ * @property {string} widthMiniplayer
  */
 export const generalDefaults = {
-  theme: '',
-  volume: 1,
-  posMiniplayer: 'bottom right',
-  widthMiniplayer: '0px',
   sync: [],
+  syncQueueAni: [],
+  syncQueueMal: [],
   settings: defaults,
   loadedTorrent: undefined,
   stagingTorrents: [],
   seedingTorrents: [],
-  completedTorrents: []
+  completedTorrents: [],
+  posMiniplayer: 'bottom right',
+  widthMiniplayer: '0px'
 }
 
 /**
@@ -707,28 +868,13 @@ export const historyDefaults = {
 }
 
 /**
- * @typedef {Object} QueryDefaults
- * @property {Record<string, any>} recommendations
- * @property {Record<string, any>} notifications
- * @property {Record<string, any>} following
- * @property {Record<string, any>} episodes
- * @property {Record<string, any>} search
- * @property {Record<string, any>} searchIDS
- * @property {Record<string, any>} compound
- * @property {Record<string, any>} extensions
- * @property {Record<string, any>} rss
+ * @typedef {Object} ExtensionDefaults
+ * @property {any} [extensionSources]
+ * @property {any} [repositorySources]
  */
-export const queryDefaults = {
-  recommendations: {},
-  notifications: {},
-  following: {},
-  episodes: {},
-  threads: {},
-  search: {},
-  searchIDS: {},
-  compound: {},
-  extensions: {},
-  rss: {}
+export const extensionDefaults = {
+  extensionSources: undefined,
+  repositorySources: undefined
 }
 
 /**
@@ -742,6 +888,7 @@ export const queryDefaults = {
  * @property {any[]} announcedDubs
  * @property {any[]} announcedSubs
  * @property {any[]} announcedHentais
+ * @property {any[]} incomingNotifications
  * @property {any[]} notifications
  */
 export const notifyDefaults = {
@@ -754,6 +901,7 @@ export const notifyDefaults = {
   announcedDubs: [],
   announcedSubs: [],
   announcedHentais: [],
+  incomingNotifications: [],
   notifications: []
 }
 

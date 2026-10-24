@@ -20,43 +20,72 @@ class Worker {
   id
   source
   module
+  type
   cache = new Map()
+  #abortController = new AbortController()
+
+  /**
+   * Creates a promise that rejects once the worker is terminated.
+   */
+  #terminated() {
+    const { signal } = this.#abortController
+    return new Promise((_, reject) => {
+      if (signal.aborted) return reject(new Error(`Worker ${this.id} was terminated`))
+      signal.addEventListener('abort', () => reject(new Error(`Worker ${this.id} was terminated`)), { once: true })
+    })
+  }
 
   /**
    * Load and validate the source from code
+   *
    * @param {string} id
+   * @param {'torrent'} type
    * @param {object} module
-   * @param {{bypassCORS: boolean}} opts
+   * @param {{settings: Record<string, any>, bypassCORS: boolean}} opts
    * @returns {Promise<{ validated: true } | { error: string } | { stub: boolean, error: string }>}
    */
-  async initialize(id, module, opts) {
+  async initialize(id, type = 'torrent', module, opts) {
+    this.type = type
     this.module = module
     try {
       let source
-      if (id.startsWith('extension:')) source = (await import(/* webpackIgnore: true */ module)).default
+      if (id.startsWith('extension:')) source = (await Promise.race([import(/* webpackIgnore: true */ module), this.#terminated()])).default
       else {
         const blob = new Blob([module], { type: 'application/javascript' })
         const blobUrl = URL.createObjectURL(blob)
-        source = (await import(/* webpackIgnore: true */ blobUrl)).default
+        source = (await Promise.race([import(/* webpackIgnore: true */ blobUrl), this.#terminated()])).default
       }
-      source.anitomyscript = (await import('anitomyscript')).default
+      source.anitomyscript = (await Promise.race([import('anitomyscript'), this.#terminated()])).default
+      if (Object.keys(opts.settings ?? {}).length) source.settings = opts.settings
       this.id = id
       this.source = source
 
       let validated = false
       if (opts.bypassCORS) {
-        try { validated = await this.source.validate() } catch {}
+        try { validated = await Promise.race([this.source.validate(), this.#terminated()]) } catch {}
         if (!validated) {
           globalThis.fetch = createBridge() // hacky Android workaround for Access-Control-Allow-Origin error.
-          validated = await this.source.validate()
+          validated = await Promise.race([this.source.validate(), this.#terminated()])
         }
-      } else validated = await this.source.validate()
+      } else validated = await Promise.race([this.source.validate(), this.#terminated()])
       if (!validated) return { error: 'The content source appears to be unreachable.' }
 
       return { validated: true }
     } catch (err) {
       return { stub: isStubModule(module), error: err.message }
     }
+  }
+
+  /**
+   * Updates the settings on the active source instance and clears the query cache.
+   * Called by the extension manager when the user changes an extension setting.
+   *
+   * @param {Record<string, any>} settings The settings object to apply.
+   * @returns {Promise<void>}
+   */
+  async updateSettings(settings = {}) {
+    this.cache.clear()
+    this.source.settings = settings
   }
 
   /**
@@ -75,7 +104,7 @@ class Worker {
    * @param {boolean} online
    * @param {{enabled: boolean}} sourceOptions
    */
-  async query (options, types, online, sourceOptions) {
+  async query(options, types = {}, online, sourceOptions) {
     /** @type {Promise<{ results: Result[], errors: string[] }>[]} */
     const promises = []
     if (!sourceOptions?.enabled) return { results: [], errors: [{ message: 'Extension is not enabled.. skipping...' }] }
@@ -87,15 +116,15 @@ class Worker {
       return cached.query
     }
 
-    promises.push(this._querySource(this.source, options, types))
+    if (online) promises.push(this._querySource(this.source, options, types))
     /** @type {Result[]} */
     const results = []
     const errors = []
-    for (const res of await Promise.all(promises)) {
+    for (const res of await Promise.race([Promise.all(promises), this.#terminated()])) {
       results.push(...res.results)
       errors.push(...res.errors)
     }
-    const noResults = (!online || (!results?.length && !errors?.length)) ? [{ message: 'Source ' + this.id + ' found no results.' }] : null
+    const noResults = (!online || (!results?.length && !errors?.length)) ? [{ message: 'Source ' + this.id + ' found no results.' + (!online ? ' Network is offline.' : '') }] : null
     if (online && !errors?.length) this.cache.set(cacheKey, { query: { results, errors: noResults || errors }, timestamp: Date.now() })
     return { results, errors: noResults || errors }
   }
@@ -106,15 +135,17 @@ class Worker {
    * @param {{ movie: boolean, batch: boolean }} types
    * @returns {Promise<{ results: Result[], errors: string[] }>}
    */
-  async _querySource (source, options, { movie, batch }) {
+  async _querySource(source, options, { movie, batch } = {}) {
     const promises = []
-    promises.push(source.single(options))
-    if (movie) promises.push(source.movie(options))
-    if (batch) promises.push(source.batch(options))
+    if (this.type === 'torrent') {
+      promises.push(source.single(options))
+      if (movie) promises.push(source.movie(options))
+      if (batch) promises.push(source.batch(options))
+    }
 
     const results = []
     const errors = []
-    for (const result of await Promise.allSettled(promises)) {
+    for (const result of await Promise.race([Promise.allSettled(promises), this.#terminated()])) {
       if (result.status === 'fulfilled') {
         results.push(...result.value)
       } else {
@@ -127,10 +158,11 @@ class Worker {
   }
 
   async validate() {
-    return !!(await this.source.validate())
+    return !!(await Promise.race([this.source.validate(), this.#terminated()]))
   }
 
   terminate() {
+    this.#abortController.abort()
     self.close()
   }
 }

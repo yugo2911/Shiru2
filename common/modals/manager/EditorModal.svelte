@@ -2,7 +2,7 @@
   import { writable } from 'simple-store-svelte'
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import SearchPage from '@/routes/search/SearchPage.svelte'
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
   import { setHash } from '@/modules/anime/animehash.js'
   import { modal } from '@/modules/navigation.js'
   import { X } from 'lucide-svelte'
@@ -52,13 +52,13 @@
     modal.open(modal.FILE_EDITOR, writable(search))
   }
 </script>
-<SoftModal class='vwh-90 rounded scrollbar-none bg-very-dark' bind:showModal={$modal[modal.FILE_EDITOR]} {close} id={modal.FILE_EDITOR}>
-  <div class='d-flex mt-10'>
-    <div>
-      <h3 class='mb-0 font-weight-bold text-white title font-size-24 ml-20'>Select a Series</h3>
-      <h4 class='mb-0 text-muted title font-size-12 ml-20'>Click or tap the series that is currently playing.</h4>
+<SoftModal class='w-full mx-20 h-full rounded scrollbar-none bg-very-dark' innerCss='pt-20' bind:showModal={$modal[modal.FILE_EDITOR]} {close} id={modal.FILE_EDITOR}>
+  <div class='d-flex' style='margin-top: max(calc(var(--safe-area-top) - 3rem), 1rem)'>
+    <div class='details'>
+      <h3 class='mb-0 font-weight-bold text-white title font-size-24 ml-20 line-height-1'>Select a Series</h3>
+      <h4 class='mb-0 text-muted title font-size-12 ml-20 line-height-1'>Click or tap the series that is currently playing.</h4>
     </div>
-    <button type='button' class='btn btn-square ml-auto mr-20 d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
+    <button type='button' class='btn btn-square ml-auto mr-20 d-flex align-items-center justify-content-center rounded-2 flex-shrink-0 mt-10' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
   </div>
   <SearchPage {key} search={$modal[modal.FILE_EDITOR]?.data}/>
 </SoftModal>

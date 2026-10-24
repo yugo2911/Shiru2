@@ -1,40 +1,41 @@
 import { Filesystem } from '@capacitor/filesystem'
 import { Browser } from '@capacitor/browser'
-import { IPC } from '../preload/preload.js'
 import { loadingClient } from './util.js'
-import { App } from '@capacitor/app'
+import { ipcWire } from './ipc.js'
+import { App as Capacitor } from '@capacitor/app'
 
 export default class Protocol {
   // schema: shiru://key/value
   protocolMap = {
     alauth: token => this.sendToken(token),
     malauth: token => this.sendMalToken(token),
-    anime: id => IPC.emit('open-anime', {id}),
-    malanime: id => IPC.emit('open-anime', {id, mal: true}),
+    anime: id => ipcWire.send('common:onRequestModal', 'anime_details', { id }),
+    malanime: id => ipcWire.send('common:onRequestModal', 'anime_details', { id, isMal: true }),
     torrent: magnet => this.add(magnet),
     search: id => this.play(id),
-    w2g: link => IPC.emit('w2glink', link),
-    schedule: () => IPC.emit('schedule'),
-    donate: () => Browser.open({url: 'https://github.com/sponsors/RockinChaos/'}),
-    update: () => IPC.emit('quit-and-install'),
-    changelog: () => Browser.open({url: 'https://github.com/RockinChaos/Shiru/releases/latest'}),
-    show: () => IPC.emit('window-show')
+    w2g: link => ipcWire.send('common:onLobbyInvite', link),
+    player: () => ipcWire.send('common:onRequestPage', 'player'),
+    schedule: () => ipcWire.send('common:onRequestPage', 'schedule'),
+    donate: () => Browser.open({ url: 'https://contribute.shiru.app/' }),
+    update: () => ipcWire.emit('common:quitAndInstall'),
+    changelog: () => Browser.open({ url: 'https://latest.shiru.app/' })
   }
 
   protocolRx = /shiru:\/\/([a-z0-9]+)\/(.*)/i
 
   constructor() {
-    App.getLaunchUrl().then(res => {
+    Capacitor.getLaunchUrl().then(res => {
       if (location.hash !== '#skipAlLogin') {
         location.hash = '#skipAlLogin'
         if (res) this.handleProtocol(res.url)
       } else location.hash = ''
     })
-    App.addListener('appUrlOpen', async ({ url }) => {
+    Capacitor.addListener('appUrlOpen', async ({ url }) => {
       await loadingClient.promise
       if ((!url.startsWith('magnet:') && url.endsWith('.torrent')) || url.startsWith('content://') || url.startsWith('file://')) this.handleTorrentFile(url)
       else this.handleProtocol(url)
     })
+    ipcWire.on('common:handleProtocol', (event, data) => this.handleProtocol(data))
   }
 
   /**
@@ -59,7 +60,7 @@ export default class Protocol {
     let token = line.split('access_token=')[1].split('&token_type')[0]
     if (token) {
       if (token.endsWith('/')) token = token.slice(0, -1)
-      IPC.emit('altoken', token)
+      ipcWire.send('common:onProviderToken', 'anilist', { token })
     }
   }
 
@@ -73,7 +74,7 @@ export default class Protocol {
       if (code.endsWith('/')) code = code.slice(0, -1)
       if (state.endsWith('/')) state = state.slice(0, -1)
       if (state.includes('%')) state = decodeURIComponent(state)
-      IPC.emit('maltoken', code, state)
+      ipcWire.send('common:onProviderToken', 'myanimelist', { code, state })
     }
   }
 
@@ -81,8 +82,7 @@ export default class Protocol {
    * @param {string} id - The media id.
    */
   play(id) {
-    IPC.emit('play-anime', id)
-    IPC.emit('window-show')
+    ipcWire.send('common:onRequestPlay', { id })
   }
 
   /**
@@ -90,8 +90,7 @@ export default class Protocol {
    * @param {boolean} base64 - If the data needs to be converted from `Base64` to `Uint8Array`
    */
   add(magnet, base64 = false) {
-    IPC.emit('play-torrent', { magnet, base64 })
-    IPC.emit('window-show')
+    ipcWire.send('torrent:onRequest', { magnet, base64 })
   }
 
   /**

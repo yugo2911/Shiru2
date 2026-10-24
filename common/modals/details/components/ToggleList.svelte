@@ -1,15 +1,28 @@
 <script>
+  import { resizeObserver } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
-  import { onDestroy, afterUpdate } from 'svelte'
+  import { click } from '@/modules/lib/click.js'
+  import ToggleTitle from '@/modals/details/components/ToggleTitle.svelte'
+  import ToggleFooter from '@/modals/details/components/ToggleFooter.svelte'
 
+  export let title
   export let promise
   export let list
 
-  let container = null
+  let showMore = false
+  function toggleList() {
+    showMore = !showMore
+  }
 
-  function updateRowMarkers() {
-    if (!container) return
-    const cards = Array.from(container.querySelectorAll('.small-card'))
+  let previewLength = 4
+  function updateRowLength(node) {
+    if (!settings.value.toggleList) return
+    const firstItem = node.querySelector('.small-card')
+    if (firstItem) previewLength = Math.floor(node.offsetWidth / firstItem.offsetWidth) || 1
+  }
+
+  function updateRowMarkers(node) {
+    const cards = Array.from(node.querySelectorAll('.small-card'))
     cards.forEach(card => card.classList.remove('first-in-row', 'last-in-row'))
     if (!settings.value.toggleList) {
       if (cards.length > 0) {
@@ -32,56 +45,63 @@
     }
   }
 
-  function handleUpdate() {
-    updateRowMarkers()
-  }
-
-  let observer = null
-  $: {
-    if (container && !observer) {
-      observer = new ResizeObserver(handleUpdate)
-      observer.observe(container)
-      window.addEventListener('resize', handleUpdate)
-    }
-  }
-  afterUpdate(handleUpdate)
-  onDestroy(() => {
-    observer?.disconnect()
-    observer = null
-    window.removeEventListener('resize', handleUpdate)
+  const trackLayout = resizeObserver((node) => {
+    updateRowLength(node)
+    updateRowMarkers(node)
   })
 </script>
 
 {#if list?.length}
-  <div class='pt-10 text-capitalize d-flex gallery'
-       class:justify-content-center={list.length <= 2 || settings.value.toggleList}
-       class:justify-content-start={list.length > 2 && !settings.value.toggleList}
-       class:scroll={!settings.value.toggleList && list.length > 2}
-       class:flex-row={!settings.value.toggleList}
-       class:flex-wrap={settings.value.toggleList}
-       bind:this={container}>
-    {#each list as item}
-      <slot {item} {promise} />
-    {/each}
+  {@const canToggle = settings.value.toggleList && list.length > previewLength}
+  {@const isScrollable = !settings.value.toggleList && list.length > 2}
+  <span class='d-flex align-items-end mt-20' aria-hidden='true' tabindex='-1' class:pointer={canToggle} class:not-reactive={!canToggle} use:click={toggleList}>
+    <ToggleTitle title={title} class={canToggle ? `more` : ``}/>
+  </span>
+  <div class:position-relative={isScrollable} class:scrollable={isScrollable}>
+    <div class='pt-10 text-capitalize d-flex gallery'
+         class:justify-content-center={list.length <= 2 || settings.value.toggleList}
+         class:justify-content-start={isScrollable}
+         class:scroll={isScrollable}
+         class:flex-row={!settings.value.toggleList}
+         class:flex-wrap={settings.value.toggleList}
+         use:trackLayout>
+      {#each !settings.value.toggleList ? list : (showMore ? list : list.slice(0, previewLength)) as item, itemIndex (itemIndex)}
+        <slot {item} {promise} />
+      {/each}
+    </div>
   </div>
+  <ToggleFooter {showMore} {toggleList} size={settings.value.toggleList && list.length} rowSize={previewLength} />
 {/if}
 
 <style>
-  
-
+  .scrollable::before,
+  .scrollable::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    height: 100%;
+    width: 2rem;
+    z-index: 32;
+    background: var(--details-section-end-gradient);
+    pointer-events: none;
+  }
+  .scrollable::before {
+    left: -1px;
+    transform: scaleX(-1);
+  }
   .scroll {
     overflow-x: scroll;
     flex-shrink: 0;
     scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.07) transparent;
   }
-  .scroll::-webkit-scrollbar { display: none; }
+  .scroll::-webkit-scrollbar {
+    display: none;
+  }
 
-  .gallery :global(.first-in-row .small-card-ct .card-popup) {
+  .gallery :global(.first-in-row .small-card-ct .absolute-container) {
     left: -48% !important;
   }
-  .gallery :global(.last-in-row .small-card-ct .card-popup) {
+  .gallery :global(.last-in-row .small-card-ct .absolute-container) {
     right: -48% !important;
   }
   .gallery :global(.item.small-card) {

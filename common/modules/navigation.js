@@ -1,9 +1,14 @@
-import { files } from '@/components/MediaHandler.svelte'
-import { SUPPORTS } from '@/modules/support.js'
-import { writable } from 'simple-store-svelte'
+import { COMMON, ELECTRON, ANDROID } from '@/modules/bridge.js'
 import { settings } from '@/modules/settings.js'
+import { writable } from 'simple-store-svelte'
+import { cache } from '@/modules/cache.js'
 import Debug from 'debug'
 const debug = Debug('ui:history')
+
+/** @type {import('simple-store-svelte').Writable<Array<object>>} */
+export const files = writable([])
+/** @type {import('simple-store-svelte').Writable<boolean>} */
+export const drawerOpen = writable(false)
 
 /**
  * @typedef {Object} PageStore
@@ -251,6 +256,30 @@ export const modal = (() => {
   }
 })()
 
+const validPages = Object.values(page).filter(value => typeof value === 'string')
+COMMON.onRequestPage((pageName) => {
+  if (validPages.includes(pageName)) {
+    ELECTRON.showAndFocus()
+    page.navigateTo(pageName === 'player' ? (files?.value?.length ? pageName : 'home') : pageName)
+  } else debug(`onRequestPage: unknown page "${pageName}"`)
+})
+
+const validModals = Object.values(modal).filter(value => typeof value === 'string')
+COMMON.onRequestModal(async (modalName, opts) => {
+  if (validModals.includes(modalName)) {
+    if (modalName === modal.ANIME_DETAILS && Object.keys(opts)?.length) {
+      const foundMedia = await cache.requestMedia(opts.id, opts.isMal)
+      if (foundMedia) {
+        ELECTRON.showAndFocus()
+        modal.open(modal.ANIME_DETAILS, foundMedia)
+      }
+    } else {
+      ELECTRON.showAndFocus()
+      modal.open(modalName)
+    }
+  } else debug(`onRequestModal: unknown modal "${modalName}" ${JSON.stringify(opts)}`)
+})
+
 /**
  * Manages navigation history for back/forward movement.
  * * TODO: Change the settings tabs have page routes to support history navigation.
@@ -276,26 +305,34 @@ class HistoryManager {
   canGoForward = writable(false)
 
   constructor() {
-    if (SUPPORTS.isAndroid) {
-      let minimizeApp = null
-      window.Capacitor.Plugins.App.addListener('backButton', () => {
-        debug('Android back button pressed', JSON.stringify({ canGoBack: canGoBack.value, minimizeApp: minimizeApp, currentIndex: this.currentIndex, historyLength: this.history.length }))
-        if (canGoBack.value) this.goBack()
-        else if (minimizeApp) {
-          debug('Second back press detected, minimizing app')
-          clearTimeout(minimizeApp)
+    let minimizeApp = null
+    ANDROID.onBackButton(() => {
+      debug('Android back button pressed', JSON.stringify({ canGoBack: canGoBack.value, minimizeApp: minimizeApp, currentIndex: this.currentIndex, historyLength: this.history.length }))
+      if (document.fullscreenElement) {
+        debug('Back was pressed while in fullscreen, skipping navigation and exiting fullscreen...')
+        document.exitFullscreen()
+        return
+      } else if (drawerOpen.value) {
+        drawerOpen.set(false)
+        return
+      }
+
+      if (canGoBack.value) this.goBack()
+      else if (minimizeApp) {
+        debug('Second back press detected, minimizing app')
+        clearTimeout(minimizeApp)
+        minimizeApp = null
+        ANDROID.minimize()
+      } else {
+        debug('First back press, setting minimize timeout')
+        ANDROID.toast('Press back again to exit')
+        minimizeApp = setTimeout(() => {
+          debug('Resetting minimize timeout it has been 1000ms')
           minimizeApp = null
-          window.Capacitor.Plugins.App.minimizeApp()
-        } else {
-          debug('First back press, setting minimize timeout')
-          minimizeApp = setTimeout(() => {
-            debug('Resetting minimize timeout it has been 1000ms')
-            minimizeApp = null
-          }, 1_000)
-          minimizeApp?.unref?.()
-        }
-      })
-    }
+        }, 2_000)
+        minimizeApp?.unref?.()
+      }
+    })
     window.addEventListener('mouseup', (event) => {
       if (event.button === 3) {
         debug('Mouse back button pressed')
@@ -304,6 +341,17 @@ class HistoryManager {
       } else if (event.button === 4) {
         debug('Mouse forward button pressed')
         event.preventDefault()
+        this.goForward()
+      }
+    })
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'BrowserBack' || (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.key === 'ArrowLeft')) {
+        event.preventDefault()
+        debug('Back navigation key pressed', event.key)
+        this.goBack()
+      } else if (event.key === 'BrowserForward' || (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.key === 'ArrowRight')) {
+        event.preventDefault()
+        debug('Forward navigation key pressed', event.key)
         this.goForward()
       }
     })
@@ -335,6 +383,11 @@ class HistoryManager {
    */
   navigatePage(pageValue) {
     debug('navigatePage called', pageValue)
+    const tempIndex = this.history.findIndex(state => state.isTemp)
+    if (tempIndex !== -1) {
+      this.history.splice(tempIndex, 1)
+      debug('Removed temp entry before navigation', JSON.stringify(tempIndex))
+    }
     const filteredModals = { ...modal.value }
     delete filteredModals[modal.MINIMIZE_PROMPT]
     delete filteredModals[modal.UPDATE_PROMPT]
@@ -343,6 +396,7 @@ class HistoryManager {
       this.addHistoryEntry('modal', filteredModals)
     }
     if (modal.length) this.setIgnoreNext(() => modal.clear())
+    if (page.value === pageValue) this.addHistoryEntry('page', pageValue)
     page.set(pageValue)
   }
 
@@ -352,6 +406,11 @@ class HistoryManager {
    */
   goBack(skipLock = false) {
     debug('goBack called', JSON.stringify({ currentIndex: this.currentIndex }))
+    if (drawerOpen.value) {
+      drawerOpen.set(false)
+      debug('Called goBack but navigation drawer is open, closing...')
+      return
+    }
     if (!skipLock) {
       if (this.navigationLocked) {
         debug('goBack ignored, navigation cooldown active')
@@ -375,6 +434,7 @@ class HistoryManager {
           this.setIgnoreNext(() => modal.set(current.value))
           skipNavigation = true
           debug('Modal restored without moving history', current.value)
+          this.syncState()
         }
       }
     }
@@ -399,7 +459,8 @@ class HistoryManager {
       this.lockNavigation()
     }
     if (this.currentIndex < this.history.length - 1) {
-      let next = this.history[this.currentIndex + 1]
+      drawerOpen.set(false)
+      const next = this.history[this.currentIndex + 1]
       if (next?.isTemp) {
         debug('Navigating to temp forward entry', JSON.stringify(next))
         if (next.type === 'modal') {
@@ -560,7 +621,7 @@ class HistoryManager {
    */
   lockNavigation() {
     this.navigationLocked = true
-    setTimeout(() => this.navigationLocked = false, 150).unref?.()
+    setTimeout(() => (this.navigationLocked = false), 150).unref?.()
   }
 
   /**

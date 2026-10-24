@@ -3,15 +3,15 @@
     import { malDubs } from '@/modules/anime/animedubs.js'
     import { animeSchedule } from '@/modules/anime/animeschedule.js'
     import { getMediaMaxEp } from '@/modules/anime/anime.js'
-    import { matchPhrase } from '@/modules/util.js'
+    import { matchPhrase, resizeObserver } from '@/modules/util.js'
     import { writable } from 'simple-store-svelte'
-    import { onDestroy, afterUpdate } from 'svelte'
     import { Mic, MicOff, Captions, Adult, ClockFading } from 'lucide-svelte'
 
-    /** @type {import('@/modules/al.d.ts').Media} */
+    /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
     export let media = null
     export let data = null
 
+    export let style = ''
     export let banner = false
     export let viewAnime = false
     export let episode = false
@@ -20,65 +20,51 @@
     export let dubbed = false
     export let subbed = false
 
-    let isDubbed = writable(false)
-    let isPartial = writable(false)
+    const { dubLists } = malDubs
+    const { dubAiredLists, dubAiring } = animeSchedule
 
-    $: dubEpisodes = null
-    animeSchedule.dubAiredLists.subscribe(async (value) => getDubEpisodes(await value))
-    function getDubEpisodes(dubAiredLists) {
-      if (banner) return
-      const dubAiring = animeSchedule.dubAiring.value?.find(entry => entry.unaired && entry.media?.media?.id === media.id)
-      const airedEpisodes = dubAiredLists?.filter(ep => ep.id === media.id)?.map(ep => ep.episode.aired) || []
-      const episodes = String((($isDubbed || $isPartial) && airedEpisodes.length > 0 && airedEpisodes.length) || (dubAiredLists?.find(entry => entry.media?.media?.id === media.id)?.episodeNumber && '0') || (!$isPartial && media.status !== 'RELEASING' && media.status !== 'NOT_YET_RELEASED' && Number(media.seasonYear || 0) < 2025 && !dubAiring && getMediaMaxEp(media)) || '')
-      if (dubEpisodes !== episodes) dubEpisodes = episodes
+    const isDubbed = writable(false)
+    const isPartial = writable(false)
+
+    let dubEpisodes = null
+    $: getDubEpisodes($dubAiredLists, media?.id)
+    async function getDubEpisodes(dubAiredLists, _) {
+        if (banner) return
+        const aired = await dubAiredLists
+        const airing = dubAiring.value?.find(entry => entry.unaired && entry.media?.media?.id === media.id)
+        const airedEpisodes = aired?.filter(ep => ep.id === media.id)?.map(ep => ep.episode.aired) || []
+        const episodes = String((($isDubbed || $isPartial) && airedEpisodes.length > 0 && airedEpisodes.length) || (aired?.find(entry => entry.media?.media?.id === media.id)?.episodeNumber && '0') || (!$isPartial && media.status !== 'RELEASING' && media.status !== 'NOT_YET_RELEASED' && Number(media.seasonYear || 0) < 2025 && !airing && getMediaMaxEp(media)) || '')
+        if (dubEpisodes !== episodes) dubEpisodes = episodes
     }
 
-    $: if (media) setLabel()
-    malDubs.dubLists.subscribe(() => setLabel())
-    async function setLabel() {
-        const dubLists = await malDubs.dubLists.value
-        if (media?.idMal && dubLists?.dubbed) {
+    $: setLabel($dubLists, media?.id)
+    async function setLabel(dubLists, _) {
+        const _dubLists = await dubLists
+        if (media?.idMal && _dubLists?.dubbed) {
             const episodeOrMedia = !episode || await malDubs.isDubMedia(data?.parseObject)
-            isDubbed.set(episodeOrMedia && dubLists.dubbed.includes(media.idMal))
-            isPartial.set(episodeOrMedia && dubLists.incomplete.includes(media.idMal))
-            getDubEpisodes(await animeSchedule.dubAiredLists.value)
+            isDubbed.set(episodeOrMedia && _dubLists.dubbed.includes(media.idMal))
+            isPartial.set(episodeOrMedia && _dubLists.incomplete.includes(media.idMal))
+            getDubEpisodes(await dubAiredLists.value)
         }
     }
 
-    let audioContainer
-    function handleUpdate() {
-        if (!audioContainer) return
-        const items = Array.from(audioContainer.querySelectorAll('.audio-label'))
+    const markFirstInRow = resizeObserver((node) => {
+        const items = Array.from(node.querySelectorAll('.audio-label'))
         if (!items.length) return
         items.forEach(i => i.classList.remove('first-audio'))
-        let rows = {}
+        const rows = {}
         items.forEach(item => {
             const top = item.offsetTop
             if (!rows[top]) rows[top] = []
             rows[top].push(item)
         })
         Object.values(rows).forEach(rowItems => rowItems[0]?.classList.add('first-audio'))
-    }
-
-    let observer = null
-    $: {
-        if (audioContainer && !observer) {
-            observer = new ResizeObserver(handleUpdate)
-            observer.observe(audioContainer)
-            window.addEventListener('resize', () => handleUpdate())
-        }
-    }
-    afterUpdate(handleUpdate)
-    onDestroy(() => {
-        observer?.disconnect()
-        observer = null
-        window.removeEventListener('resize', () => handleUpdate())
     })
 </script>
 {#if settings.value.cardAudio}
     {#if !banner && !episodeList}
         {@const subEpisodes = String(media.status !== 'NOT_YET_RELEASED' && media.status !== 'CANCELLED' && getMediaMaxEp(media, (media.status !== 'FINISHED')) || dubEpisodes || '')}
-        <div bind:this={audioContainer} class='position-absolute bottom-0 right-0 d-flex flex-row-reverse flex-wrap align-items-end justify-content-start h-20 vertical-flip z-1' class:mb-4={!viewAnime} class:mb--3={viewAnime}>
+        <div use:markFirstInRow class='position-absolute bottom-0 right-0 w-full d-flex flex-row-reverse flex-wrap align-items-end justify-content-start h-20 vertical-flip z-1' {style} class:mb--7={!viewAnime} class:mb--3={viewAnime}>
             <div class='audio-label px-10 text-dark rounded-right font-weight-bold d-flex align-items-center vertical-flip h-full bg-septenary slant mrl-1 z-5'>
                 <Captions size='2rem' strokeWidth='1.5' />
                 <span class='d-flex align-items-center line-height-1' class:ml-3={(subEpisodes && subEpisodes.length > 0) || (dubEpisodes && Number(dubEpisodes) > 0)}><div class='line-height-1 mt-2'>{#if subEpisodes && (!dubEpisodes || (Number(subEpisodes) >= Number(dubEpisodes)))}{Number(subEpisodes)}{:else if dubEpisodes && (Number(dubEpisodes) > 0)}{Number(dubEpisodes)}{/if}</div></span>
@@ -126,32 +112,29 @@
     {/if}
 {/if}
 
- <style>
-     .w-icon {
-         margin-right: -2rem;
-     }
-     .w-text {
-         margin-right: -1.3rem;
-     }
-     .ml-2 {
-         margin-left: 0.2rem;
-     }
-     .ml-3 {
-         margin-left: 0.3rem;
-     }
-     .mrl-1 {
-         margin-right: -.3rem;
-     }
-     .mrl-2 {
-         margin-right: -1.3rem;
-     }
-     .mb-4 {
-         margin-bottom: .38rem;
-     }
-     .slant {
-         clip-path: polygon(15% -1px, 100% 0, 100% 100%, 0% calc(100% + 1px));
-     }
-     .lg-slant {
-         clip-path: polygon(21% -1px, 100% 0, 100% 100%, 0% calc(100% + 1px));
-     }
- </style>
+<style>
+    .w-icon {
+        margin-right: -2rem;
+    }
+    .w-text {
+        margin-right: -1.3rem;
+    }
+    .ml-2 {
+        margin-left: 0.2rem;
+    }
+    .ml-3 {
+        margin-left: 0.3rem;
+    }
+    .mrl-1 {
+        margin-right: -.3rem;
+    }
+    .mrl-2 {
+        margin-right: -1.3rem;
+    }
+    .slant {
+        clip-path: polygon(15% -1px, 100% 0, 100% 100%, 0% calc(100% + 1px));
+    }
+    .lg-slant {
+        clip-path: polygon(21% -1px, 100% 0, 100% 100%, 0% calc(100% + 1px));
+    }
+</style>

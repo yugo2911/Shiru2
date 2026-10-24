@@ -1,5 +1,5 @@
 <script context='module'>
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
   import { Search, X } from 'lucide-svelte'
   import { modal } from '@/modules/navigation.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
@@ -32,13 +32,13 @@
   }
 </script>
 
-<SoftModal class='m-0 w-800 mw-0 mh-full d-flex flex-column rounded bg-very-dark pt-0 py-30 pl-20 pr-30 mx-20 scrollbar-none' bind:showModal={$modal[modal.FILE_MANAGER]} {close} id={modal.FILE_MANAGER}>
-  <div class='d-flex mt-30 mb-10'>
+<SoftModal class='fluid-min-width mh-full d-flex flex-column rounded bg-very-dark pt-0 px-5 px-md-20 scrollbar-none' innerCss='pt-safe-area' bind:showModal={$modal[modal.FILE_MANAGER]} {close} id={modal.FILE_MANAGER}>
+  <div class='d-flex mt-10 mb-10'>
     <div class='mb-0 mr-5 ml-20'>
       <h3 class='mb-0 font-weight-bold text-white title font-size-24'>File Manager</h3>
       <h5 class='mb-0 mt-0 text-muted info font-size-12'>Something didn't resolve correctly? Please open an issue on GitHub so we can investigate and fix it!</h5>
     </div>
-    <button type='button' class='btn btn-square ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
+    <button type='button' class='btn btn-square ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0 mt-10 mr-10' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
   </div>
   <FileCard {playFile} bind:file={playing} bind:files playing={true} bind:fileEdit class='mr-30'/>
   <div class='input-group mt-10 long-input' class:d-none={files?.length < 2}>
@@ -49,26 +49,32 @@
         autocomplete='off'
         spellcheck='false'
         data-option='search'
-        placeholder='Filter by file name or series title' bind:value={searchText} on:input={() => { container.scrollTo({top: 0}); }} />
+        placeholder='Filter by file name or series title' bind:value={searchText} on:input={() => { container.scrollTo({ top: 0 }); }} />
   </div>
-  <div><div class='shadow-overlay' class:d-none={files?.length < 2}/></div>
-  <div bind:this={container} class='overflow-y-auto mt-10'>
-    {#each filterResults(files?.filter((file) => file !== playing), searchText) as file, index}
-      <FileCard {playFile} bind:file bind:files bind:fileEdit class='{index === 0 ? `mt-10` : ``}'/>
+  <div bind:this={container} class='overflow-y-auto mt-10 pb-20'>
+    {#each filterResults(files?.filter((file) => file !== playing), searchText) as file, index (index)}
+      <FileCard {playFile} bind:file bind:files bind:fileEdit class='{index === 0 ? `mt-15` : ``}'/>
     {/each}
   </div>
 </SoftModal>
 <EditorModal bind:fileEdit />
 
 <style>
-  .shadow-overlay {
+  .long-input {
+    position: relative;
+  }
+  .long-input::after {
+    content: '';
     position: absolute;
+    bottom: -2.2rem;
     left: 0;
     right: 0;
     height: 1.2rem;
-    margin-top: -1rem;
-    box-shadow: 0 1.2rem 1.2rem var(--dark-color-dim);
+    background: linear-gradient(to bottom, var(--dark-color-dim), transparent);
     pointer-events: none;
     z-index: 1;
+  }
+  .long-input.d-none::after {
+    display: none;
   }
 </style>

@@ -27,8 +27,8 @@ export default class AbstractSource {
   }
 
   /**
-   * Validates the source url.
-   * @type {() => Promise<boolean>}
+   * Validates the source url. If you require user configuration for settings, you should validate this.settings here.
+   * @type {Promise<boolean>}
    */
   validate () {
     throw new Error('Source does not implement method #validate()')

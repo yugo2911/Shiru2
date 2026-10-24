@@ -1,6 +1,5 @@
-import { app, protocol, shell, ipcMain } from 'electron'
+import { app, net, protocol, shell, ipcMain } from 'electron'
 import { readFile } from 'fs/promises'
-import { development } from './util.js'
 import path from 'path'
 
 if (process.defaultApp) {
@@ -18,16 +17,16 @@ export default class Protocol {
   protocolMap = {
     alauth: token => this.sendToken(token),
     malauth: token => this.sendMalToken(token),
-    anime: id => this.window.webContents.send('open-anime', { id }),
-    malanime: id => this.window.webContents.send('open-anime', { id, mal: true }),
+    anime: id => this.window.webContents.send('common:onRequestModal', 'anime_details', { id }),
+    malanime: id => this.window.webContents.send('common:onRequestModal', 'anime_details', { id, isMal: true}),
     torrent: magnet => this.add(magnet),
     search: id => this.play(id),
-    w2g: link => this.window.webContents.send('w2glink', link),
-    schedule: () => this.window.webContents.send('schedule'),
-    donate: () => shell.openExternal('https://github.com/sponsors/RockinChaos/'),
-    update: () => ipcMain.emit('quit-and-install'),
-    changelog: () => shell.openExternal('https://github.com/RockinChaos/Shiru/releases/latest'),
-    show: () => ipcMain.emit('window-show')
+    w2g: link => this.window.webContents.send('common:onLobbyInvite', link),
+    schedule: () => this.window.webContents.send('common:onRequestPage', 'schedule'),
+    donate: () => shell.openExternal('https://contribute.shiru.app/'),
+    update: () => ipcMain.emit('common:quitAndInstall'),
+    changelog: () => shell.openExternal('https://latest.shiru.app/'),
+    show: () => ipcMain.emit('electron:showAndFocus')
   }
 
   protocolRx = /shiru:\/\/([a-z0-9]+)\/(.*)/i
@@ -37,11 +36,6 @@ export default class Protocol {
    */
   constructor (window) {
     this.window = window
-
-    protocol.registerHttpProtocol('shiru', (req, cb) => {
-      const token = req.url.slice(7)
-      this.window.loadURL(development ? 'http://localhost:5000/app.html' + token : `file://${path.join(__dirname, '/app.html')}${token}`)
-    })
 
     app.on('open-url', (event, url) => {
       event.preventDefault()
@@ -56,16 +50,17 @@ export default class Protocol {
     })
 
     // Handle locally loaded extensions (test extensions)
-    protocol.registerFileProtocol('extension', (request, callback) => {
+    protocol.handle('extension', (request) => {
       // Extract path after 'extension://'
       let filePath = request.url.replace('extension://', '')
       // Fix drive paths
       if (/^[A-Z]\//i.test(filePath)) filePath = filePath.charAt(0) + ':' + filePath.slice(1)
-      callback({ path: filePath })
+      else if (!/^[A-Za-z]:/.test(filePath)) filePath = '/' + filePath
+      return net.fetch('file://' + filePath)
     })
 
     if (process.argv.length >= 2 && !process.defaultApp) {
-      ipcMain.on('version', () => {
+      ipcMain.on('webtorrent-heartbeat', () => {
         for (const line of process.argv) {
           this.handleProtocol(line)
         }
@@ -74,7 +69,7 @@ export default class Protocol {
 
     app.on('second-instance', (event, commandLine) => {
       // Someone tried to run a second instance, we should focus our window.
-      ipcMain.emit('window-show')
+      ipcMain.emit('electron:showAndFocus')
       // There's probably a better way to do this instead of a for loop and split[1][0]
       // but for now it works as a way to fix multiple OS's commandLine differences
       for (const line of commandLine) {
@@ -91,9 +86,7 @@ export default class Protocol {
       }
     })
 
-    ipcMain.on('handle-protocol', (event, text) => {
-      this.handleProtocol(text)
-    })
+    ipcMain.on('common:handleProtocol', (event, text) => this.handleProtocol(text))
   }
 
   /**
@@ -111,7 +104,7 @@ export default class Protocol {
     let token = line.split('access_token=')[1].split('&token_type')[0]
     if (token) {
       if (token.endsWith('/')) token = token.slice(0, -1)
-      this.window.webContents.send('altoken', token)
+      this.window.webContents.send('common:onProviderToken', 'anilist', { token })
     }
   }
 
@@ -125,7 +118,7 @@ export default class Protocol {
       if (code.endsWith('/')) code = code.slice(0, -1)
       if (state.endsWith('/')) state = state.slice(0, -1)
       if (state.includes('%')) state = decodeURIComponent(state)
-      this.window.webContents.send('maltoken', code, state)
+      this.window.webContents.send('common:onProviderToken', 'myanimelist', { code, state })
     } 
   }
 
@@ -133,16 +126,14 @@ export default class Protocol {
    * @param {string} id - The media id.
    */
   play(id) {
-    this.window.webContents.send('play-anime', id)
-    ipcMain.emit('window-show')
+    this.window.webContents.send('common:onRequestPlay', { id })
   }
 
   /**
    * @param {string} magnet - The magnet link.
    */
   add(magnet) {
-    this.window.webContents.send('play-torrent', { magnet })
-    ipcMain.emit('window-show')
+    this.window.webContents.send('torrent:onRequest', { magnet })
   }
 
   /**

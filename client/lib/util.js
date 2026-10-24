@@ -2,20 +2,29 @@ import { createHash } from 'crypto'
 import { videoRx } from '@/modules/util.js'
 import querystring from 'querystring'
 import parseTorrent from 'parse-torrent'
-import { SUPPORTS } from '@/modules/support.js'
 import { stat } from 'fs/promises'
 import { statSync } from 'fs'
 import path from 'path'
 import os from 'os'
+
+/** @type {boolean} */
+export const isFlatpak = !!process.env.FLATPAK_ID
 
 /**
  * Temporary directory path for WebTorrent usage (used for fallback).
  */
 export let TMP
 try {
-  TMP = path.join(statSync('/tmp') && '/tmp', 'webtorrent')
+  const base = isFlatpak ? // flatpak "/tmp" gets wiped on every restart... so best to avoid it.
+    (process.env.XDG_CACHE_HOME || path.join(typeof os.homedir === 'function' ? os.homedir() : '/', '.cache'))
+    : '/tmp'
+  TMP = path.join(statSync(base) && base, 'webtorrent')
 } catch (err) {
-  TMP = path.join(typeof os.tmpdir === 'function' ? os.tmpdir() : '/', 'webtorrent')
+  try {
+    TMP = path.join(statSync('/tmp') && '/tmp', 'webtorrent')
+  } catch (err) {
+    TMP = path.join(typeof os.tmpdir === 'function' ? os.tmpdir() : '/', 'webtorrent')
+  }
 }
 
 /**
@@ -28,36 +37,6 @@ export const stringifyQuery = obj => {
   ret = ret.replace(/[@*/+]/g, char => // `escape` doesn't encode the characters @*/+ so we do it manually
       `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
   return ret
-}
-
-/**
- * Safely encodes the filename segment of a stream URL, preserving the path structure.
- * Encodes only the last path segment to ensure special characters in filenames are properly escaped for use in intents or URLs.
- * THIS IS VERY IMPORTANT FOR ANDROID!
- *
- * @param {string} streamURL - The stream URL containing the filename to encode.
- * @returns {string} The stream URL with the filename segment URI-encoded.
- */
-export const encodeStreamURL = (streamURL) => {
-  if (!streamURL?.length || !SUPPORTS.isAndroid) return streamURL
-  return streamURL.replace(/\\/g, '/').split('/').map(segment => {
-    if (!segment) return segment
-    return encodeURIComponent(decodeURIComponent(segment))
-      .replace(/%5B/g, '[')
-      .replace(/%5D/g, ']')
-      .replace(/%2C/g, ',')
-      .replace(/%28/g, '(')
-      .replace(/%29/g, ')')
-      .replace(/%2A/g, '*')
-      .replace(/%2B/g, '+')
-      .replace(/%3B/g, ';')
-      .replace(/%3D/g, '=')
-      .replace(/%40/g, '@')
-      .replace(/%21/g, '!')
-      .replace(/%24/g, '$')
-      .replace(/%26/g, '&')
-      .replace(/%27/g, "'")
-  }).join('/')
 }
 
 /**
@@ -91,7 +70,7 @@ export async function hasIntegrity(cache, torrentPath) {
   if (!cache || torrentPath == null) return null
   try {
     if (cache.files && cache.files.length) {
-      for (const file of cache.files?.filter(file => videoRx.test(file.name))) {
+      for (const file of cache.files.filter(file => videoRx.test(file.name))) {
         const stats = await stat(path.join(torrentPath, file.path))
         if (stats.size !== file.length) return false
       }
@@ -155,4 +134,93 @@ export async function getInfoHash(input) {
     console.debug(error)
     return null
   }
+}
+
+/**
+ * Builds a stats object for a torrent, used when sending updates to the renderer.
+ * @param {import('webtorrent').Torrent|object} torrent - The torrent or cached torrent object
+ * @param {boolean} [completed=false] - True if torrent is a completed/cached torrent.
+ * @returns {object}
+ */
+export function getStats(torrent, completed = false) {
+  const pieces = completed ? getPiecesFromBitfield(torrent?._bitfield, torrent?.info?.pieces ? torrent.info.pieces.length / 20 : 0) : getPieces(torrent)
+  return {
+    infoHash: torrent?.infoHash,
+    name: torrent?.name,
+    size: torrent?.length,
+    current: torrent?.current,
+    staging: torrent?.staging,
+    seeding: torrent?.seeding,
+    progress: torrent?.progress,
+    downloaded: getDownloadedBytes(pieces, completed ? torrent?.info?.['piece length'] : torrent?.pieceLength, torrent?.length || torrent?.info?.length || (Array.isArray(torrent?.info?.files) ? torrent.info.files.reduce((sum, file) => sum + file.length, 0) : 0)),
+    numSeeders: torrent?.wires?.filter(wire => wire.isSeeder).length || 0,
+    totalSeeders: torrent?.seeders || 0,
+    numLeechers: (torrent?.wires?.length - torrent?.wires?.filter(wire => wire.isSeeder).length) || 0,
+    totalLeechers: torrent?.leechers || 0,
+    numPeers: torrent?.numPeers || 0,
+    downloadSpeed: torrent?.downloadSpeed || 0,
+    uploadSpeed: torrent?.uploadSpeed || 0,
+    magnetURI: torrent?.magnetURI,
+    date: torrent?.date ?? new Date(Date.now() - 1_000).toUTCString(),
+    ...(!torrent?.current && !torrent?.staging && !torrent?.seeding ? { incomplete: torrent?.incomplete || torrent?.progress < 1 } : {}),
+    ...(torrent?.missing_pieces ? { missing_pieces: torrent.missing_pieces } : {}),
+    eta: torrent?.timeRemaining,
+    ratio: torrent?.ratio || (torrent && getRatio(torrent, torrent?.length, torrent?.progress)),
+    pieces,
+    cachedAt: torrent?.cachedAt ?? Date.now()
+  }
+}
+
+/**
+ * Gets ratio for a torrent from cache.
+ * @param {object} cache - Cached torrent object.
+ * @param {number} size - Total size of the torrent in bytes.
+ * @param {number} progress - Progress of the torrent.
+ * @returns {number}
+ */
+function getRatio(cache, size, progress) {
+  return (cache?._uploaded || 0) / (((progress || 0) * (size || 0)) || size || 1)
+}
+
+/**
+ * Sums the exact byte length of every verified piece, accounting for the shorter final piece.
+ * @param {number[]|null} pieces - Piece states, where 2 means verified
+ * @param {number} pieceLength - Standard piece size in bytes
+ * @param {number} totalLength - Total torrent size in bytes
+ * @returns {number}
+ */
+function getDownloadedBytes(pieces, pieceLength, totalLength) {
+  if (!pieces?.length || !pieceLength || !totalLength) return 0
+  const lastPieceLength = totalLength - pieceLength * (pieces.length - 1)
+  return pieces.reduce((sum, state, index) => sum + (state === 2 ? (index === pieces.length - 1 ? lastPieceLength : pieceLength) : 0), 0)
+}
+
+/**
+ * Returns piece states (2=verified, 0=missing) from a stored bitfield, or null if absent.
+ * @param {Buffer|Uint8Array} bitfield
+ * @param {number} pieceCount
+ * @returns {number[]|null}
+ */
+function getPiecesFromBitfield(bitfield, pieceCount) {
+  if (!bitfield || !pieceCount) return null
+  const buffer = Buffer.isBuffer(bitfield) ? bitfield : Buffer.from(bitfield)
+  return Array.from({ length: pieceCount }, (_, index) => (buffer[index >> 3] >> (7 - (index & 7))) & 1 ? 2 : 0)
+}
+
+/**
+ * Returns piece states for an active torrent: 2 = verified, 1 = downloading, 0 = missing.
+ * @param {import('webtorrent').Torrent} torrent
+ * @returns {number[]|null}
+ */
+function getPieces(torrent) {
+  if (!torrent?.pieces?.length) return null
+  const downloading = new Set()
+  for (const wire of (torrent.wires || [])) {
+    for (const request of (wire.requests || [])) downloading.add(request.piece)
+  }
+  return torrent.pieces.map((piece, index) => {
+    if (piece === null) return 2
+    if (downloading.has(index)) return 1
+    return 0
+  })
 }

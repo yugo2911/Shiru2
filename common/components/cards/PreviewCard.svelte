@@ -1,201 +1,205 @@
 <script>
   import { formatMap, getMediaMaxEp, playMedia } from '@/modules/anime/anime.js'
-  import { anilistClient } from '@/modules/anilist.js'
+  import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
+  import { fadeIn, fadeOut, clampToViewport } from '@/modules/util.js'
   import { episodesList } from '@/modules/episodes.js'
-  import { fadeIn as _fadeIn, fadeOut as _fadeOut } from '@/modules/util.js'
-
-  function fadeIn(node, params) {
-    const t = _fadeIn(node, params)
-    const origCss = t.css
-    t.css = (t, u) => origCss(t, u).replace('transform:', 'transform: translateX(-50%) ')
-    return t
-  }
-  function fadeOut(node, params) {
-    const t = _fadeOut(node, params)
-    const origCss = t.css
-    t.css = (t, u) => origCss(t, u).replace('transform:', 'transform: translateX(-50%) ')
-    return t
-  }
-  import { click } from '@/modules/click.js'
-  import { settings } from '@/modules/settings.js'
+  import { click } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import Scoring from '@/components/Scoring.svelte'
-  import { Play, VolumeX, Volume2 } from 'lucide-svelte'
+  import Helper from '@/modules/providers/helper.js'
+  import { Heart, Play, VolumeX, Volume2, ThumbsUp, ThumbsDown } from 'lucide-svelte'
+  import { settings } from '@/modules/settings.js'
   import { ELECTRON } from '@/modules/bridge.js'
 
+  /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
   export let media
   export let element
   export let _variables
+  export let type = null
 
   $: maxEp = getMediaMaxEp(media)
-  let hide = true
-  let muted = settings.value.autoMuteTrailers
+  $: hasSpoiler = media?.mediaListEntry?.status && $settings.spoilerStatus.includes(media.mediaListEntry.status ?? 'NOTONLIST')
 
-  const play = () => media.status !== 'NOT_YET_RELEASED' && playMedia(media)
-  const toggleMute = () => (muted = !muted)
+  let hide = true
+
+  /** @param {import('@/modules/providers/anilist/al.d.ts').Media} media */
+  function getPlayButtonText (media) {
+    if (media.mediaListEntry) {
+      const { status, progress } = media.mediaListEntry
+      if (progress) {
+        if (status === 'COMPLETED') {
+          return 'Rewatch Now'
+        } else {
+          return 'Continue Now'
+        }
+      }
+    }
+    return 'Watch Now'
+  }
+  const playButtonText = getPlayButtonText(media)
+  function toggleFavourite() {
+    media.isFavourite = anilistClient.favourite({ id: media.id, isFavourite: !media.isFavourite })
+  }
+  function play() {
+    if (media.status === 'NOT_YET_RELEASED') return
+    playMedia(media)
+  }
+  let muted = true
+  function toggleMute() {
+    muted = !muted
+  }
 </script>
 
-<style>
-  .preview-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-line);
-    border-left: 3px solid var(--card-accent);
-    color: var(--card-fg);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
-  }
-
-  .media-aside {
-    width: 60%;
-    height: 100%;
-    position: absolute;
-    right: 0;
-    top: 0;
-    z-index: 1;
-    background: var(--card-bg);
-    overflow: hidden;
-  }
-
-  .preview-overlay {
-    background: linear-gradient(90deg, var(--card-bg) 15%, color-mix(in srgb, var(--card-bg) 60%, transparent) 40%, transparent 100%);
-    z-index: 3;
-    pointer-events: none;
-  }
-
-  .trailer-viewport {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    min-width: 177.77vh;
-    min-height: 100%;
-  }
-
-  .trailer-viewport iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    pointer-events: none;
-  }
-
-  .preview-title {
-    font-size: 2.2rem;
-    font-weight: 900;
-    line-height: 1;
-    text-transform: uppercase;
-    color: var(--card-fg);
-    letter-spacing: -0.02em;
-  }
-
-  .preview-play-btn {
-    width: 52px;
-    height: 52px;
-    border-radius: 50px;
-    background: var(--card-accent);
-    color: var(--card-bg);
-    border: none;
-    transition: all 0.15s;
-  }
-
-  .preview-play-btn:hover {
-    transform: scale(1.1);
-  }
-
-  .preview-icon-btn {
-    background: transparent;
-    border: 1px solid var(--card-line);
-    color: var(--card-fg);
-    border-radius: 50px;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    transition: all 0.15s;
-  }
-
-  .preview-icon-btn:hover {
-    border-color: var(--card-accent);
-    color: var(--card-accent);
-  }
-
-  .preview-stat {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--card-line);
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-    color: var(--card-dim);
-  }
-
-  .preview-stat-value {
-    margin-left: auto;
-    font-weight: 700;
-    color: var(--card-accent);
-  }
-</style>
-
-<div 
-  class='position-absolute w-450 h-full preview-card top-0 bottom-0 m-auto z-30 fade-change overflow-hidden' 
-  in:fadeIn out:fadeOut 
-  bind:this={element}
-  style={media.coverImage?.color ? `--card-accent: ${media.coverImage.color}` : ''}
->
-  <div class='media-aside'>
-    <div class='position-absolute w-full h-full preview-overlay'></div>
-    <SmartImage class='img-cover w-full h-full grayscale opacity-30' images={[media.bannerImage, media.coverImage?.extraLarge]}/>
-    
-    {#await (media.trailer?.id && media) || episodesList.getMedia(media.idMal) then trailer}
-      {#if trailer?.trailer?.id || trailer?.data?.trailer?.youtube_id}
-        {#await ELECTRON.getYouTube() then youtubeServer}
-          <div class="trailer-viewport" style='transition: opacity 1.5s' class:transparent={hide}>
-            <iframe
-              title={media.title.userPreferred}
-              loading='lazy'
-              src={`${youtubeServer}/embed/${trailer?.trailer?.id || trailer?.data?.trailer?.youtube_id}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&loop=1&playlist=${trailer?.trailer?.id || trailer?.data?.trailer?.youtube_id}`}
-              on:load={() => setTimeout(() => (hide = false), 500)}
-            />
-          </div>
-        {/await}
-      {/if}
-    {/await}
+<div class='position-absolute h-full absolute-container top-0 bottom-0 m-auto bg-dark-light z-30 rounded pointer fade-change overflow-hidden clip-0-rounded' use:clampToViewport in:fadeIn out:fadeOut bind:this={element} on:scroll={(e) => (e.target.scrollTop = 0)}>
+  <div class='banner position-relative bg-black'>
+    <div class='ratio-16-9 w-full h-full clip-0'>
+      <SmartImage class='img-cover w-full h-full' images={[media.bannerImage, ...(media.trailer?.id ? [`https://i.ytimg.com/vi/${media.trailer.id}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${media.trailer.id}/hqdefault.jpg`] : []), media.coverImage?.extraLarge, './no_image_episode.jpg' ]}/>
+      {#await (media.trailer?.id && media) || episodesList.getMedia(media.idMal) then trailer}
+        {@const trailerId = trailer?.trailer?.id || trailer?.data?.trailer?.youtube_id}
+        {#if trailerId }
+          {#await ELECTRON.getYouTube() then youtubeServer}
+            <div style='transition: opacity .3s' class:transparent={hide}>
+              <SmartImage class='position-absolute top-0 left-0 w-full h-full img-cover blur-6' images={[`https://i.ytimg.com/vi/${trailerId}/maxresdefault.jpg`, `https://i.ytimg.com/vi/${trailerId}/hqdefault.jpg`]}/>
+              <button type='button' class='position-absolute z-10 top-0 right-0 m-15 btn-square bg-transparent shadow-none border-0 rounded pointer mute' style='filter: drop-shadow(0 0 .4rem hsla(var(--black-color-hsl), 1))' use:click={toggleMute}>
+                {#if muted}
+                  <VolumeX size='2.2rem' fill='currentColor'/>
+                {:else}
+                  <Volume2 size='2.2rem' fill='currentColor'/>
+                {/if}
+              </button>
+              <iframe
+                  class='w-full border-0 position-absolute left-0 pv-trailer pointer-events-none'
+                  tabindex='-1'
+                  title={media.title.userPreferred}
+                  loading='lazy'
+                  allow='autoplay'
+                  allowfullscreen
+                  on:load={() => { setTimeout(() => (hide = false), 300).unref?.() }}
+                  referrerpolicy='strict-origin-when-cross-origin'
+                  src={`${youtubeServer}/embed/${trailerId}?autoplay=1&controls=0&mute=${muted ? 1 : 0}&disablekb=1&loop=1&vq=medium&playlist=${trailerId}&cc_lang_pref=ja`}
+              />
+            </div>
+          {/await}
+        {/if}
+      {/await}
+    </div>
   </div>
-
-  <div class='position-relative z-10 p-30 w-55 h-full d-flex flex-column'>
-    <div class='font-size-10 letter-spacing-2 text-uppercase font-weight-bold mb-15' style="color: var(--card-accent);">PREVIEW</div>
-    
-    <h1 class='preview-title mb-25'>
+  <div class='w-full px-20'>
+    <div class='font-scale-20 font-weight-bold text-truncate d-inline-block w-full text-white' title={anilistClient.title(media)}>
       {anilistClient.title(media)}
-    </h1>
-
-    <div class='d-flex align-items-center gap-3 mb-30'>
-      <button class='preview-play-btn d-flex align-items-center justify-content-center' use:click={play}>
-        <Play fill='currentColor' size='1.5rem' class="ml-3"/>
-      </button>
-      
-      <div class='d-flex flex-column gap-2'>
-        <button class='preview-icon-btn' use:click={toggleMute}>
-          {#if muted} <VolumeX size='1rem'/> {:else} <Volume2 size='1rem'/> {/if}
+    </div>
+    {#if !_variables?.fileEdit}
+      <div class='d-flex flex-row position-relative'>
+        <button type='button' tabindex='-1' class='position-absolute preview-safe-area top-0 left-0 h-50 bg-transparent border-0 shadow-none not-reactive' use:click={() => {}}/>
+        <button type='button' class='btn btn-secondary flex-grow-1 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center z-1' use:click={play} disabled={media.status === 'NOT_YET_RELEASED'}>
+          <Play class='pr-10 z-10' fill='currentColor' size='2.2rem'/>
+          {playButtonText}
         </button>
+        {#if Helper.isAuthorized()}
+          <Scoring {media} previewAnime={true}/>
+        {/if}
+        {#if Helper.isAniAuth()}
+          <button type='button' class='btn btn-square ml-10 d-flex align-items-center justify-content-center shadow-none border-0 z-1' data-toggle='tooltip' data-placement='top-right' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
+            <div class='favourite d-flex align-items-center justify-content-center'>
+              <Heart color={media.isFavourite ? 'var(--tertiary-color)' : 'currentColor'} fill={media.isFavourite ? 'var(--tertiary-color)' : 'transparent'} size='1.7rem'/>
+            </div>
+          </button>
+        {/if}
+      </div>
+    {/if}
+    <div class='text-truncate pb-10'>
+      <div class='details text-white text-capitalize pt-10 d-flex flex-wrap'>
+        {#if type || type === 0}
+          <span class='d-flex badge pl-5 pr-5 d-flex align-items-center justify-content-center font-scale-14'>
+            {#if Number.isInteger(type) && type >= 0}
+              <ThumbsUp fill='currentColor' class='m-0 p-0 pr-5 {type === 0 ? "text-muted" : "text-success"}' size='1.9rem'/>
+            {:else if Number.isInteger(type) && type < 0}
+              <ThumbsDown fill='currentColor' class='text-danger m-0 p-0 pr-5' size='1.9rem'/>
+            {/if}
+            <span> {(Number.isInteger(type) ? Math.abs(type).toLocaleString() + (type >= 0 ? ' like' : ' dislike') + ((type !== 1 && type !== -1) ? 's' : '') : type)}</span>
+          </span>
+        {/if}
+        <span class='badge pl-5 pr-5 font-scale-14'>
+          {#if media.format}
+            {formatMap[media.format]}
+          {/if}
+        </span>
+        {#if maxEp > 1 || (maxEp !== 1 && ['CURRENT', 'REPEATING', 'PAUSED', 'DROPPED'].includes(media.mediaListEntry?.status) && media.mediaListEntry?.progress)}
+          <span class='badge pl-5 pr-5 font-scale-14'>
+            {['CURRENT', 'REPEATING', 'PAUSED', 'DROPPED'].includes(media.mediaListEntry?.status) && media.mediaListEntry?.progress ? media.mediaListEntry.progress + ' / ' : ''}{maxEp && maxEp !== 0 && !(media.mediaListEntry?.progress > maxEp) ? maxEp : '?'}
+            Episodes
+          </span>
+        {:else if media.duration && (!hasSpoiler || !['hermit'].includes($settings.spoilers))}
+          <span class='badge pl-5 pr-5 font-scale-14'>
+            {media.duration + ' Minutes'}
+          </span>
+        {/if}
+        {#if media.isAdult}
+        <span class='badge pl-5 pr-5 font-scale-14'>
+            Rated 18+
+          </span>
+        {/if}
+        {#if media.season || media.seasonYear || media.startDate?.year || media.status === 'RELEASING'}
+          <span class='badge pl-5 pr-5 font-scale-14'>
+            {[media.season?.toLowerCase(), (media.seasonYear || media.startDate?.year || currentYear)].filter(s => s).join(' ')}
+          </span>
+        {:else if media.status === 'NOT_YET_RELEASED'}
+          <span class='badge pl-5 pr-5 font-scale-14'>
+            Not Released
+          </span>
+        {/if}
+        {#if media.averageScore}
+          {#if (!hasSpoiler || !['strict', 'hermit'].includes($settings.spoilers))}
+            <span class='badge pl-5 pr-5 font-scale-14'>{media.averageScore + '%'} Rating</span>
+          {/if}
+          {#if media.stats?.scoreDistribution && (!type && type !== 0) && (!hasSpoiler || !['moderate', 'strict', 'hermit'].includes($settings.spoilers))}
+            <span class='badge pl-5 pr-5 font-scale-14'>{anilistClient.reviews(media)} Reviews</span>
+          {/if}
+        {/if}
       </div>
     </div>
-
-    <div class='mt-auto'>
-      <div class='preview-stat'>
-        EPISODES
-        <span class='preview-stat-value'>{maxEp || '??'}</span>
+    {#if media.description}
+      <div class='w-full h-full description overflow-hidden font-scale-14' class:text-muted={!hasSpoiler || !['strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={hasSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
+        {media.description?.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
       </div>
-      <div class='preview-stat' style="border-bottom: none;">
-        SCORE
-        <span class='preview-stat-value'>{media.averageScore || '0'}%</span>
-      </div>
-    </div>
-
-    <div class='mt-20'>
-      <Scoring {media} previewAnime={true}/>
-    </div>
+    {/if}
   </div>
 </div>
+
+<style>
+  .details > span:not(:last-child) {
+    margin-right: .2rem;
+    margin-bottom: .1rem;
+  }
+  .details::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--preview-card-end-gradient);
+  }
+  .banner::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100.5%;
+    background: var(--preview-card-trailer-gradient);
+  }
+  .absolute-container {
+    will-change: transform, opacity, bottom;
+    left: -100%;
+    right: -100%;
+    width: min(35rem, 90vw);
+  }
+  .preview-safe-area {
+    margin-top: -1rem !important;
+    margin-left: -1rem !important;
+    width: calc(100% + 2rem) !important;
+  }
+</style>

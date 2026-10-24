@@ -1,7 +1,6 @@
 <script>
   import { Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type } from 'lucide-svelte'
-  import { getKitsuMappings } from '@/modules/anime/anime.js'
-  import { seasons } from '@/modules/anilist.js'
+  import { currentYear } from '@/modules/providers/anilist/anilist.js'
 
   export let media = null
   export let alt = null
@@ -57,19 +56,17 @@
       studio = ((await alt)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0] // sometimes this can still be wrong, so we just get the first studio in the list and assume that's correct.
       return studio
     } else if (property === 'season') {
-      const details = await (((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id))
-      const attributes = details?.included?.[0]?.attributes
-      const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())
-      const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()
-      seasonal = (season || seasonYear) ? [season, seasonYear].filter(f => f).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
+      const seasonYear = media.seasonYear || media.startDate?.year || (media.status === 'RELEASING' && currentYear)
+      const season = media.season?.toLowerCase()
+      seasonal = (season || seasonYear) ? [season, seasonYear].filter(s => s).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
       return seasonal
     }
     return media[property]
   }
 </script>
 
-<div bind:this={scrollDetails} class='details-strip card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start bg-dark-light'>
-  {#each detailsMap as detail}
+<div bind:this={scrollDetails} class='card m-0 px-20 pb-0 pt-10 d-flex flex-row overflow-x-scroll text-capitalize align-items-start bg-dark-light'>
+  {#each detailsMap as detail (detail.property)}
     {#await getProperty(detail.property, media) then property}
       {#if property}
         <div class='d-flex flex-row mx-10 py-5 justify-content-center'>
@@ -81,7 +78,7 @@
             </div>
           {/if}
           <div class='d-flex flex-column justify-content-center text-nowrap'>
-            <div class='font-weight-bold select-all line-height-normal'>
+            <div class='font-weight-bold select-text line-height-normal'>
               {#if detail.custom === 'property'}
                 {getCustomProperty(detail.property, media)}
               {:else}
@@ -95,55 +92,3 @@
     {/await}
   {/each}
 </div>
-
-<style>
-  
-
-  .details-strip {
-    font-family: 'IBM Plex Mono', monospace !important;
-    background: #131317 !important;
-    border: none !important;
-    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
-    border-radius: 0 !important;
-    scrollbar-width: none;
-    gap: 0;
-  }
-  .details-strip::-webkit-scrollbar { display: none; }
-
-  /* Each detail chip */
-  .details-strip :global(.d-flex.flex-row.mx-10.py-5) {
-    background: rgba(237,237,234,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 3px;
-    padding: 0.5rem 1rem !important;
-    margin: 0.4rem 0.4rem !important;
-    gap: 0.7rem;
-    white-space: nowrap;
-    transition: background 0.1s;
-  }
-  .details-strip :global(.d-flex.flex-row.mx-10.py-5:hover) {
-    background: rgba(237,237,234,0.08);
-  }
-
-  /* Icon color */
-  .details-strip :global(svg) {
-    color: #d4f55e !important;
-    flex-shrink: 0;
-  }
-  /* Native kanji icon */
-  .details-strip :global(.mr-10.d-flex.align-items-center) {
-    color: #d4f55e;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.2rem;
-    font-weight: 500;
-  }
-
-  /* Value text */
-  .details-strip :global(.font-weight-bold.select-all) {
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-weight: 500 !important;
-    font-size: 1.1rem !important;
-    color: #ededea !important;
-    letter-spacing: 0.02em;
-  }
-</style>

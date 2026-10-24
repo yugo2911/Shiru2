@@ -1,30 +1,34 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import PreviewCard from '@/components/cards/PreviewCard.svelte'
-  import { airingAt, getAiringInfo, getKitsuMappings, formatMap, statusColorMap } from '@/modules/anime/anime.js'
-  import { createListener } from '@/modules/util.js'
-  import { hoverClick } from '@/modules/click.js'
+  import { airingAt, getAiringInfo, formatMap, statusColorMap } from '@/modules/anime/anime.js'
+  import { createListener, baseFontSize, resizeObserver } from '@/modules/util.js'
+  import { hoverClick, getInteractionMethod } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
-  import { anilistClient, currentYear } from '@/modules/anilist.js'
+  import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
+  import { CalendarDays, Tv, ThumbsUp, ThumbsDown } from 'lucide-svelte'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
-  import { ThumbsUp, ThumbsDown } from 'lucide-svelte'
+  import { writable } from 'simple-store-svelte'
 
-  /** @type {import('@/modules/al.d.ts').Media} */
+  /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
   export let data
   export let type = null
   export let variables = null
-  let _variables = variables
+  const _variables = variables
 
   let media
-  $: if (data && !media) media = mediaCache.value[data?.id]
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
+  $: media = fromCache($mediaCache, media ?? mediaCache.value[data?.id])
   function viewMedia() {
     if (_variables?.fileEdit) _variables.fileEdit(media)
     else modal.open(modal.ANIME_DETAILS, media)
   }
+
+  const { reactive, init } = createListener(['btn', 'scoring', 'mute', 'preview-safe-area'])
+  $: init(preview)
+  $: if (preview) clearTimeout(focusTimeout)
 
   let preview = false
   let ignoreFocus = false
@@ -40,7 +44,7 @@
   let focusTimeout
   let blurTimeout
   function handleFocus() {
-    if (ignoreFocus || preview) return
+    if (ignoreFocus || preview || !['keyboard', 'dpad'].includes(getInteractionMethod())) return
     clearTimeouts()
     focusTimeout = setTimeout(() => {
       if (settings.value.cardPreview) {
@@ -55,8 +59,9 @@
     clearTimeouts()
     blurTimeout = setTimeout(() => {
       const focused = document.activeElement
-      const lostFocus = container && focused?.offsetParent != null && !container.contains(focused)
-      const lostPreviewFocus = previewCard && !previewCard.contains(focused)
+      const stillFocused = focused?.offsetParent != null
+      const lostFocus = container && (!stillFocused || !container.contains(focused))
+      const lostPreviewFocus = previewCard && (!stillFocused || !previewCard.contains(focused))
       if (lostFocus && lostPreviewFocus) {
         preview = false
         ignoreFocus = false
@@ -77,14 +82,24 @@
     clearTimeout(blurTimeout)
   }
 
+  let baseWidth
+  let imageWidth
+  $: baseWidth = 19 * $baseFontSize
+  $: scale = Math.max(imageWidth && baseWidth ? Math.min(imageWidth / baseWidth, .9) : .9, .75)
+  const trackWidth = resizeObserver((_, entry) => {
+    const width = entry.contentRect.width
+    if (Math.abs(width - imageWidth) < 1) return
+    imageWidth = width
+  })
+
   let airingInterval
-  let _airingAt = null
-  $: airingInfo = getAiringInfo(_airingAt)
+  const airingInfo = writable(null)
   onMount(() => {
     container.addEventListener('focusout', handleBlur)
-    _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
+    const _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
     if (_airingAt) {
-      airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
+      airingInfo.set(getAiringInfo(_airingAt))
+      airingInterval = setInterval(() => (airingInfo.set(getAiringInfo(_airingAt))), 60_000)
       airingInterval.unref?.()
     }
   })
@@ -94,30 +109,26 @@
     clearTimeouts()
     clearTimeout(airingInterval)
   })
-
-  const { reactive, init } = createListener(['btn', 'scoring', 'mute', 'preview-safe-area'])
-  $: init(preview)
-  $: if (preview) clearTimeout(focusTimeout)
 </script>
 
-<div bind:this={container} class='d-flex p-0 position-relative small-card-ct {$reactive ? `` : `not-reactive`}' use:hoverClick={[viewMedia, setHoverState, viewMedia]} on:focus={handleFocus}>
+<div bind:this={container} class='d-flex px-md-20 px-sm-10 px-5 py-20 position-relative small-card-ct' class:not-reactive={!$reactive} use:hoverClick={[viewMedia, setHoverState, viewMedia]} on:focus={handleFocus}>
   {#if preview}
     <PreviewCard {media} {type} {_variables} bind:element={previewCard}/>
   {/if}
-  <div class='item load-in small-card d-flex flex-column pointer {airingInfo?.episode.match(/out for/i) ? `airing` : ``}'>
-    {#if airingInfo}
+  <div class='item load-in small-card d-flex flex-column pointer' class:airing={$airingInfo?.episode?.match(/out for/i)}>
+    {#if $airingInfo}
       <div class='w-full text-center pb-10'>
-        {airingInfo.episode}&nbsp;
-        <span class='font-weight-bold {airingInfo.episode.match(/out for/i) ? `text-success` : `text-light`}'>
-            {airingInfo.time}
+        {$airingInfo.episode}&nbsp;
+        <span class='font-weight-bold {$airingInfo.episode.match(/out for/i) ? `text-success` : `text-light`}'>
+            {$airingInfo.time}
         </span>
       </div>
     {/if}
-    <div class='d-inline-block position-relative'>
-      <span class='airing-badge rounded-10 font-weight-semi-bold text-light bg-success' class:d-none={!airingInfo?.episode?.match(/out for/i)}>AIRING</span>
-      <SmartImage class='cover-img cover-color cover-ratio w-full rounded' color={media.coverImage.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './404_cover.png']}/>
+    <div use:trackWidth class='d-inline-block position-relative mb-5'>
+      <span class='airing-badge rounded-10 font-weight-semi-bold text-light bg-success' class:d-none={!$airingInfo?.episode?.match(/out for/i)}>AIRING</span>
+      <SmartImage class='d-inline-block cover-img cover-ratio w-full h-full rounded' color={media.coverImage?.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './no_image_cover.jpg']}/>
       {#if !_variables?.scheduleList}
-        <AudioLabel {media} />
+        <AudioLabel {media} style='transform: scaleY(-1) scale({scale}) !important; transform-origin: right !important; width: {100 / scale}% !important; bottom: {.4 * scale}rem !important;' />
       {/if}
     </div>
     {#if type || type === 0}
@@ -130,109 +141,68 @@
         {(Number.isInteger(type) ? Math.abs(type).toLocaleString() + (type >= 0 ? ' like' : ' dislike') + ((type !== 1 && type !== -1) ? 's' : '') : type)}
       </div>
     {/if}
-    
-    <!-- Title Section with Status Dot -->
-    <div class='d-flex align-items-center title-container'>
+    <div class='text-white font-weight-very-bold font-size-16 title overflow-hidden' class:mb-10={type || type === 0}>
       {#if media.mediaListEntry?.status}
-        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-dot flex-shrink-0' title={media.mediaListEntry.status} />
+        <div style:--statusColor={statusColorMap[media.mediaListEntry.status]} class='list-status-circle d-inline-flex overflow-hidden mr-5' title={media.mediaListEntry.status} />
       {/if}
-      <div class='text-white font-weight-very-bold font-size-16 title text-truncate' class:mb-10={type || type === 0}>
-        {anilistClient.title(media)}
-      </div>
+      {anilistClient.title(media)}
     </div>
-
-    <!-- Bottom Metadata Row (Format, Year, etc.) -->
-    <div class='d-flex flex-row mt-auto font-weight-medium align-items-center gap-1 w-full text-muted metadata-row'>
-      <div class='badge-pill'>
-        <span class='line-height-1'>{formatMap[media.format]}</span>
+    <div class='d-flex flex-row mt-auto font-weight-medium justify-content-between w-full text-muted'>
+      <div class='d-flex align-items-center pr-5'>
+        <CalendarDays class='pr-5' size='2.6rem' />
+        <span class='line-height-1'>{media.seasonYear || media.startDate?.year || (media.status === 'NOT_YET_RELEASED' && 'TBA') || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
       </div>
-      <div class='badge-pill'>
-        {#await ((media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
-          {@const attributes = details?.included?.[0]?.attributes}
-          <span class='line-height-1'>{details.seasonYear || ((media.status === 'NOT_YET_RELEASED') && 'TBA') || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear()) || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
-        {/await}
+      <div class='d-flex align-items-center text-nowrap text-right'>
+        <span class='line-height-1'>{formatMap[media.format]}</span>
+        <Tv class='pl-5' size='2.6rem' />
       </div>
     </div>
   </div>
 </div>
 
 <style>
-  .small-card-ct { 
-    transition: transform 0.2s; 
-    outline: none; 
-    margin: 8px; /* Added external margin to increase space between grid items[cite: 1] */
+  .airing::before {
+    content: '';
+    position: absolute;
+    inset: -1.3rem;
+    border-radius: .4rem;
+    pointer-events: none;
+    animation: airing-pulse 3.5s infinite;
+    will-change: box-shadow, opacity;
   }
-  .small-card-ct:hover, .small-card-ct:focus-within { transform: translateY(-4px); z-index: 10; }
-  
-  .small-card { 
-    width: 160px; 
-    min-height: 280px; 
-    background: var(--secondary-color-dark); 
-    border-radius: 8px;
-    padding: 6px;
+  @keyframes airing-pulse {
+    0%   { box-shadow: 0 0 0 0 var(--success-color); opacity: 0.9; }
+    25%  { box-shadow: 0 0 0 .7rem var(--dark-color); opacity: 0.6; }
+    40% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0.4; }
+    100% { box-shadow: 0 0 0 0 var(--dark-color); opacity: 0; }
   }
-
-  .cover-img { 
-    aspect-ratio: 2 / 3; 
-    object-file: cover; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    border-radius: 6px;
-  }
-
   .airing-badge {
     position: absolute;
-    top: 4px;
-    left: 4px;
-    padding: 2px 6px;
-    font-size: 0.9rem;
-    z-index: 2;
+    top: -1rem;
+    right: -1rem;
+    font-size: 1rem;
+    padding: .35rem .9rem;
+    box-shadow: 0 .2rem .5rem hsla(var(--black-color-hsl), 0.2);
   }
-
-  .title-container {
-    margin-top: 8px;
-    gap: 6px;
-    min-height: 22px;
+  .small-card-ct:hover {
+    z-index: 30;
+    /* fixes transform scaling on click causing z-index issues */
   }
-
   .title {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     line-height: 1.2;
+  }
+  .item {
     width: 100%;
+    aspect-ratio: 152/296;
   }
-
-  .list-status-dot {
-    width: 10px;
-    height: 10px;
+  .list-status-circle {
+    background: var(--statusColor);
+    height: 1.1rem;
+    width: 1.1rem;
     border-radius: 50%;
-    background-color: var(--statusColor, #22c55e);
-  }
-
-  .metadata-row {
-    margin-top: 8px;
-    gap: 6px;
-  }
-
-  .badge-pill {
-    background: rgba(255, 255, 255, 0.06);
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-
-  .context-type { 
-    font-size: 1.2rem; 
-    color: var(--text-muted); 
-    margin: 2px 0; 
-  }
-
-  :global(.small-card-ct .cover-color) { background-color: var(--color); }
-  
-  .airing .cover-img { border: 2px solid var(--success-color); }
-  .not-reactive { pointer-events: none; }
-
-  .small-card-ct :global(.preview-card) {
-    left: 50% !important;
-    transform: translateX(-50%);
   }
 </style>

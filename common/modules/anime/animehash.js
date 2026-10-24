@@ -1,5 +1,6 @@
 import { cache, caches } from '@/modules/cache.js'
 import { loadedTorrent, completedTorrents, seedingTorrents, stagingTorrents } from '@/modules/torrent.js'
+import { equalsIgnoreCase } from '@/modules/util.js'
 import { writable } from 'simple-store-svelte'
 
 // The cache is structured as an array of objects with the following properties: { hash, mediaId, episodeRange: { first, last }, episode, season, parseObject, files: [{ mediaId, episodeRange: { first, last }, episode, season, parseObject, fileHash, cachedAt, updatedAt, locked, failed }], cachedAt, updatedAt, locked, failed }
@@ -25,11 +26,11 @@ function pushFiles(files, data) {
 }
 
 export function setHash(hash, data) {
-    const existing = hashes.value.find(item => item.hash === hash)
+    const existing = hashes.value.find(item => equalsIgnoreCase(item.hash, hash))
     if (existing) {
         if (data.fileHash) {
             const files = existing.files || []
-            const existingFile = files.find(item => item.fileHash === data.fileHash)
+            const existingFile = files.find(item => equalsIgnoreCase(item.fileHash, data.fileHash))
             if (existingFile) {
                 Object.assign(existingFile, {
                     mediaId: data.mediaId,
@@ -42,6 +43,9 @@ export function setHash(hash, data) {
                     updatedAt: Date.now()
                 })
                 if ((data.locked || !data.failed) && existingFile.failed) delete existingFile.failed
+                if (!data.episode && existingFile.episode) delete existingFile.episode
+                if (!data.season && existingFile.season) delete existingFile.season
+                if (!data.episodeRange && existingFile.episodeRange) delete existingFile.episodeRange
             } else pushFiles(files, data)
             existing.files = files
             if (!data.failed || data.locked) {
@@ -49,6 +53,9 @@ export function setHash(hash, data) {
                 existing.updatedAt = Date.now()
             }
             if ((data.locked || !data.failed) && existing.failed) delete existing.failed
+            if (!data.episode && existing.episode) delete existing.episode
+            if (!data.season && existing.season) delete existing.season
+            if (!data.episodeRange && existing.episodeRange) delete existing.episodeRange
         } else {
             Object.assign(existing, {
                 hash,
@@ -62,6 +69,9 @@ export function setHash(hash, data) {
                 updatedAt: Date.now()
             })
             if ((data.locked || !data.failed) && existing.failed) delete existing.failed
+            if (!data.episode && existing.episode) delete existing.episode
+            if (!data.season && existing.season) delete existing.season
+            if (!data.episodeRange && existing.episodeRange) delete existing.episodeRange
         }
     } else {
         const files = []
@@ -87,21 +97,21 @@ export function setHash(hash, data) {
 
 export function getHash(mediaId, data, ignoreCached = false, ignoreExpiry = false, allHashes = false) {
   const loadedHash = loadedTorrent.value?.infoHash
-  const seedingHashes = new Set(seedingTorrents.value.map(torrent => torrent.infoHash).filter(Boolean))
-  const stagingHashes = new Set(stagingTorrents.value.map(torrent => torrent.infoHash).filter(Boolean))
-  const completedHashes = new Set(completedTorrents.value.map(torrent => torrent.infoHash).filter(Boolean))
+  const seedingHashes = new Set(seedingTorrents.value.map(torrent => torrent.infoHash.toLowerCase()).filter(Boolean))
+  const stagingHashes = new Set(stagingTorrents.value.map(torrent => torrent.infoHash.toLowerCase()).filter(Boolean))
+  const completedHashes = new Set(completedTorrents.value.map(torrent => torrent.infoHash.toLowerCase()).filter(Boolean))
   const availableHashes = ignoreCached ? null : new Set([...completedHashes, ...stagingHashes, ...seedingHashes, loadedHash].filter(Boolean))
   const getPriority = (hash) => {
-    if (hash === loadedHash) return 0
-    if (seedingHashes.has(hash)) return 1
-    if (stagingHashes.has(hash)) return 2
-    if (completedHashes.has(hash)) return 3
+    if (equalsIgnoreCase(hash, loadedHash)) return 0
+    if (seedingHashes.has(hash?.toLowerCase())) return 1
+    if (stagingHashes.has(hash?.toLowerCase())) return 2
+    if (completedHashes.has(hash?.toLowerCase())) return 3
     return 4
   }
 
   const foundHashes = []
   const cacheDuration = cache.getMedia(mediaId)?.status === 'FINISHED' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000
-  const filtered = ignoreCached ? hashes.value : hashes.value.filter(item => availableHashes.has(item.hash) || (item.files?.length && item.files.some(file => availableHashes.has(file.fileHash))))
+  const filtered = ignoreCached ? hashes.value : hashes.value.filter(item => availableHashes.has(item.hash?.toLowerCase()) || (item.files?.length && item.files.some(file => availableHashes.has(file.fileHash?.toLowerCase()))))
   for (const item of filtered) {
     let matchFound = false
     if (item.mediaId === mediaId && item.episode === (Number.isFinite(Number(data.episode)) ? Number(data.episode) : data.episode) && (item.parseObject || data.client) && (ignoreExpiry || item.locked || (item.updatedAt >= Date.now() - cacheDuration))) matchFound = true // Root match
@@ -122,11 +132,11 @@ export function getHash(mediaId, data, ignoreCached = false, ignoreExpiry = fals
 }
 
 export function getId(hash, data, ignoreExpiry = false) {
-    const item = hashes.value.find(entry => entry.hash === hash || entry.files?.some(file => file.fileHash === hash))
+    const item = hashes.value.find(entry => equalsIgnoreCase(entry.hash, hash) || entry.files?.some(file => equalsIgnoreCase(file.fileHash, hash)))
     if (!item) return null
     if (!data.fileHash && (ignoreExpiry || item.locked || (item.updatedAt >= Date.now() - (cache.getMedia(item.mediaId)?.status === 'FINISHED' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000)))) return item // No fileHash: use top-level match
     else if (Array.isArray(item.files)) { // fileHash exists: try to find matching file
-        const file = item.files.find(file => file.fileHash === data.fileHash)
+        const file = item.files.find(file => equalsIgnoreCase(file.fileHash, data.fileHash))
         if (file && (ignoreExpiry || file.locked || (file.updatedAt >= Date.now() - (cache.getMedia(file.mediaId)?.status === 'FINISHED' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000)))) return file
     }
     return null

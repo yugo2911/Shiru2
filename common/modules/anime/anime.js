@@ -1,19 +1,19 @@
-import { codes, DOMPARSER, getRandomInt, countdown, sleep } from '@/modules/util.js'
-import { printError } from '@/modules/networking.js'
-import { anilistClient } from '@/modules/anilist.js'
+import { codes, DOMPARSER, getRandomInt, countdown, sleep, isValidNumber } from '@/modules/util.js'
+import { printError, status } from '@/modules/networking.js'
+import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+import { toast } from '@/modules/lib/toast.js'
 import _anitomyscript from 'anitomyscript'
-import { toast } from 'svelte-sonner'
 import SectionsManager, { search, key } from '@/modules/sections.js'
-import { page } from '@/modules/navigation.js'
-import clipboard from '@/modules/clipboard.js'
+import { page, modal } from '@/modules/navigation.js'
+import clipboard from '@/modules/lib/clipboard.js'
 import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
 import { animeSchedule } from '@/modules/anime/animeschedule.js'
 import AnimeResolver from '@/modules/anime/animeresolver.js'
-import { episodesList } from '@/modules/episodes.js'
 import { settings } from '@/modules/settings.js'
-import { cache, caches } from '@/modules/cache.js'
-import { status } from '@/modules/networking.js'
-import Helper from '@/modules/helper.js'
+import { cache, caches, mediaCache } from '@/modules/cache.js'
+import { COMMON, ELECTRON } from '@/modules/bridge.js'
+import { derived } from 'simple-store-svelte'
+import Helper from '@/modules/providers/helper.js'
 import Bottleneck from 'bottleneck'
 import { Drama, BookHeart, MountainSnow, Laugh, Adult, Droplets, FlaskConical, Ghost, Skull, HeartPulse, Volleyball, Car, Brain, Footprints, Guitar, Bot, Sparkles, WandSparkles, Activity } from 'lucide-svelte'
 import Debug from 'debug'
@@ -21,7 +21,12 @@ const debug = Debug('ui:anime')
 
 const imageRx = /\.(jpeg|jpg|gif|png|webp)/i
 
-clipboard.on('files', ({ detail }) => {
+COMMON.onRequestPlay((opts) => {
+  ELECTRON.showAndFocus()
+  handlePlay(opts.id, opts.episode, opts.torrentOnly)
+})
+
+clipboard.addEventListener('files', ({ detail }) => {
   for (const file of detail) {
     if (file.type.startsWith('image')) {
       toast.promise(traceAnime(file), {
@@ -34,7 +39,7 @@ clipboard.on('files', ({ detail }) => {
   }
 })
 
-clipboard.on('text', ({ detail }) => {
+clipboard.addEventListener('text', ({ detail }) => {
   for (const { type, text } of detail) {
     let src = null
     if (type === 'text/html') {
@@ -52,6 +57,33 @@ clipboard.on('text', ({ detail }) => {
     }
   }
 })
+
+export function play (media, episode, force = false) {
+  if (!media) return
+  if (isValidNumber(episode)) return playAnime(media, episode, force)
+  if (media.status === 'NOT_YET_RELEASED') return
+  playMedia(media)
+}
+
+export function handlePlay (id, episode, torrentOnly) {
+  const cachedMedia = mediaCache.value[id]
+  if (!cachedMedia) return
+  const cachedEpisode = isValidNumber(episode) ? episode : cachedMedia?.mediaListEntry?.progress
+  const desiredEpisode = (isValidNumber(episode) ? episode : cachedEpisode && cachedEpisode !== 0 ? cachedEpisode + 1 : cachedEpisode)
+  if (torrentOnly) {
+    if (desiredEpisode) return playAnime(cachedMedia, desiredEpisode)
+    if (cachedMedia?.status === 'NOT_YET_RELEASED') return
+    playMedia(cachedMedia)
+  } else play(cachedMedia, desiredEpisode)
+}
+
+export async function handleAnime (detail) {
+  const foundMedia = await cache.requestMedia(detail.id, detail.isMal)
+  if (foundMedia) {
+    ELECTRON.showAndFocus()
+    modal.open(modal.ANIME_DETAILS, foundMedia)
+  }
+}
 
 export async function traceAnime (image) { // WAIT lookup logic
   let options
@@ -74,8 +106,7 @@ export async function traceAnime (image) { // WAIT lookup logic
       clearNext: true,
       load: (page = 1, perPage = 50, variables = {}) => {
         const res = anilistClient.searchIDS({ page, perPage, id: ids, ...SectionsManager.sanitiseObject(variables) }).then(async res => {
-          for (const index in res.data?.Page?.media) {
-            const media = res.data.Page.media[index]
+          for (const [index, media] of (res.data?.Page?.media || []).entries()) {
             const counterpart = result.find(({ anilist }) => anilist === media.id)
             const metadata = (await getEpisodeMetadataForMedia(media))?.[counterpart.episode] || {}
             res.data.Page.media[index] = {
@@ -102,74 +133,10 @@ export async function traceAnime (image) { // WAIT lookup logic
   }
 }
 
-function constructChapters (results, duration) {
-  const chapters = results.map(result => {
-    const diff = duration - result.episodeLength
-    return {
-      start: (result.interval.startTime + diff) * 1000,
-      end: (result.interval.endTime + diff) * 1000,
-      text: result.skipType.toUpperCase()
-    }
-  })
-  const ed = chapters.find(({ text }) => text === 'ED')
-  const recap = chapters.find(({ text }) => text === 'RECAP')
-  if (recap) recap.text = 'Recap'
-
-  chapters.sort((a, b) => a - b)
-  if ((chapters[0].start | 0) !== 0) {
-    chapters.unshift({ start: 0, end: chapters[0].start, text: chapters[0].text === 'OP' ? 'Intro' : 'Episode' })
-  }
-  if (ed) {
-    if ((ed.end | 0) + 5000 - duration * 1000 < 0) {
-      chapters.push({ start: ed.end, end: duration * 1000, text: 'Preview' })
-    }
-  } else if ((chapters[chapters.length - 1].end | 0) + 5000 - duration * 1000 < 0) {
-    chapters.push({
-      start: chapters[chapters.length - 1].end,
-      end: duration * 1000,
-      text: 'Episode'
-    })
-  }
-
-  for (let i = 0, len = chapters.length - 2; i <= len; ++i) {
-    const current = chapters[i]
-    const next = chapters[i + 1]
-    if ((current.end | 0) !== (next.start | 0)) {
-      chapters.push({
-        start: current.end,
-        end: next.start,
-        text: 'Episode'
-      })
-    }
-  }
-
-  chapters.sort((a, b) => a.start - b.start)
-
-  return chapters
-}
-
-export async function getChaptersAniSkip (file, duration) {
-  const resAccurate = await fetch(`https://api.aniskip.com/v2/skip-times/${file.media.media.idMal}/${file.media.episode}/?episodeLength=${duration}&types=op&types=ed&types=recap`)
-  const jsonAccurate = await resAccurate.json()
-
-  const resRough = await fetch(`https://api.aniskip.com/v2/skip-times/${file.media.media.idMal}/${file.media.episode}/?episodeLength=0&types=op&types=ed&types=recap`)
-  const jsonRough = await resRough.json()
-
-  const map = {}
-  if (jsonAccurate?.statusCode === 500 || jsonRough?.statusCode === 500) return []
-  for (const result of [...jsonAccurate.results, ...jsonRough.results]) {
-    map[result.skipType] ||= result
-  }
-
-  const results = Object.values(map)
-  if (!results.length) return []
-  return constructChapters(results, duration)
-}
-
 export function getMediaMaxEp (media, playable) {
   if (!media) return 0
   else if (playable) return media.nextAiringEpisode?.episode - 1 || lastAired(media.airingSchedule?.nodes)?.episode || (media.status === 'NOT_YET_RELEASED' ? 0 : media.episodes) || (media.status === 'RELEASING' ? (media.mediaListEntry?.progress ?? 1) : 0)
-  else return Math.max(media.airingSchedule?.nodes?.[media.airingSchedule?.nodes?.length - 1]?.episode || 0, media.airingSchedule?.nodes?.length || 0, (!media.streamingEpisodes || (media.status === 'FINISHED' && media.episodes) ? 0 : media.streamingEpisodes?.filter((ep) => { const match = (/Episode (\d+(\.\d+)?) - /).exec(ep.title); return match ? Number.isInteger(parseFloat(match[1])) : false}).length), media.episodes || 0, media.nextAiringEpisode?.episode || 0) || (media.status === 'RELEASING' ? (media.mediaListEntry?.progress ?? 1) : 0)
+  else return Math.max(media.airingSchedule?.nodes?.[media.airingSchedule?.nodes?.length - 1]?.episode || 0, media.airingSchedule?.nodes?.length || 0, (!media.streamingEpisodes || (media.status === 'FINISHED' && media.episodes) ? 0 : media.streamingEpisodes?.filter((ep) => { const match = (/Episode (\d+(\.\d+)?) - /).exec(ep.title); return match ? Number.isInteger(parseFloat(match[1])) : false }).length), media.episodes || 0, media.nextAiringEpisode?.episode || 0) || (media.status === 'RELEASING' ? (media.mediaListEntry?.progress ?? 1) : 0)
 }
 
 // utility method for correcting anitomyscript woes for what's needed
@@ -231,8 +198,8 @@ function addAnimeType(obj, newType) {
  */
 export async function hasZeroEpisode(media, existingMappings) { // really wish they could make fetching zero episodes less painful.
   if (!media) return null
-  const mappings = existingMappings || (await getAniMappings(media.id)) || {}
-  const hasZeroEpisode = media.streamingEpisodes?.filter((ep) => { const match = (/Episode (\d+(\.\d+)?) - /).exec(ep.title); return match ? Number.isInteger(parseFloat(match[1])) && Number(parseFloat(match[1])) === 0 : false})
+  const mappings = existingMappings || (await getAniMappings(media)) || {}
+  const hasZeroEpisode = media.streamingEpisodes?.filter((ep) => { const match = (/Episode (\d+(\.\d+)?) - /).exec(ep.title); return match ? Number.isInteger(parseFloat(match[1])) && Number(parseFloat(match[1])) === 0 : false })
   const zeroAsFirstEpisode = /episode\s*0/i.test(mappings?.episodes?.[1]?.title?.en || mappings?.episodes?.[1]?.title?.jp) // The first episode is titled as Episode 0 so this is likely a Prologue, fixes issues with series like `Fate/stay night: Unlimited Blade Works`
   // no clue what fixed Mushoku but this initial part seems to allow 'Episode 0 : Guardian Fits' to properly be mapped to season 2 part 1, ensure when making changes this doesn't appear on season 1 part 1.
   if (hasZeroEpisode?.length > 0 && ((media.episodes >= media.streamingEpisodes?.length) || zeroAsFirstEpisode)) {
@@ -306,14 +273,14 @@ export const genreIcons = {
   'Thriller': HeartPulse
 }
 
-export const genreList = [
+export const genreList = derived(settings, $settings => [
   'Action',
   'Adventure',
   'Comedy',
   'Drama',
   'Ecchi',
   'Fantasy',
-  ...(settings.value.adult === 'hentai' ? ['Hentai'] : []),
+  ...($settings.adult === 'hentai' ? ['Hentai'] : []),
   'Horror',
   'Mahou Shoujo',
   'Mecha',
@@ -326,9 +293,9 @@ export const genreList = [
   'Sports',
   'Supernatural',
   'Thriller'
-]
+])
 
-export const tagList = [
+export const tagList = derived(settings, $settings => [
   'Chuunibyou',
   'Demons',
   'Food',
@@ -352,6 +319,7 @@ export const tagList = [
   'Satire',
   'School',
   'Seinen',
+  'Shogi',
   'Shoujo',
   'Shounen',
   'Slavery',
@@ -362,9 +330,11 @@ export const tagList = [
   'Unrequited Love',
   'Vampire',
   'Kids',
+  'Gekiga',
   'Gender Bending',
   'Body Swapping',
   'Boys\' Love',
+  'Brainwashing',
   'Cute Boys Doing Cute Things',
   'Cute Girls Doing Cute Things',
   '4-koma',
@@ -404,6 +374,7 @@ export const tagList = [
   'Autobiographical',
   'Aviation',
   'Badminton',
+  'Ballet',
   'Band',
   'Bar',
   'Baseball',
@@ -421,6 +392,8 @@ export const tagList = [
   'Bullying',
   'Butler',
   'Calligraphy',
+  'Camping',
+  'Card Battle',
   'Cars',
   'Cannibalism',
   'Chibi',
@@ -431,9 +404,12 @@ export const tagList = [
   'Centaur',
   'Cheerleading',
   'Chimera',
+  'Circus',
+  'Coastal',
   'Class Struggle',
   'Classic Literature',
   'Classical Music',
+  'Clone',
   'Cohabitation',
   'College',
   'Coming of Age',
@@ -456,6 +432,7 @@ export const tagList = [
   'Desert',
   'Detective',
   'Disability',
+  'Dissociative Identities',
   'Dinosaurs',
   'Drawing',
   'Dragons',
@@ -499,12 +476,14 @@ export const tagList = [
   'Gambling',
   'Gangs',
   'Ghost',
+  'Go',
   'Gods',
   'Goblin',
   'Golf',
   'Gore',
   'Guns',
   'Gyaru',
+  'Graduation Project',
   'Handball',
   'Henshin',
   'Hikikomori',
@@ -512,15 +491,19 @@ export const tagList = [
   'Historical',
   'Homeless',
   'Horticulture',
+  'Human Experimentation',
   'Human Pet',
   'Ice Skating',
   'Idol',
   'Incest',
   'Indigenous Cultures',
   'Inn',
+  'Interspecies',
   'Jazz Music',
   'Judo',
+  'Kabuki',
   'Kaiju',
+  'Karuta',
   'Kemonomimi',
   'Kingdom Management',
   'Konbini',
@@ -534,6 +517,8 @@ export const tagList = [
   'Makeup',
   'Male Protagonist',
   'Mafia',
+  'Mahjong',
+  'Manzai',
   'Matriarchy',
   'Matchmaking',
   'Medicine',
@@ -543,6 +528,7 @@ export const tagList = [
   'Meta',
   'Metal Music',
   'Mixed Media',
+  'Modeling',
   'Mopeds',
   'Monster Boy',
   'Monster Girl',
@@ -572,6 +558,7 @@ export const tagList = [
   'Photography',
   'Pirates',
   'Philosophy',
+  'Poker',
   'Police',
   'Politics',
   'Polyamorous',
@@ -585,9 +572,7 @@ export const tagList = [
   'Primarily Teen Cast',
   'Pregnancy',
   'Prison',
-  'Primarily Animal Cast',
-  'Primarily Child Cast',
-  'Primarily Teen Cast',
+  'Prophecy',
   'Proxy Battle',
   'Psychosexual',
   'Puppetry',
@@ -599,6 +584,7 @@ export const tagList = [
   'Rescue',
   'Restaurant',
   'Revenge',
+  'Reverse Isekai',
   'Robots',
   'Rock Music',
   'Rotoscoping',
@@ -611,6 +597,7 @@ export const tagList = [
   'Scuba Diving',
   'Shapeshifting',
   'Ships',
+  'Short-Form Chapter',
   'Shrine Maiden',
   'Skateboarding',
   'Skeleton',
@@ -628,7 +615,6 @@ export const tagList = [
   'Super Robot',
   'Surreal Comedy',
   'Survival',
-  'Sweat',
   'Swordplay',
   'Swimming',
   'Table Tennis',
@@ -674,65 +660,70 @@ export const tagList = [
   'Youkai',
   'Zombie',
   'Vertical Video',
-  ...(settings.value.adult === 'hentai' ? [
-  'Ahegao',
-  'Anal Sex',
-  'Armpits',
-  'Ashikoki',
-  'Asphyxiation',
-  'Bondage',
-  'Boobjob',
-  'Cervix Penetration',
-  'Cheating',
-  'Cumflation',
-  'Cunnilingus',
-  'Deepthroat',
-  'Defloration',
-  'DILF',
-  'Double Penetration',
-  'Erotic Piercings',
-  'Facial',
-  'Feet',
-  'Fellatio',
-  'Femdom',
-  'Fisting',
-  'Flat Chest',
-  'Futanari',
-  'Group Sex',
-  'Hair Pulling',
-  'Handjob',
-  'Hypersexuality',
-  'Inseki',
-  'Irrumatio',
-  'Lactation',
-  'Large Breasts',
-  'Male Pregnancy',
-  'Masochism',
-  'Masturbation',
-  'Mating Press',
-  'MILF',
-  'Nakadashi',
-  'Netorare',
-  'Netorase',
-  'Netori',
-  'Pet Play',
-  'Prostitution',
-  'Public Sex',
-  'Rimjob',
-  'Scat',
-  'Scissoring',
-  'Sex Toys',
-  'Shimaidon',
-  'Squirting',
-  'Sumata',
-  'Tentacles',
-  'Threesome',
-  'Virginity',
-  'Vore',
-  'Voyeur',
-  'Zoophilia'
+  ...($settings.adult === 'hentai' ? [
+    'Ahegao',
+    'Anal Sex',
+    'Armpits',
+    'Ashikoki',
+    'Asphyxiation',
+    'Bondage',
+    'Boobjob',
+    'Cervix Penetration',
+    'Cheating',
+    'Cumflation',
+    'Cunnilingus',
+    'Deepthroat',
+    'Defloration',
+    'DILF',
+    'Double Penetration',
+    'Erotic Piercings',
+    'Facial',
+    'Feet',
+    'Fellatio',
+    'Femdom',
+    'Fingering',
+    'Fisting',
+    'Flat Chest',
+    'Futanari',
+    'Group Sex',
+    'Hair Pulling',
+    'Handjob',
+    'Hypersexuality',
+    'Inseki',
+    'Irrumatio',
+    'Lactation',
+    'Large Breasts',
+    'Male Pregnancy',
+    'Masochism',
+    'Masturbation',
+    'Mating Press',
+    'MILF',
+    'Nakadashi',
+    'Netorare',
+    'Netorase',
+    'Netori',
+    'Oyakodon',
+    'Pet Play',
+    'Prostitution',
+    'Public Sex',
+    'Rimjob',
+    'Scat',
+    'Scissoring',
+    'Sex Toys',
+    'Shimaidon',
+    'Sixty-nine',
+    'Squirting',
+    'Sumata',
+    'Swapping',
+    'Sweat',
+    'Tentacles',
+    'Threesome',
+    'Virginity',
+    'Vore',
+    'Voyeur',
+    'Zoophilia'
   ] : [])
-]
+])
 
 export async function playMedia (media) {
   const zeroEpisode = await hasZeroEpisode(media)
@@ -748,7 +739,6 @@ export async function playMedia (media) {
     }
   }
   playAnime(media, ep)
-  media = null
 }
 
 export function setStatus (status, other = {}, media) {
@@ -770,43 +760,44 @@ const episodeMetadataMap = new Map()
 export async function getEpisodeMetadataForMedia (media) {
   if (episodeMetadataMap.has(`${media?.id}`)) return episodeMetadataMap.get(`${media?.id}`)
   const promiseData = (async () => {
-    const aniMappings = (await getAniMappings(media?.id) || {})?.episodes
-    if (!aniMappings || !Object.keys(aniMappings).length) return kitsuToAniEpisodes(await episodesList.getKitsuEpisodes(media?.id))
-    else return aniMappings
+    //const aniMappings = (await getAniMappings(media) || {})?.episodes
+    //if (!aniMappings || !Object.keys(aniMappings).length) return kitsuToAniEpisodes(await episodesList.getKitsuEpisodes(media?.id))
+    //else return aniMappings
+    return (await getAniMappings(media) || {})?.episodes
   })()
   episodeMetadataMap.set(`${media?.id}`, promiseData)
   return promiseData
 }
 
-function kitsuToAniEpisodes(data) {
-  if (!data?.data) return {}
-  const episodes = {}
-  data.data.forEach((episode) => {
-    const attributes = episode.attributes
-    const episodeNumber = attributes.number
-    if (!episodeNumber) return
-    episodes[episodeNumber] = {
-      episode: episodeNumber.toString(),
-      seasonNumber: attributes.seasonNumber || 1,
-      episodeNumber: episodeNumber,
-      absoluteEpisodeNumber: episodeNumber,
-      title: {
-        en: attributes.canonicalTitle || attributes.titles?.en || null,
-        ja: attributes.titles?.ja || null,
-        "x-jat": attributes.titles?.["x-jat"] || attributes.titles?.ja_jp || null
-      },
-      airDate: attributes.airdate || null,
-      airdate: attributes.airdate || null,
-      length: attributes.length || null,
-      runtime: attributes.length || null,
-      overview: attributes.synopsis || attributes.description || null,
-      summary: attributes.description || attributes.synopsis || null,
-      image: attributes.thumbnail?.original || attributes.thumbnail?.large || null,
-      kitsuId: episode.id
-    }
-  })
-  return episodes
-}
+// function kitsuToAniEpisodes(data) {
+//   if (!data?.data) return {}
+//   const episodes = {}
+//   data.data.forEach((episode) => {
+//     const attributes = episode.attributes
+//     const episodeNumber = attributes.number
+//     if (!episodeNumber) return
+//     episodes[episodeNumber] = {
+//       episode: episodeNumber.toString(),
+//       seasonNumber: attributes.seasonNumber || 1,
+//       episodeNumber: episodeNumber,
+//       absoluteEpisodeNumber: episodeNumber,
+//       title: {
+//         en: attributes.canonicalTitle || attributes.titles?.en || null,
+//         ja: attributes.titles?.ja || null,
+//         "x-jat": attributes.titles?.["x-jat"] || attributes.titles?.ja_jp || null
+//       },
+//       airDate: attributes.airdate || null,
+//       airdate: attributes.airdate || null,
+//       length: attributes.length || null,
+//       runtime: attributes.length || null,
+//       overview: attributes.synopsis || attributes.description || null,
+//       summary: attributes.description || attributes.synopsis || null,
+//       image: attributes.thumbnail?.original || attributes.thumbnail?.large || null,
+//       kitsuId: episode.id
+//     }
+//   })
+//   return episodes
+// }
 
 export function getAiringInfo(airingAt) {
   if (!airingAt) return null
@@ -849,10 +840,10 @@ export function nextAiring(nodes, variables) {
 export function lastAired(nodes, variables) {
   const currentTime = new Date()
   return nodes?.filter(node => new Date(variables?.hideSubs ? node.airingAt : (node.airingAt * 1000)) < currentTime)?.sort((a, b) => {
-      const timeDiff = b.airingAt - a.airingAt
-      if (timeDiff !== 0) return timeDiff
-      return (b.episode || 0) - (a.episode || 0)
-    })?.shift()
+    const timeDiff = b.airingAt - a.airingAt
+    if (timeDiff !== 0) return timeDiff
+    return (b.episode || 0) - (a.episode || 0)
+  })?.shift()
 }
 
 export async function isSubbedProgress(media) {
@@ -878,7 +869,7 @@ export async function isSubbedProgress(media) {
 const concurrentRequests = new Map()
 export async function getKitsuMappings(anilistID) {
   if (!anilistID) return
-  const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `kitsu-${anilistID}`, status.value === 'offline')
+  const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, status.value === 'offline')
   if (cachedEntry) return cachedEntry
   else if (status.value === 'offline') return
   if (concurrentRequests.has(`kitsu-${anilistID}`)) return concurrentRequests.get(`kitsu-${anilistID}`)
@@ -890,7 +881,7 @@ export async function getKitsuMappings(anilistID) {
       } catch (e) {
         if (!res || res.status !== 404) throw e
       }
-      if (!res.ok && (res.status === 429 || res.status === 500)) {
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
         throw res
       }
       let json = null
@@ -910,10 +901,10 @@ export async function getKitsuMappings(anilistID) {
       }
       const date = new Date()
       const media = cache.getMedia(anilistID)
-      const cacheDuration = media?.status === 'FINISHED' && (media?.endDate ? (date.getFullYear() - media?.endDate.year) * 12 + (date.getMonth() + 1 - media?.endDate.month) >= 1 : (media?.startDate?.year || media?.seasonYear) && date.getFullYear() - (media?.startDate?.year || media?.seasonYear) >= 1) ? getRandomInt(14, 21) * 24 * 60 * 60 * 1_000 : getRandomInt(60, 90) * 60 * 1_000
-      return cache.cacheEntry(caches.MAPPINGS, `kitsu-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 60 to 90 minutes, or 2 to 3 weeks for finished series (its highly unlikely the mappings will change drastically at that point).
+      const cacheDuration = media?.status === 'FINISHED' && media?.endDate && (date.getFullYear() - media.endDate.year) * 12 + (date.getMonth() + 1 - media.endDate.month) > 12 ? getRandomInt(24, 48) * 60 * 60 * 1_000 : getRandomInt(30, 60) * 60 * 1_000
+      return cache.cacheEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
     } catch (e) {
-      const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `kitsu-${anilistID}`, true)
+      const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, true)
       if (cachedEntry) {
         debug(`Failed to request Kitsu Mappings for ${anilistID}, this is likely due to an outage... falling back to cached data.`)
         return cachedEntry
@@ -929,42 +920,41 @@ export async function getKitsuMappings(anilistID) {
 
 let aniRateLimitPromise = null
 const aniLimiter = new Bottleneck({
-  reservoir: 200,
-  reservoirRefreshAmount: 200,
-  reservoirRefreshInterval: 30_000,
-  maxConcurrent: 15,
-  minTime: 80
+  maxConcurrent: 30,
+  minTime: 110
 })
 aniLimiter.on('failed', async (error) => {
   if (status.value === 'offline') throw new Error('Failed making request to api.ani.zip, network is offline... not retrying')
   if (error.status === 500) return 1
   if (!error.statusText) {
-    if (!aniRateLimitPromise) aniRateLimitPromise = sleep(10 * 1000).then(() => { aniRateLimitPromise = null })
-    return 10 * 1000
+    if (!aniRateLimitPromise) aniRateLimitPromise = sleep(10 * 1_000).then(() => { aniRateLimitPromise = null })
+    return 10 * 1_000
   }
-  const time = (Number((error.headers.get('retry-after') || 10)) + 1) * 1000
+  const time = (Number((error.headers.get('retry-after') || 10)) + 1) * 1_000
   if (!aniRateLimitPromise) aniRateLimitPromise = sleep(time).then(() => { aniRateLimitPromise = null })
   return time
 })
 
-export async function getAniMappings(anilistID) {
-  if (!anilistID) return
-  const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `ani-${anilistID}`, status.value === 'offline')
+export async function getAniMappings(opts) {
+  if (!opts?.id && !opts?.idMal) return
+  const cacheKey = opts.id ? `ani-${opts.id}` : `mal-${opts.idMal}`
+  const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, cacheKey, status.value === 'offline')
   if (cachedEntry) return cachedEntry
   else if (status.value === 'offline') return
-  if (concurrentRequests.has(`ani-${anilistID}`)) return concurrentRequests.get(`ani-${anilistID}`)
+  if (concurrentRequests.has(cacheKey)) return concurrentRequests.get(cacheKey)
   const requestPromise = aniLimiter.wrap(async () => {
     await aniRateLimitPromise
+    let res
     try {
-      let res = {}
-      try {
-        res = await fetch(`https://api.ani.zip/mappings?anilist_id=${anilistID}`)
-      } catch (e) {
-        if (!res || res.status !== 404) throw e
-      }
-      if (!res.ok && (res.status === 429 || res.status === 500)) {
-        throw res
-      }
+      res = await fetch(`https://api.ani.zip/v1/episodes?${opts.id ? `anilist_id=${opts.id}` : `mal_id=${opts.idMal}`}`)
+      if (res?.status === 404 && opts.id && opts.idMal) res = await fetch(`https://api.ani.zip/v1/episodes?mal_id=${opts.idMal}`)
+    } catch (e) {
+      if (!res || res.status !== 404) throw e
+    }
+    if (!res.ok && (res.status === 429 || res.status >= 500)) {
+      throw res
+    }
+    try {
       let json = null
       try {
         json = await res.json()
@@ -981,21 +971,21 @@ export async function getAniMappings(anilistID) {
         }
       }
       const date = new Date()
-      const media = cache.getMedia(anilistID)
-      const cacheDuration = media?.status === 'FINISHED' && (media?.endDate ? (date.getFullYear() - media?.endDate.year) * 12 + (date.getMonth() + 1 - media?.endDate.month) >= 1 : (media?.startDate?.year || media?.seasonYear) && date.getFullYear() - (media?.startDate?.year || media?.seasonYear) >= 1) ? getRandomInt(14, 21) * 24 * 60 * 60 * 1_000 : getRandomInt(60, 90) * 60 * 1_000
-      return cache.cacheEntry(caches.MAPPINGS, `ani-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 60 to 90 minutes, or 2 to 3 weeks for finished series (its highly unlikely the mappings will change drastically at that point).
+      const media = opts.id && cache.getMedia(opts.id)
+      const cacheDuration = media?.status === 'FINISHED' && media?.endDate && (date.getFullYear() - media.endDate.year) * 12 + (date.getMonth() + 1 - media.endDate.month) >= 12 ? getRandomInt(24, 72) * 60 * 60 * 1_000 : getRandomInt(2, 6) * 60 * 60 * 1_000
+      return cache.cacheEntry(caches.QUERY_MAPPINGS, cacheKey, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
     } catch (e) {
-      const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `ani-${anilistID}`, true)
+      const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, cacheKey, true)
       if (cachedEntry) {
-        debug(`Failed to request Anilist Mappings for ${anilistID}, this is likely due to an outage... falling back to cached data.`)
+        debug(`Failed to request Ani mappings for ${opts.id || opts.idMal}, this is likely due to an outage... falling back to cached data.`)
         return cachedEntry
       }
       else throw e
     }
   })().finally(() => {
-    concurrentRequests.delete(`ani-${anilistID}`)
+    concurrentRequests.delete(cacheKey)
   })
-  concurrentRequests.set(`ani-${anilistID}`, requestPromise)
+  concurrentRequests.set(cacheKey, requestPromise)
   return requestPromise
 }
 

@@ -1,6 +1,6 @@
 <script context='module'>
-  const badgeKeys = ['title', 'search', 'genre', 'genre_not', 'tag', 'tag_not', 'studio', 'season', 'year', 'format', 'format_not', 'status', 'status_not', 'sort', 'hideSubs', 'hideMyAnime', 'hideStatus', 'showMyAnime', 'showStatus']
-  const badgeDisplayNames = { title: BookUser, search: Type, genre: Hash, genre_not: Hash, tag: Hash, tag_not: Hash, studio: Factory, season: CalendarRange, year: Leaf, format: Tv, format_not: MonitorUp, status: MonitorPlay, status_not: MonitorX, sort: ArrowDownWideNarrow, hideMyAnime: EyeOff, showMyAnime: Hourglass, hideSubs: Mic }
+  const badgeKeys = ['title', 'search', 'genre', 'genre_not', 'tag', 'tag_not', 'season', 'year', 'format', 'format_not', 'status', 'status_not', 'sort', 'hideSubs', 'hideMyAnime', 'hideStatus', 'showMyAnime', 'showStatus']
+  const badgeDisplayNames = { title: BookUser, search: Type, genre: Hash, genre_not: Hash, tag: Hash, tag_not: Hash, season: CalendarRange, year: Leaf, format: Tv, format_not: MonitorUp, status: MonitorPlay, status_not: MonitorX, sort: ArrowDownWideNarrow, hideMyAnime: EyeOff, showMyAnime: Hourglass, hideSubs: Mic }
   const sortOptions = { TITLE_ROMAJI: 'Title', START_DATE_DESC: 'Release Date', SCORE_DESC: 'Score', POPULARITY_DESC: 'Popularity', UPDATED_AT_DESC: 'Date Updated', UPDATED_TIME_DESC: 'Last Updated', STARTED_ON_DESC: 'Start Date', FINISHED_ON_DESC: 'Completed Date', PROGRESS_DESC: 'Your Progress', USER_SCORE_DESC: 'Your Score' }
   const formatOptions = { TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }
 
@@ -11,15 +11,15 @@
 
 <script>
   import { traceAnime, genreIcons, genreList, tagList } from '@/modules/anime/anime.js'
-  import { currentYear, anilistClient } from '@/modules/anilist.js'
+  import { currentYear } from '@/modules/providers/anilist/anilist.js'
   import { page } from '@/modules/navigation.js'
   import { settings } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
-  import { click } from '@/modules/click.js'
-  import { toast } from 'svelte-sonner'
-  import Helper from '@/modules/helper.js'
+  import { click } from '@/modules/lib/click.js'
+  import { toast } from '@/modules/lib/toast.js'
+  import Helper from '@/modules/providers/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
-  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2, Factory } from 'lucide-svelte'
+  import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2 } from 'lucide-svelte'
 
   export let clearNow
   export let search
@@ -27,31 +27,14 @@
   let form
   let searchTextInput = search.search || null
   let searchTags = getTags()
-  let studioList = {}
-
-  async function loadStudios() {
-    const res = await anilistClient.alRequest(/* js */`
-      query {
-        Page {
-          studios {
-            id,
-            name
-          }
-        }
-      }
-    `, {})
-    const studios = res?.data?.Page?.studios || []
-    studioList = studios.reduce((acc, s) => ({ ...acc, [s.id]: s.name }), {})
-  }
-  loadStudios()
   $: if (clearNow) searchTags = getTags()
 
   function getTags() {
     delete search.clearNow
     return {
       headers: {
-        [genreList[0]]: 'Genres',
-        [tagList[0]]: 'Tags'
+        [$genreList[0]]: 'Genres',
+        [$tagList[0]]: 'Tags'
       },
       tags: [...toArray(search?.genre), ...toArray(search?.tag)],
       tags_not: [...toArray(search?.genre_not), ...toArray(search?.tag_not)]
@@ -59,10 +42,15 @@
   }
 
   $: {
-    search.genre = searchTags.tags.filter(val => genreList.includes(val))
-    search.tag = searchTags.tags.filter(val => tagList.includes(val))
-    search.genre_not = searchTags.tags_not.filter(val => genreList.includes(val))
-    search.tag_not = searchTags.tags_not.filter(val => tagList.includes(val))
+    for (const [key, val] of Object.entries({
+      genre: searchTags.tags.filter(val => $genreList.includes(val)),
+      tag: searchTags.tags.filter(val => $tagList.includes(val)),
+      genre_not: searchTags.tags_not.filter(val => $genreList.includes(val)),
+      tag_not: searchTags.tags_not.filter(val => $tagList.includes(val))
+    })) {
+      const current = Array.isArray(search[key]) ? search[key] : []
+      if (current.length !== val.length || current.join() !== val.join()) search[key] = val
+    }
   }
 
   $: sanitisedSearch = Object.entries(searchCleanup(search, true)).flatMap(
@@ -79,7 +67,6 @@
       genre_not: [],
       tag: [],
       tag_not: [],
-      studio: [],
       format: [],
       format_not: [],
       status: [],
@@ -120,7 +107,7 @@
         searchTags.tags = searchTags.tags.filter((item) => item !== badge.value)
         searchTags.tags_not = searchTags.tags_not.filter((item) => item !== badge.value)
       }
-      if (search[badge.key].length === 0) search[badge.key] = badge.key.includes('status') || badge.key.includes('format') || badge.key.startsWith('studio') || badge.key.startsWith('genre') || badge.key.startsWith('tag') ? [] : ''
+      if (search[badge.key].length === 0) search[badge.key] = badge.key.includes('status') || badge.key.includes('format') ? [] : ''
     } else search[badge.key] = ''
     form.dispatchEvent(new Event('input', { bubbles: true }))
   }
@@ -189,7 +176,7 @@
   }
 </script>
 
-<form class='container-fluid py-20 px-md-50 bg-dark pb-0 position-sticky top-0 search-container z-40' class:mt-20={!SUPPORTS.isAndroid && !search.fileEdit} class:mt-md-0={!SUPPORTS.isAndroid && !search.fileEdit} class:bg-very-dark={search.fileEdit} on:input bind:this={form}>
+<form class='container-fluid px-md-10 bg-dark position-sticky top-0 search-container z-40' class:px-10={search.fileEdit} class:px-md-50={!search.fileEdit} class:pt-20={!search.fileEdit} class:mt-20={!SUPPORTS.isAndroid && !search.fileEdit} class:mt-md-0={!SUPPORTS.isAndroid && !search.fileEdit} class:bg-very-dark={search.fileEdit} style:--container-color={search.fileEdit ? 'var(--dark-color-dim)' : 'var(--dark-color)'} on:input bind:this={form}>
   <div class='row'>
     <div class='col-lg col-4 p-10 d-flex flex-column justify-content-end' class:d-advanced-title={advancedSearch}>
       <div class='pb-10 font-weight-semi-bold d-flex align-items-center {advancedSearch} font-scale-24'>
@@ -216,16 +203,7 @@
         <div>Genres</div>
       </div>
       <div class='input-group' title={(!Helper.isAniAuth() && Helper.isUserSort(search)) ? 'Cannot use with sort: ' + sortOptions[search.sort] : ''}>
-        <CustomDropdown id={`tags-input`} bind:form headers={searchTags.headers} options={[...toArray(genreList), ...toArray(tagList)]} bind:value={searchTags.tags} bind:altValue={searchTags.tags_not} constrainAlt={false} disabled={search.disableSearch || (!Helper.isAniAuth() && Helper.isUserSort(search))}/>
-      </div>
-    </div>
-    <div class='col-lg col-4 p-10 z-4 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
-      <div class='pb-10 font-weight-semi-bold d-flex align-items-center font-scale-24'>
-        <Factory class='mr-10 block-scale-30'/>
-        <div>Studio</div>
-      </div>
-      <div class='input-group'>
-        <CustomDropdown id={`studio-input`} bind:form options={studioList} bind:value={search.studio} bind:altValue={search.studio_not} disabled={search.disableSearch}/>
+        <CustomDropdown id='tags-input' bind:form headers={searchTags.headers} options={[...toArray($genreList), ...toArray($tagList)]} bind:value={searchTags.tags} bind:altValue={searchTags.tags_not} constrainAlt={false} disabled={search.disableSearch || (!Helper.isAniAuth() && Helper.isUserSort(search))}/>
       </div>
     </div>
     <div class='col-lg col-4 p-10 z-4 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
@@ -244,7 +222,7 @@
           </select>
         </div>
         <div class='input-group'>
-          <CustomDropdown id={`year-input`} class='radius-left-0' bind:form options={Array.from({ length: currentYear - 1940 + 2 }, (_, i) => currentYear + 1 - i)} bind:value={search.year} arrayValue={false} bind:disabled={search.disableSearch}/>
+          <CustomDropdown id='year-input' class='radius-left-0' bind:form options={Array.from({ length: currentYear - 1940 + 2 }, (_, i) => currentYear + 1 - i)} bind:value={search.year} arrayValue={false} displaySize={40} bind:disabled={search.disableSearch}/>
         </div>
       </div>
     </div>
@@ -254,7 +232,7 @@
         <div>Format</div>
       </div>
       <div class='input-group'>
-        <CustomDropdown id={`format-input`} bind:form options={{ TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }} bind:value={search.format} bind:altValue={search.format_not} bind:disabled={search.disableSearch}/>
+        <CustomDropdown id='format-input' bind:form options={{ TV: 'TV Show', MOVIE: 'Movie', TV_SHORT: 'TV Short', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA' }} bind:value={search.format} bind:altValue={search.format_not} bind:disabled={search.disableSearch}/>
       </div>
     </div>
     <div class='col p-10 z-2 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
@@ -263,7 +241,7 @@
         <div>Status</div>
       </div>
       <div class='input-group'>
-        <CustomDropdown id={`status-input`} bind:form options={{ RELEASING: 'Releasing', FINISHED: 'Finished', NOT_YET_RELEASED: 'Not Yet Released', CANCELLED: 'Cancelled' }} bind:value={search.status} bind:altValue={search.status_not} bind:disabled={search.disableSearch}/>
+        <CustomDropdown id='status-input' bind:form options={{ RELEASING: 'Releasing', FINISHED: 'Finished', NOT_YET_RELEASED: 'Not Yet Released', CANCELLED: 'Cancelled' }} bind:value={search.status} bind:altValue={search.status_not} bind:disabled={search.disableSearch}/>
       </div>
     </div>
     <div class='col p-10 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>
@@ -351,7 +329,7 @@
       </div>
     </div>
   </div>
-  <div class='w-full p-10 d-flex flex-colum align-items-center'>
+  <div class='w-full p-10 d-flex flex-colum'>
     <form>
       <div class='not-reactive' role='button' tabindex='0'>
         {#if sanitisedSearch?.length}
@@ -360,13 +338,13 @@
             {#if filteredBadges.length > 0}
               <Tags class='text-dark-light mr-20 block-scale-30 mb-5'/>
             {/if}
-          {#each badgeKeys as key}
+          {#each badgeKeys as key (key)}
             {@const matchingBadges = filteredBadges.filter(badge => badge.key === key)}
-            {#each matchingBadges as badge}
+            {#each matchingBadges as badge, badgeIndex (badgeIndex)}
               {#if badge.key === key && (badge.key !== 'hideStatus' && badge.key !== 'showStatus' && (search.userList || badge.key !== 'title')) && !(badge.key === 'sort' && badge.value === 'TRENDING_DESC')}
-                <div use:click={() => removeBadge(badge)} class='badge border-0 py-5 px-10 text-capitalize mr-10 text-white text-nowrap d-flex align-items-center mb-5' class:bg-dark-light={!badge.key.includes('_not')} class:bg-danger-very-dim={badge.key.includes('_not')}>
+                <div use:click={() => removeBadge(badge)} class='badge border-0 py-5 px-10 text-capitalize mr-10 text-white text-nowrap d-flex align-items-center mb-5' style='max-width: 60vw' class:bg-dark-light={!badge.key.includes('_not')} class:bg-danger-very-dim={badge.key.includes('_not')}>
                   <svelte:component this={badge.key === 'genre' ? genreIcons[badge.value] || badgeDisplayNames[badge.key] : badgeDisplayNames[badge.key]} class='mr-5 square-scale-18'/>
-                  <span>{badge.key === 'sort' ? getSortDisplayName(badge.value) : (badge.key === 'format' || badge.key === 'format_not') ? getFormatDisplayName(badge.value) : badge.key === 'studio' ? (studioList[badge.value] || badge.value) : (badge.key === 'hideMyAnime' ? 'Hide My Anime' : badge.key === 'showMyAnime' ? 'Show My Anime' : badge.key === 'hideSubs' ? 'Dubbed' : ('' + badge.value).replace(/_/g, ' ').toLowerCase())}</span>
+                  <span class='text-truncate'>{badge.key === 'sort' ? getSortDisplayName(badge.value) : (badge.key === 'format' || badge.key === 'format_not') ? getFormatDisplayName(badge.value) : (badge.key === 'hideMyAnime' ? 'Hide My Anime' : badge.key === 'showMyAnime' ? 'Show My Anime' : badge.key === 'hideSubs' ? 'Dubbed' : ('' + badge.value).replace(/_/g, ' ').toLowerCase())}</span>
                   <button on:click={() => removeBadge(badge)} class='pointer bg-transparent border-0 icon text-white position-relative pl-0 pr-0 pt-0 x-filter d-flex align-items-center z-1' type='button' data-toggle='tooltip' data-placement='bottom' data-target-breakpoint='md' data-title='Remove Filter'><X size='1.3rem' strokeWidth='3'/></button>
                 </div>
               {/if}
@@ -395,6 +373,18 @@
     opacity: 1;
     max-width: 2rem;
     margin-left: 1.5rem;
+  }
+
+  form.search-container::after {
+    content: '';
+    position: absolute;
+    bottom: -1.2rem;
+    left: 0;
+    right: 0;
+    height: 1.2rem;
+    background: linear-gradient(to bottom, var(--container-color), transparent);
+    pointer-events: none;
+    z-index: 1;
   }
 
   input:not(:focus):invalid {

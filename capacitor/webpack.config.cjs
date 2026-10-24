@@ -1,16 +1,16 @@
 const commonConfig = require('common/webpack.config.cjs')
-const { merge } = require('webpack-merge')
 const { join, resolve } = require('path')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
-const mode = process.env.NODE_ENV?.trim() || 'development'
-
+const nodeEnv = process.env.NODE_ENV?.trim()
+const mode = nodeEnv === 'production' || nodeEnv === 'none' ? nodeEnv : 'development'
 const alias = {
   '@/modules/support.js': join(__dirname, 'src', 'main', 'support.js'),
   '@': resolve(__dirname, '..', 'common')
 }
+const common = commonConfig(__dirname, alias, 'browser', 'index')
 
-/** @type {import('webpack').Configuration} */
+/** @type {import('webpack').Configuration & { devServer?: import('webpack-dev-server').Configuration }} */
 const capacitorConfig = {
   devtool: 'source-map',
   entry: [join(__dirname, 'src', 'background', 'background.js')],
@@ -26,6 +26,13 @@ const capacitorConfig = {
     'require-addon': 'commonjs2 require-addon'
   },
   resolve: {
+    modules: [
+      'node_modules',
+      resolve(__dirname, '../node_modules'),
+      resolve(__dirname, '../client/node_modules'),
+      resolve(__dirname, '../capacitor/node_modules'),
+      resolve(__dirname, 'node_modules')
+    ],
     aliasFields: [],
     mainFields: ['module', 'main', 'node'],
     alias: {
@@ -34,7 +41,8 @@ const capacitorConfig = {
       'node-datachannel': false,
       '@client': resolve(__dirname, '..', 'client'),
       'webtorrent-client': resolve(__dirname, '..', 'client/core/webtorrent.js'),
-      'http-tracker': resolve('../node_modules/bittorrent-tracker/lib/client/http-tracker.js'),
+      debug: resolve(__dirname, '..', 'common/modules/lib/debug.js'),
+      'http-tracker': resolve(__dirname, '../client/node_modules/bittorrent-tracker/lib/client/http-tracker.js'),
       'webrtc-polyfill': false // no webrtc on mobile, need the resources
     }
   },
@@ -44,18 +52,39 @@ const capacitorConfig = {
       writeToDisk: true
     },
     hot: true,
+    compress: true,
+    liveReload: false,
     client: {
-      overlay: { errors: true, warnings: false, runtimeErrors: false }
+      overlay: {
+        errors: true,
+        warnings: false,
+        runtimeErrors: false
+      }
     },
     port: 5001
   },
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: join(__dirname, 'public', 'nodejs') }
+        {
+          from: join(__dirname, 'public', 'nodejs'),
+          globOptions: {
+            ignore: [
+              '**/Dockerfile',
+              '**/setup-deps.sh',
+              '**/package-lock.json'
+            ]
+          }
+        }
       ]
     })
   ]
 }
 
-module.exports = [capacitorConfig, merge({ entry: [join(__dirname, 'src', 'main', 'main.js')] }, commonConfig(__dirname, alias, 'browser', 'index'))]
+module.exports = [
+  capacitorConfig,
+  {
+    ...common,
+    entry: [join(__dirname, 'src', 'main', 'main.js'), ...(Array.isArray(common.entry) ? common.entry : [common.entry].filter(Boolean))]
+  }
+]

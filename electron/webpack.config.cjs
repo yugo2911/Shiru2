@@ -1,11 +1,11 @@
 const { join, resolve } = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-
-const mode = process.env.NODE_ENV?.trim() || 'development'
-
 const commonConfig = require('common/webpack.config.cjs')
 
-/** @type {import('webpack').WebpackOptionsNormalized[]} */
+const nodeEnv = process.env.NODE_ENV?.trim()
+const mode = nodeEnv === 'production' || nodeEnv === 'none' ? nodeEnv : 'development'
+
+/** @type {import('webpack').Configuration[]} */
 module.exports = [
   {
     devtool: 'source-map',
@@ -24,16 +24,6 @@ module.exports = [
     resolve: {
       aliasFields: [],
       mainFields: ['module', 'main', 'node'],
-      modules: [
-        'node_modules',
-        resolve(__dirname, '..', 'node_modules'),
-        resolve(__dirname, '..', 'common', 'node_modules'),
-        resolve(__dirname, '..', 'client', 'node_modules'),
-        resolve(__dirname, '..', 'electron', 'node_modules')
-      ],
-      fallback: {
-        events: resolve(__dirname, 'node_modules/events/events.js')
-      },
       alias: {
         '@': resolve(__dirname, '..', 'common'),
         '@client': resolve(__dirname, '..', 'client'),
@@ -41,9 +31,9 @@ module.exports = [
         'node-fetch': false,
         ws: false,
         wrtc: false,
-        debug: resolve(__dirname, '../common/modules/debug.js'),
-        'webrtc-polyfill': resolve(__dirname, 'node_modules/webrtc-polyfill/browser.js'),
-        'http-tracker': resolve(__dirname, '../client/node_modules/bittorrent-tracker/lib/client/http-tracker.js')
+        debug: resolve(__dirname, '../common/modules/lib/debug.js'),
+        'webrtc-polyfill': resolve('../node_modules/webrtc-polyfill/browser.js'),
+        'http-tracker': resolve('../node_modules/bittorrent-tracker/lib/client/http-tracker.js')
       }
     },
     plugins: [new HtmlWebpackPlugin({ filename: 'background.html' })],
@@ -53,13 +43,20 @@ module.exports = [
         writeToDisk: true
       },
       hot: true,
+      compress: true,
+      liveReload: false,
       client: {
-        overlay: { errors: true, warnings: false, runtimeErrors: false }
+        overlay: {
+          errors: true,
+          warnings: false,
+          runtimeErrors: false
+        }
       },
+      host: 'localhost',
       port: 5000
     }
   },
-  commonConfig(__dirname),
+  commonConfig(__dirname, {}, 'browser', 'app'),
   {
     devtool: 'source-map',
     stats: { warnings: false },

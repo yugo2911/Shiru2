@@ -1,18 +1,18 @@
 <script>
-  import { anilistClient } from '@/modules/anilist.js'
-  import { profiles, settings, sync } from '@/modules/settings.js'
+  import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+  import { profiles, sync } from '@/modules/settings.js'
   import { getMediaMaxEp } from '@/modules/anime/anime.js'
   import { codes, createListener } from '@/modules/util.js'
   import { SUPPORTS } from '@/modules/support.js'
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
   import { writable } from 'simple-store-svelte'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import { X, Bookmark, PencilLine } from 'lucide-svelte'
-  import Helper from '@/modules/helper.js'
+  import Helper from '@/modules/providers/helper.js'
   import Debug from 'debug'
   const debug = Debug('ui:scoring')
 
-  /** @type {import('@/modules/al.d.ts').Media} */
+  /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
   export let media
   export let viewAnime = false
   export let previewAnime = false
@@ -114,9 +114,10 @@
             }
           }
         }
-      } else if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Warnings')) {
+      } else {
         toast.warning('No Changes to List', {
           description: `Title: ${anilistClient.title(media)}\nStatus: ${Helper.statusName[status]}\nEpisode: ${episode} / ${totalEpisodes}${score !== 0 ? `\nYour Score: ${score}` : ''}`,
+          respectLevel: true,
           duration: 6000
         })
       }
@@ -130,14 +131,16 @@
     if ((save && res?.data?.SaveMediaListEntry) || (!save && res)) {
       debug(`List Updated${who}: ${description.replace(/\n/g, ', ')}`)
       if (!profile) {
-        if (save && (settings.value.toasts.includes('All') || settings.value.toasts.includes('Successes'))) {
+        if (save) {
           toast.success('List Updated', {
             description,
+            respectLevel: true,
             duration: 6000
           })
-        } else if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Warnings')) {
+        } else {
           toast.warning('List Updated', {
             description,
+            respectLevel: true,
             duration: 9000
           })
         }
@@ -145,12 +148,11 @@
     } else {
       const error = `\n${429} - ${codes[429]}`
       debug(`Error: Failed to ${(save ? 'update' : 'delete title from')} user list${who} with: ${description.replace(/\n/g, ', ')} ${error}`)
-      if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) {
-        toast.error('Failed to ' + (save ? 'Update' : 'Delete') + ' List' + who, {
-          description: description + error,
-          duration: 9000
-        })
-      }
+      toast.error('Failed to ' + (save ? 'Update' : 'Delete') + ' List' + who, {
+        description: description + error,
+        respectLevel: true,
+        duration: 9000
+      })
     }
   }
 
@@ -187,8 +189,9 @@
     if ($showModal) {
       const { reactive, init } = createListener([`scoring`, `scoring-btn`])
       init(true, true)
-      reactive.subscribe(value => {
+      const unsubscribe = reactive.subscribe(value => {
         if (!value) {
+          unsubscribe()
           showModal.set(false)
           init(false, true)
         }

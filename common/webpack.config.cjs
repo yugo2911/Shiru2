@@ -1,19 +1,29 @@
 const { join, resolve } = require('path')
-
-const mode = process.env.NODE_ENV?.trim() || 'development'
-const isDev = mode === 'development'
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
-/** @type {(parentDir: string, alias?: Record<string, string>, aliasFields?: (string | string[]), filename?: string) => import('webpack').WebpackOptionsNormalized} */
+const nodeEnv = process.env.NODE_ENV?.trim()
+const mode = nodeEnv === 'production' || nodeEnv === 'none' ? nodeEnv : 'development'
+const isDev = mode === 'development'
+
+/** @type {(parentDir: string, alias?: Record<string, string | false>, aliasFields?: string, filename?: string) => import('webpack').Configuration} */
 module.exports = (parentDir, alias = {}, aliasFields = 'browser', filename = 'app') => ({
   devtool: 'source-map',
+  experiments: {
+    css: true
+  },
   entry: [join(__dirname, 'main.js')],
   stats: { warnings: false },
   output: {
     path: join(parentDir, 'build'),
     filename: 'renderer.js'
+  },
+  resolveLoader: {
+    modules: [
+      'node_modules',
+      resolve(__dirname, '../node_modules'),
+      resolve(__dirname, 'node_modules')
+    ]
   },
   mode,
   module: {
@@ -32,20 +42,16 @@ module.exports = (parentDir, alias = {}, aliasFields = 'browser', filename = 'ap
         }
       },
       {
-        test: /\.css$/,
-        use: [
-          MiniCssExtractPlugin.loader,
-          {
-            loader: 'css-loader',
-            options: {
-              sourceMap: true
-            }
-          }
-        ]
-      },
-      {
         // required to prevent errors from Svelte on Webpack 5+
         test: /node_modules\/svelte\/.*\.mjs$/,
+        resolve: {
+          fullySpecified: false
+        }
+      },
+      {
+        // required to prevent strict ESM extension errors from capacitor-nodejs
+        test: /\.js$/,
+        include: /capacitor-nodejs/,
         resolve: {
           fullySpecified: false
         }
@@ -53,38 +59,27 @@ module.exports = (parentDir, alias = {}, aliasFields = 'browser', filename = 'ap
     ]
   },
   resolve: {
-    aliasFields: [aliasFields],
+    mainFields: ['svelte', 'browser', '...'],
+    conditionNames: ['svelte', 'browser', '...'],
     modules: [
       'node_modules',
-      resolve(__dirname, '..', 'node_modules'),
-      resolve(__dirname, 'node_modules'),
-      resolve(__dirname, '..', 'client', 'node_modules'),
-      resolve(__dirname, '..', 'electron', 'node_modules')
+      resolve(__dirname, '../node_modules'),
+      resolve(__dirname, '../client/node_modules'),
+      resolve(__dirname, '../capacitor/node_modules'),
+      resolve(__dirname, 'node_modules')
     ],
-    fallback: {
-      events: resolve(__dirname, '..', 'electron/node_modules/events/events.js')
-    },
+    aliasFields: [aliasFields],
     alias: {
       ...alias,
       '@': __dirname,
       module: false,
       url: false,
-      debug: resolve(__dirname, './modules/debug.js'),
-      'bittorrent-tracker/lib/client/websocket-tracker.js': resolve(__dirname, '..', 'client/node_modules/bittorrent-tracker/lib/client/websocket-tracker.js')
+      debug: resolve(__dirname, './modules/lib/debug.js'),
+      'bittorrent-tracker/lib/client/websocket-tracker.js': resolve(__dirname, '../client/node_modules/bittorrent-tracker/lib/client/websocket-tracker.js')
     },
     extensions: ['.mjs', '.js', '.svelte']
   },
-  resolveLoader: {
-    modules: [
-      'node_modules',
-      resolve(__dirname, '..', 'node_modules'),
-      resolve(__dirname, 'node_modules')
-    ]
-  },
   plugins: [
-    new MiniCssExtractPlugin({
-      filename: '[name].css'
-    }),
     new CopyWebpackPlugin({
       patterns: [
         { from: join(__dirname, 'public') }

@@ -1,14 +1,16 @@
-import { FolderPicker } from 'capacitor-folder-picker'
-import { IPC } from '../preload/preload.js'
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
+import { FileManager } from './plugin.js'
+import { Filesystem } from '@capacitor/filesystem'
+import { ipcWire } from './ipc.js'
 
 export default class Dialog {
   STORAGE_TYPE_MAP = { primary: '/sdcard/', secondary: '/sdcard/'}
 
-  constructor() {
-    IPC.on('dialog', async () => {
-      const result = await FolderPicker.chooseFolder()
-      const normalizedPath = decodeURIComponent(result.path)
+  constructor(debug) {
+    ipcWire.handle('common:pickFolder', async () => {
+      const chosenPath = await FileManager.pickFolder().catch(() => null)
+      if (!chosenPath) return { cancelled: true }
+      const normalizedPath = decodeURIComponent(chosenPath)
       const [, uri, ...path] = normalizedPath.split(':')
       const [, , app, subpath, type, ...rest] = uri.split('/')
 
@@ -21,16 +23,31 @@ export default class Dialog {
         if (!/[a-z0-9]{4}-[a-z0-9]{4}/i.test(type)) return toast.error('Unsupported storage type')
         base = `/storage/${type}/`
       }
-      IPC.emit('path', base + path.join(''))
+      return { path: base + path.join('') }
     })
-    IPC.on('log-contents', async (log) => {
+    ipcWire.handle('common:exportLog', async () => {
       try {
+        const log = await debug.getLogContents()
         await window.cordova.plugins.saveDialog.saveFile(new Blob([log], { type: 'application/octet-stream' }), `shiru-log-${new Date().toISOString().replace(/[:.]/g, '-')}.log`)
-        IPC.emit('log-exported', { error: false })
+        return { error: false }
       } catch (error) {
         console.debug('Failed to export logs', error)
-        IPC.emit('log-exported', { error: true })
+        return { error: true }
       }
+    })
+    // TODO: Add support for media file selection, currently only supports torrent files
+    ipcWire.handle('common:pickMediaFiles', async () => {
+      const files = await FileManager.pickFiles()
+      if (!files.length) return {}
+      const paths = []
+      const torrents = []
+      for (const file of files) {
+        if ((file.name || file.path).toLowerCase().endsWith('.torrent')) {
+          const { data } = await Filesystem.readFile({ path: file.path })
+          torrents.push(Uint8Array.from(atob(data), byte => byte.charCodeAt(0)))
+        } // else paths.push(file.path)
+      }
+      return { paths, torrents }
     })
   }
 }

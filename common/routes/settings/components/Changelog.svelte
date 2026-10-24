@@ -1,7 +1,7 @@
 <script context='module'>
   import { version } from '@/routes/settings/SettingsPage.svelte'
   import { SUPPORTS } from '@/modules/support.js'
-  import { IPC } from '@/modules/bridge.js'
+  import { COMMON } from '@/modules/bridge.js'
   import { writable } from 'simple-store-svelte'
   import { settings } from '@/modules/settings.js'
   import { uniqueStore } from '@/modules/util.js'
@@ -10,36 +10,76 @@
   const debug = Debug('ui:changelog-view')
 
   export let latestVersion
-  export let updateChannel = writable(settings.value.updateChannel ?? 'stable')
-  export let changeLog = writable(getChanges())
+  /** @type {import('simple-store-svelte').Writable<"stable" | "nightly">} */
+  export const updateChannel = writable(/** @type {"stable" | "nightly"} */ (settings.value.updateChannel ?? 'stable'))
+  export const changeLog = writable(getChanges())
 
-  uniqueStore(updateChannel).subscribe((channel) => {
+  uniqueStore(updateChannel).subscribe(channel => {
     changeLog.set(getChanges())
-    setTimeout(() => IPC.emit('set-update-channel', channel))
+    setTimeout(() => COMMON.setUpdateChannel(channel))
   })
 
   window.addEventListener('online', () => changeLog.set(getChanges()))
 
   settings.subscribe(value => {
-    if (value.updateChannel !== updateChannel.value) updateChannel.set(value.updateChannel)
+    if (value.updateChannel !== updateChannel.value) {
+      settings.update(current => {
+        current.updateVersion = undefined
+        return current
+      })
+      updateChannel.set(/** @type {"stable" | "nightly"} */ (value.updateChannel))
+    }
   })
 
   const startedAt = Date.now()
-  IPC.on(SUPPORTS.isAndroid ? 'update-available' : 'update-downloaded', (version) => {
+  if (SUPPORTS.isAndroid || COMMON.getPlatformInfo().manualInstall) COMMON.onUpdateAvailable((version) => setChangeLog(version))
+  else COMMON.onUpdateDownloaded((version) => setChangeLog(version))
+
+  /**
+   * Updates the latest version and refreshes the changelog if the app has been running for at least 30 seconds.
+   *
+   * @param {string} version Latest available version string
+   */
+  function setChangeLog(version) {
     if (latestVersion !== version) {
       latestVersion = version
       if ((Date.now() - startedAt) >= 30_000) changeLog.set(getChanges())
     }
-  })
+  }
+
+  /**
+   * Fetches a single release entry directly by its version tag.
+   * Used as a fallback when the releases feed has not yet reflected the latest release.
+   *
+   * @param {string} version Version string to fetch
+   * @returns {Promise<Object|null>} Mapped release entry or null on failure
+   */
+  export async function getReleaseByTag(version) {
+    try {
+      const response = await fetch(`${atob('aHR0cHM6Ly91cGRhdGVzLnNoaXJ1LmFwcA==')}/tags/v${semver.valid(version)?.replace(/^v/, '') ?? version}`)
+      if (!response.ok) return null
+      const [entry] = mapLogs([await response.json()])
+      return entry
+    } catch (error) {
+      debug('Failed to fetch release by tag', error)
+      return null
+    }
+  }
 
   /**
    * Fetches and filters GitHub releases based on current version and update channel.
    * Implements different filtering logic for stable/nightly channels and current version type.
+   *
    * @returns {Promise<Array>} Filtered array of release entries
    */
   async function getChanges() {
     try {
-      const json = await (await fetch('https://api.github.com/repos/RockinChaos/Shiru/releases')).json()
+      const res = await fetch(atob('aHR0cHM6Ly91cGRhdGVzLnNoaXJ1LmFwcA=='))
+      if (res.status === 404 || res.status === 451) {
+        debug('Repository is gone or access has been blocked, unable to fetch changes.')
+        return []
+      }
+      const json = await res.json()
       const mapJSON = mapLogs(json)
       const currentIndex = mapJSON.findIndex(entry => semver.valid(entry.version) === semver.valid(version))
       if (currentIndex === -1) return updateChannel.value === 'stable' ? mapJSON.filter(entry => !semver.prerelease(entry.version)) : mapJSON
@@ -80,11 +120,12 @@
 
   /**
    * Maps GitHub release API response to simplified changelog entries.
+   *
    * @param {Array} json Raw GitHub API release data
    * @returns {Array} Mapped release entries with relevant fields
    */
   function mapLogs(json) {
-    return json.map(({body, tag_name: version, published_at: date, assets, html_url: url, prerelease}) => ({
+    return json.map(({ body, tag_name: version, published_at: date, assets, html_url: url, prerelease }) => ({
       body,
       version,
       date,
@@ -97,11 +138,12 @@
 <script>
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
   export let body = ''
 
   /**
    * Sanitizes markdown content by parsing and cleaning HTML.
+   *
    * @param {string} body Raw markdown content
    * @returns {string} Sanitized HTML string
    */
@@ -138,16 +180,18 @@
 
   /**
    * Handles link clicks within changelog content by opening externally.
+   *
    * @param {Event} event Click event
    */
   function hrefListener(event) {
     const anchor = event.composedPath().find(element => element.tagName === 'A')
     if (!anchor?.href) return
     event.preventDefault()
-    IPC.emit('open', anchor.href)
+    COMMON.openURI(anchor.href)
   }
 </script>
-<div class='changelog {$$restProps.class}' tabindex='-1' use:click={hrefListener}>{@html sanitize(body)}</div>
+<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+<div class='changelog select-text {$$restProps.class}' tabindex='-1' use:click={hrefListener}>{@html sanitize(body)}</div>
 
 <style>
   .changelog :global(a) {

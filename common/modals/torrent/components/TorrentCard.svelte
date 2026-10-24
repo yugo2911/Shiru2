@@ -1,11 +1,12 @@
 <script context='module'>
   import TorrentButton from '@/components/TorrentButton.svelte'
   import SmartImage from '@/components/visual/SmartImage.svelte'
-  import { click } from '@/modules/click.js'
+  import { click } from '@/modules/lib/click.js'
   import { fastPrettyBytes, since, matchPhrase, createListener } from '@/modules/util.js'
   import { getEpisodeMetadataForMedia, getKitsuMappings } from '@/modules/anime/anime.js'
-  import { copyToClipboard } from '@/modules/clipboard.js'
+  import { copyToClipboard } from '@/modules/lib/clipboard.js'
   import { malDubs } from '@/modules/anime/animedubs.js'
+  import { settings } from '@/modules/settings.js'
   import { Database, BadgeCheck, HardDrive, FileQuestion, AlertCircle, TriangleAlert } from 'lucide-svelte'
 
   const { reactive, init } = createListener(['torrent-button', 'torrent-safe-area'])
@@ -101,6 +102,7 @@
   termMapping.DUALAUDIO = { text: 'Dual Audio', color: 'var(--octonary-color)' }
   termMapping.CHINESEAUDIO = { text: 'Chinese Audio', color: 'var(--octonary-color)' }
   termMapping.ENGLISHAUDIO = { text: 'English Audio', color: 'var(--octonary-color)' }
+  termMapping.JAPANESEAUDIO = { text: 'Japanese Audio', color: 'var(--octonary-color)' }
   termMapping['DUAL AUDIO'] = termMapping.DUALAUDIO
   termMapping['DUAL-AUDIO'] = termMapping.DUALAUDIO
   termMapping['MULTI AUDIO'] = termMapping.DUALAUDIO
@@ -118,6 +120,18 @@
   termMapping['ENG DUBBED'] = termMapping.ENGLISHAUDIO
   termMapping['ENG DUB'] = termMapping.ENGLISHAUDIO
   termMapping['EN DUB'] = termMapping.ENGLISHAUDIO
+  termMapping['JAPANESE AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPANESE DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPANESE DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JP DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JP AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JP DUB'] = termMapping.JAPANESEAUDIO
   termMapping['DUAL'] = termMapping.DUALAUDIO
   termMapping['DUBBED'] = termMapping.ENGLISHAUDIO
   termMapping['DUB'] = termMapping.ENGLISHAUDIO
@@ -165,7 +179,7 @@
     }).filter(t => t))]
 
     if (resolution) {
-      for (const res of Array.isArray(resolution) ? [...new Set(resolution)].flatMap(r => String(r).split(/[\/,|]+/).map(s => s.trim()).filter(Boolean)) : String(resolution).split(/[\/,|]+/).map(s => s.trim()).filter(Boolean)) {
+      for (const res of Array.isArray(resolution) ? [...new Set(resolution)].flatMap(r => String(r).split(/[/,|]+/).map(s => s.trim()).filter(Boolean)) : String(resolution).split(/[/,|]+/).map(s => s.trim()).filter(Boolean)) {
         terms.unshift({ key: res, term: { text: res, color: 'var(--quaternary-color)' } })
       }
     }
@@ -205,7 +219,7 @@
     const audio = !Array.isArray(aud) ? [aud] : aud
     const resolutions = resolution ? (Array.isArray(resolution) ? resolution : [resolution]) : []
     const removeTerm = term => {
-      if (term) simpleName = simpleName.replace(new RegExp(String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '')
+      if (term) simpleName = simpleName.replace(new RegExp(`(TITLE_PLACEHOLDER_\\d+)|${String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), (match, placeholder) => placeholder ?? '')
     }
 
     // Preprocess simpleName: remove titles from search.media.titles if they exist to prevent incorrect termMappings e.g; Synduality Noir being detected as Dual Audio (SynDUALity).
@@ -262,7 +276,7 @@
 
       // Remove commas (and surrounding spaces) immediately after an opening bracket
       // Handles cases like '(, word' or '[ , word' -> '(word' / '[word'
-      .replace(/([\[(])\s*,\s*/g, '$1')
+      .replace(/([[(])\s*,\s*/g, '$1')
 
       // Ensure exactly one space after every comma, including 'word,word' -> 'word, word'
       .replace(/,(?!\s)/g, ', ')
@@ -279,7 +293,7 @@
 
       // Remove any space(s) immediately after an opening bracket
       // e.g. '( word' -> '(word'
-      .replace(/([\[(])\s+/g, '$1')
+      .replace(/([[(])\s+/g, '$1')
 
       // Remove any space(s) immediately before a closing bracket
       // e.g. 'word )' -> 'word)'
@@ -289,14 +303,14 @@
       .replace(/^[,\s]+|[,\s]+$/g, '')
 
       // Remove leading dashes inside brackets e.g. '[-DL]' -> '[DL]'
-      .replace(/([\[({])\s*-\s*/g, '$1')
+      .replace(/([[({])\s*-\s*/g, '$1')
 
       // Remove trailing dashes inside brackets e.g. '[DL-]' -> '[DL]'
       .replace(/\s*-\s*([\])}])/g, '$1')
 
       // Remove empty brackets or brackets containing only a dash, underscore, slash or comma
       // e.g. '[]', '()', '[-]', '( - )', '[_]', '[/]', '[\]', '[,]'
-      .replace(/[\[{(]\s*[-_/\\,]?\s*[\]})]/g, '')
+      .replace(/[[{(]\s*[-_/\\,]?\s*[\]})]/g, '')
 
       // Remove unmatched closing brackets by counting openers before each closer
       // If there is no corresponding opener, the closing bracket is dropped
@@ -308,7 +322,7 @@
       .trim()
 
     // Reintroduce placeholders e.g. series title.
-    titleHolders.forEach(title => simpleName = simpleName.replace(new RegExp(title.placeholder, 'g'), title.original))
+    titleHolders.forEach(title => (simpleName = simpleName.replace(new RegExp(title.placeholder, 'g'), title.original)))
 
     // Clean name after restoring placeholders
     simpleName = simpleName
@@ -337,7 +351,7 @@
   /** @type {Result & { parseObject: AnitomyResult }} */
   export let result
 
-  /** @type {import('@/modules/al.d.ts').Media} */
+  /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
   export let media
 
   export let episode
@@ -347,6 +361,9 @@
 
   export let type = 'default'
   export let countdown = -1
+
+  const hasSpoiler = $settings.spoilerStatus.includes(media?.mediaListEntry?.status ?? 'NOTONLIST')
+  const isSpoiler = hasSpoiler && (media?.mediaListEntry?.progress ?? 0) < episode
 
   $: errorType = type === 'error' ? (result.title?.match(/no results/i) || result.title?.match(/extension is not enabled/i) ? 'warning' : 'error') : ''
 
@@ -370,7 +387,7 @@
   <div class='position-absolute top-0 left-0 w-full h-full'>
     <div class='position-absolute w-full h-full overflow-hidden rounded-3 error-overlay z-5 pointer-events-none' class:d-none={type !== 'error'}/>
     <div class='position-absolute w-full h-full overflow-hidden rounded-3' class:image-border={type === 'default'} >
-      <SmartImage class='img-cover w-full h-full' images={[
+      <SmartImage class='img-cover w-full h-full {isSpoiler ? `blur-6` : ``}' images={[
         () => getEpisodeMetadataForMedia(media).then(metadata => metadata?.[episode]?.image),
           media.bannerImage,
           ...(media.trailer?.id ? [
@@ -389,11 +406,11 @@
   <div class='d-flex pl-10 flex-column justify-content-between w-full h-auto position-relative' style='min-height: 10rem; min-width: 0;'>
     <div class='d-flex w-full'>
       {#if type === 'error'}
-        <div class='d-flex align-items-center justify-content-center mr-10' class:text-warning-dim={errorType === 'warning'} class:text-danger-dim={errorType === 'error'} title='Extension Error'>
+        <div class='d-flex align-items-center justify-content-center mr-10 z-1' class:text-warning-dim={errorType === 'warning'} class:text-danger-dim={errorType === 'error'} title='Extension Error'>
           <svelte:component this={errorType === 'warning' ? AlertCircle : TriangleAlert} size='2.5rem' />
         </div>
       {:else if result.accuracy === 'high'}
-        <div class='d-flex align-items-center justify-content-center mr-10 text-success-light' title='High Accuracy'>
+        <div class='d-flex align-items-center justify-content-center mr-10 text-success-light z-1' title='High Accuracy'>
           <BadgeCheck size='2.5rem' />
         </div>
       {/if}
@@ -408,9 +425,9 @@
         {/if}
       </div>
       {#if type !== 'error' && result.type === 'batch'}
-        <div class='d-flex ml-auto mr-10' title='Batch'><Database size='2.5rem'/></div>
+        <div class='d-flex ml-auto mr-10 z-1' title='Batch'><Database size='2.5rem'/></div>
       {/if}
-      <div class='d-flex' class:ml-auto={type === 'error' || result.type !== 'batch'} >
+      <div class='d-flex z-1' class:ml-auto={type === 'error' || result.type !== 'batch'} >
         {#if result.source?.icon}
           <img class='wh-25' src={(!result.source.icon.startsWith('http') ? 'data:image/png;base64,' : '') + result.source.icon} alt={result.source.name} title={result.source.name}>
         {:else if result.source?.managed}
@@ -428,7 +445,7 @@
           <span class='overflow-hidden text-truncate'>{fileName}</span>
         {/await}
         <span class='ml-auto mr-5 w-30 h-10 flex-shrink-0'/>
-        <TorrentButton class='position-absolute btn btn-square shadow-none bg-transparent bd-highlight h-40 w-40 right-0 mr--8 z-1' hash={result.hash} torrentID={result.link} search={{ media, episode: (media?.format !== 'MOVIE' && result.type !== 'batch') && episode }} size={'2.5rem'} strokeWidth={'2.3'}/>
+        <TorrentButton class='position-absolute btn btn-square btn-highlight shadow-none border-0 bg-transparent bd-highlight h-40 w-40 right-0 mr--8 z-1' hash={result.hash} torrentID={result.link} search={{ media, episode: (media?.format !== 'MOVIE' && result.type !== 'batch') && episode }} size='2.5rem' strokeWidth='2.3'/>
       {/if}
     </div>
     {#if type !== 'error'}
@@ -442,20 +459,20 @@
           {/if}
           <div class='text-light d-flex align-items-center text-nowrap'>{since(new Date(result.date))}</div>
         </div>
-        <div class='secondary-metadata d-flex flex-wrap ml-auto justify-content-end'>
+        <div class='secondary-metadata d-flex flex-wrap ml-auto justify-content-end gap-5'>
           {#if result.type === 'best'}
-            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--success-color-very-dim); border-color: var(--success-color-light) !important; color: var(--success-color-light); margin-top: 0.15rem'>
+            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--success-color-very-dim); border-color: var(--success-color-light) !important; color: var(--success-color-light)'>
               Best Release
             </div>
           {:else if result.type === 'alt'}
-            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--danger-color-very-dim); border-color: var(--danger-color) !important; color: var(--danger-color); margin-top: 0.15rem'>
+            <div class='rounded px-15 py-5 border text-nowrap font-weight-bold d-flex align-items-center' style='background: var(--danger-color-very-dim); border-color: var(--danger-color) !important; color: var(--danger-color)'>
               Alt Release
             </div>
           {/if}
           {#await sanitiseTerms({ media, episode }, result.parseObject) then termObjects}
             {@const terms = termObjects?.map(term => term.term).filter((term, index, self) => index === self.findLastIndex(_term => _term.text === term.text))}
-            {#each terms as term, index}
-              <div class='rounded px-15 py-5 bg-very-dark text-nowrap text-white d-flex align-items-center' class:ml-10={index !== 0 || result.type === 'best' || result.type === 'alt'} style='margin-top: 0.15rem;'>
+            {#each terms as term (term.text)}
+              <div class='rounded px-15 py-5 bg-very-dark text-nowrap text-white d-flex align-items-center'>
                 {term.text}
               </div>
             {/each}

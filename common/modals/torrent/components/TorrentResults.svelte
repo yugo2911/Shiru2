@@ -1,6 +1,6 @@
 <script context='module'>
   import { settings } from '@/modules/settings.js'
-  import { debounce, matchPhrase, createListener } from '@/modules/util.js'
+  import { debounce, matchPhrase, equalsIgnoreCase } from '@/modules/util.js'
   import { sanitiseTerms } from '@/modals/torrent/components/TorrentCard.svelte'
   import { add } from '@/modules/torrent.js'
   import { nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
@@ -9,17 +9,18 @@
   import { status } from '@/modules/networking.js'
   import { anitomyscript, getMediaMaxEp, getKitsuMappings, getEpisodeMetadataForMedia } from '@/modules/anime/anime.js'
   import { loadedTorrent, completedTorrents, seedingTorrents, stagingTorrents } from '@/modules/torrent.js'
-  import { dedupe, getResultsFromExtensions, updatePeerCounts, prefetchTorrent } from '@/modules/extensions/handler.js'
+  import { dedupe, getTorrentResults, updatePeerCounts } from '@/modules/extensions/handler.js'
   import { getId, getHash } from '@/modules/anime/animehash.js'
   import AnimeResolver from '@/modules/anime/animeresolver.js'
-  import { anilistClient } from '@/modules/anilist.js'
-  import { click } from '@/modules/click.js'
-  import { toast } from 'svelte-sonner'
-  import { X, Search, EllipsisVertical, Timer, Clapperboard, MonitorCog, ArrowDownWideNarrow, ChevronLeft, ChevronUp, ChevronDown, Radio, RefreshCw } from 'lucide-svelte'
+  import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+  import { click } from '@/modules/lib/click.js'
+  import { toast } from '@/modules/lib/toast.js'
+  import NestedDropdown from '@/components/overlays/NestedDropdown.svelte'
+  import { X, Search, EllipsisVertical, Timer, Clapperboard, MonitorCog, ArrowDownWideNarrow, Paintbrush, ListMusic, ChevronUp, ChevronDown, Radio, RefreshCw } from 'lucide-svelte'
   import Debug from 'debug'
   const debug = Debug('ui:torrents')
 
-  /** @typedef {import('@/modules/al.d.ts').Media} Media */
+  /** @typedef {import('@/modules/providers/anilist/al.d.ts').Media} Media */
   /** @typedef {import('anitomyscript').AnitomyResult} AnitomyResult */
   /** @typedef {import('../../../../extensions').TorrentResult} Result */
 
@@ -41,7 +42,8 @@
   async function getRequestedAudio(search, result, audioLang, exactMatch = true) {
     const terms = [...new Map((await sanitiseTerms(search, result))?.map(term => [term.term.text, term.term])).values()]
     const checkTerm = (term, keyword) => (Array.isArray(term.text) ? term.text : [term.text]).some(text => text.toLowerCase().includes(keyword.toLowerCase()))
-    const exactAudio = terms.some(term => checkTerm(term, audioLang))
+    const audioKeyword = languages.find(language => language.value === audioLang)?.label || audioLang
+    const exactAudio = terms.some(term => checkTerm(term, audioKeyword))
     const dualAudio = terms.some(term => checkTerm(term, 'dual'))
     return exactAudio || (exactMatch ? exactAudio : dualAudio)
   }
@@ -52,20 +54,18 @@
    * @param {string} audioLang
    * @param {string[]} torrentProvider
    */
-  export async function getBest(search, results, audioLang, torrentProvider = []) {
+  async function getBest(search, results, audioLang, torrentProvider = []) {
     if (!results || !results.length) return null
     const candidates = []
-    if (audioLang !== 'jpn') {
-      const checks = await Promise.all(
-        results.map(async result => ({
-          result,
-          exactBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 9,
-          exactAlt: (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 9,
-          dualBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 1,
-          dualAlt: (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 1
-        })))
-      candidates.push(...checks.filter(check => check.exactBest).map(check => check.result), ...checks.filter(check => check.exactAlt).map(check => check.result), ...checks.filter(check => check.dualBest).map(check => check.result), ...checks.filter(check => check.dualAlt).map(check => check.result))
-    }
+    const checks = await Promise.all(
+      results.map(async result => ({
+        result,
+        exactBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 9,
+        exactAlt: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 1,
+        dualBest: audioLang !== 'jpn' && (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 9,
+        dualAlt: audioLang !== 'jpn' && (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 1
+      })))
+    candidates.push(...checks.filter(check => check.exactBest).map(check => check.result), ...checks.filter(check => check.exactAlt).map(check => check.result), ...checks.filter(check => check.dualBest).map(check => check.result), ...checks.filter(check => check.dualAlt).map(check => check.result))
     candidates.push(...results.filter(result => (result.type === 'best' || result.type === 'alt') && result.seeders > 9))
     const uniqueCandidates = Array.from(new Set(candidates))
     const toConsider = uniqueCandidates.length ? uniqueCandidates : results
@@ -76,47 +76,6 @@
     return toConsider[0] || results[0]
   }
 
-  export async function fetchBestTorrent(search) {
-    const movie = isMovie(search.media)
-    const dubAiring = animeSchedule.dubAiring.value?.find(entry => entry.media?.media?.id === search.media.id)
-    const finishedDub = !dubAiring || (dubAiring.episodeNumber === search.media.episodes && (new Date().getTime() >= new Date(dubAiring.episodeDate).getTime())) || ((search.media.mediaListEntry?.progress ?? 0) > dubAiring.episodeNumber)
-    const batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || finishedDub) && !movie
-    const resolution = settings.value.rssQuality
-
-    let promises
-    try {
-      promises = await getResultsFromExtensions({ ...search, batch, movie, resolution })
-      if (!promises) return null
-    } catch {
-      return null
-    }
-
-    const extensionPromises = Array.from(promises, ([_, ext]) =>
-      ext.promise.then(results => {
-        if (!results?.length) throw new Error('empty')
-        const { results: sorted } = sortResults(results, settings.value.torrentSort)
-        const best = getBest(search, sorted, settings.value.audioLanguage, settings.value.torrentProvider)
-        if (!best) throw new Error('no match')
-        return best
-      })
-    )
-
-    try {
-      return await Promise.any(extensionPromises)
-    } catch {
-      return null
-    }
-  }
-
-  export function prefetch(search) {
-    const movie = isMovie(search.media)
-    const dubAiring = animeSchedule.dubAiring.value?.find(entry => entry.media?.media?.id === search.media.id)
-    const finishedDub = !dubAiring || (dubAiring.episodeNumber === search.media.episodes && (new Date().getTime() >= new Date(dubAiring.episodeDate).getTime())) || ((search.media.mediaListEntry?.progress ?? 0) > dubAiring.episodeNumber)
-    const batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || finishedDub) && !movie
-    const resolution = settings.value.rssQuality
-    prefetchTorrent({ media: search.media, episode: search.episode, batch, movie, resolution })
-  }
-
   function filterResults(results, searchText) {
     if (!searchText?.length) return results
     return results.filter(({ title }) => matchPhrase(searchText, title, 0.4, false, true)) || []
@@ -125,8 +84,9 @@
   /**
    * @param {Result[]} results
    * @param {string} sort
+   * @param {boolean} batch
    */
-  function sortResults(results, sort) {
+  function sortResults(results, sort, batch) {
     if (!results) return { results: [], hiddenResults: [] }
     const deduped = Array.from(dedupe(results)).map(result => {
       if (!(result.parseObject?.release_group && result.parseObject.release_group.length < 20)) result.parseObject = { ...result.parseObject, release_group: 'No Group' }
@@ -136,8 +96,11 @@
       results: deduped.filter(entry => entry.seeders > 0 || entry.source?.managed).sort((a, b) => {
         switch (sort) {
           case 'smallest': return a.size - b.size
-          case 'best': return (b.type === 'best') - (a.type === 'best') || (b.type === 'alt') - (a.type === 'alt')
-          case 'batch': return (b.type === 'batch') - (a.type === 'batch')
+          case 'best': return ((b.type === 'best') - (a.type === 'best') || (b.type === 'alt') - (a.type === 'alt')) || b.seeders - a.seeders
+          case 'batch': {
+            if (!batch) return b.seeders - a.seeders
+            return ((b.type === 'batch') - (a.type === 'batch')) || b.seeders - a.seeders
+          }
           case 'new': return new Date(b.date) - new Date(a.date)
           case 'old': return new Date(a.date) - new Date(b.date)
           case 'seeders':
@@ -200,11 +163,13 @@
   export let search
   export let close
 
+  let container
+  let containerEl
   let countdown = 5
   let timeoutHandle
   const maxEpisode = 10_000
   const updateEpisode = debounce((value) => { if (search.episode !== value) search.episode = value }, 500)
-  $: episodeSearch = search?.episode
+  let episodeSearch = search?.episode
 
   /**
    * @param {ReturnType<typeof getBest>} promise
@@ -233,7 +198,7 @@
   }
 
   const movie = isMovie(search.media)
-  let batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || dubFinished()) && !movie
+  const batch = search.media.status === 'FINISHED' && (!settings.value.preferDubs || dubFinished()) && (!movie || getMediaMaxEp(search.media) > 1)
 
   const results = writable({})
   function addResults(newItems, source) {
@@ -242,9 +207,10 @@
     return ''
   }
 
-  $: errorCardOnly = search && false
+  const errorCardOnly = writable(false)
+  $: if (search) $errorCardOnly = false
   function hideErrors() {
-    errorCardOnly = true
+    $errorCardOnly = true
     return ''
   }
 
@@ -253,10 +219,10 @@
     const cachedTorrents = []
     const torrents = [...completedTorrents.value, ...seedingTorrents.value, ...stagingTorrents.value, loadedTorrent.value].filter(Boolean)
     for (const cached of cachedHashes) {
-      const torrent = torrents.find(torrent => torrent.infoHash === cached.hash)
+      const torrent = torrents.find(torrent => equalsIgnoreCase(torrent.infoHash, cached.hash))
       if (!torrent) continue
       const title = AnimeResolver.cleanFileName(torrent.name)
-      let searchEpisode = search?.episode
+      const searchEpisode = search?.episode
       let isLocked = cached.locked ?? (cached.files?.length === 1 && (cached.files[0].locked || cached.files[0].parseObject?.locked)) ?? false
       if (!isLocked && Array.isArray(cached.files) && searchEpisode != null) {
         const normalizedEpisode = Number.isFinite(Number(searchEpisode)) ? Number(searchEpisode) : searchEpisode
@@ -270,7 +236,7 @@
         leechers: torrent.totalLeechers ?? 0,
         hash: torrent.infoHash,
         size: torrent.size,
-        date: torrent.date,
+        date: torrent.cachedAt,
         accuracy: isLocked ? 'high' : 'medium',
         parseObject: (await anitomyscript(title))?.[0],
         source: { managed: true, name: `Local (${torrent.staging ? 'Staging' : torrent.seeding ? 'Seeding' : torrent.current ? 'Now Playing' : 'Completed'})` }
@@ -280,6 +246,7 @@
   }
 
   async function queryExtensions(request, resolution) {
+    scrollTop()
     $results = {}
     const cachedHashes = []
     for (const resolvedHash of getHash(search?.media?.id, { episode: search?.episode, client: true, batchGuess: true }, false, true, true) ?? []) {
@@ -296,10 +263,10 @@
     debug(`Querying extensions for torrent sources for ${search?.media?.id}`)
     let promises
     try {
-      promises = await getResultsFromExtensions({ ...request, batch, movie, resolution })
+      promises = await getTorrentResults({ ...request, batch, movie, resolution })
     } catch (error) {
       if (search != null && search.media?.id === request?.media?.id && search.episode === request?.episode) {
-        errors = Promise.resolve({ errors: [error] })
+        $errors = Promise.resolve({ errors: [error] })
         results.update(r => ({...r, resolved: true}))
       }
     }
@@ -321,7 +288,7 @@
     results.update(r => ({ ...r, resolved: true }))
     debug(`All query promises have successfully been resolved for ${search?.media?.id}:E${search?.episode}`, JSON.stringify(Array.from(uniqueErrors)))
     const errorsArray = Array.from(uniqueErrors)
-    if (errorsArray.some(msg => msg?.includes('No torrent sources configured') || msg?.includes('Sources are inactive'))) return { errors: errorsArray.map((message) => ({ message })), errorCardOnly: true }
+    if (errorsArray.some(msg => msg?.includes('sources configured') || msg?.includes('Sources are inactive'))) return { errors: errorsArray.map((message) => ({ message })), errorCardOnly: true }
     if ($status !== 'offline' && JSON.stringify(Array.from(uniqueErrors)).match(/found no results/i) && (search?.media?.status !== 'FINISHED' || !search?.media?.episodes) && (getMediaMaxEp(search?.media, true) < search?.episode)) {
       return { errors: [ { message: `${anilistClient.title(search.media)} ${search.media?.format !== 'MOVIE' || (getMediaMaxEp(search?.media, false) > 1) ? `Episode ${search.media.nextAiringEpisode?.episode || search.episode}` : ``} hasn't released yet! ${search?.media?.nextAiringEpisode?.timeUntilAiring ? `\n${search.media?.format !== 'MOVIE' || (getMediaMaxEp(search?.media, false) > 1) ? `This episode` : `This movie`} will be released on ${new Date(Date.now() + search.media.nextAiringEpisode?.timeUntilAiring * 1000).toDateString()}` : ''}` }], errorCardOnly: true }
     }
@@ -330,6 +297,7 @@
 
   let scraping = false
   async function handleScrape() {
+    scrollTop()
     if (!$results?.resolved || !$results?.torrents?.length || scraping) return
     toast.promise(
       (async () => {
@@ -359,13 +327,15 @@
   }
 
   $: resolution = $settings.rssQuality
-  $: queries = queryExtensions({...search}, resolution)
-  $: errors = getErrors({...search}, queries)
-
-  $: queryResults = sortResults($results?.torrents, $settings.torrentSort)
+  const queries = writable(null)
+  const errors = writable(null)
+  $: $queries = queryExtensions({...search}, resolution)
+  $: $errors = getErrors({...search}, $queries)
+  $: queryResults = sortResults($results?.torrents, $settings.torrentSort, batch)
   $: lookup = queryResults?.results
+  $: (episodeSearch || resolution || $settings.torrentSort || $settings.audioLanguage) && scrollTop()
 
-  $: best = null
+  let best = null
   let current = 0
   let bestPromiseId = current
   $: {
@@ -378,12 +348,12 @@
   }
 
   $: lookupHidden = queryResults?.hiddenResults
-  $: viewHidden = false
+  let viewHidden = false
 
   $: if (!$settings.rssAutoplay) clearTimeout(timeoutHandle)
   $: autoPlay(best, $results?.resolved)
+  $: lastMagnet = cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.[`${search?.episode}`] || cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.batch
 
-  const lastMagnet = cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.[`${search?.episode}`] || cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.batch
   let searchText = ''
 
   /** @param {import('../../../../extensions').TorrentResult} result */
@@ -415,28 +385,12 @@
     if ($settings.rssAutoplay) countdown = 5
   }
 
-  const showOptions = writable(false)
-  function toggleDropdown({ target }) {
-    target.classList.toggle('active')
-    target.closest('.dropdown').classList.toggle('show')
-  }
-
-  $: {
-    if ($showOptions) {
-      const { reactive, init } = createListener([`primary`])
-      init(true, true)
-      reactive.subscribe(value => {
-        if (!value) {
-          showOptions.set(false)
-          init(false, true)
-        }
-      })
-    }
+  function scrollTop() {
+    container?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   onDestroy(() => {
     clearTimeout(timeoutHandle)
-    showOptions.set(false)
     viewHidden = false
     $results = {}
     search = null
@@ -444,206 +398,211 @@
     current = 0
     bestPromiseId = 0
     scraping = false
-    errorCardOnly = false
+    $errorCardOnly = false
   })
 </script>
 
-<div class='controls w-full bg-very-dark position-sticky top-0 z-10 pt-20 pb-10 px-30 mb-10'>
-  <div class='d-flex'>
-    <h3 class='mb-0 font-weight-bold text-white title mr-5 font-scale-40'>{anilistClient.title(search?.media)}</h3>
-    <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
-    <div class='position-absolute top-0 left-0 w-full h-full z--1'>
-      <div class='position-absolute w-full h-full overflow-hidden' >
-        <SmartImage class='img-cover w-full h-full' images={[
-          search.media.bannerImage,
-          ...(search.media.trailer?.id ? [
-            `https://i.ytimg.com/vi/${search.media.trailer.id}/maxresdefault.jpg`,
-            `https://i.ytimg.com/vi/${search.media.trailer.id}/hqdefault.jpg`] : []),
-          () => getKitsuMappings(search.media.id).then(metadata =>
-            [metadata?.included?.[0]?.attributes?.coverImage?.original,
-            metadata?.included?.[0]?.attributes?.coverImage?.large,
-            metadata?.included?.[0]?.attributes?.coverImage?.small,
-            metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
-          () => getEpisodeMetadataForMedia(search.media).then(metadata => metadata?.[1]?.image),
-          search.media.coverImage?.extraLarge]}
-        />
-      </div>
-      <div class='position-absolute top-0 left-0 w-full h-full' style='background: var(--torrent-banner-gradient)' />
-    </div>
-  </div>
-  <div class='input-group mt-20 h-40 long-input z-11'>
-    <Search size='2.6rem' strokeWidth='2.5' class='position-absolute z-10 text-dark-light h-full pl-10 pointer-events-none' />
-    <input
-      type='search'
-      class='form-control bg-dark-very-light pl-40 pr-30 rounded-3 h-40 text-truncate'
-      autocomplete='off'
-      spellcheck='false'
-      data-option='search'
-      placeholder='Filter torrents by text, or manually specify one by pasting a magnet link or torrent file' bind:value={searchText} />
-    <div class='dropdown primary dropleft with-arrow position-absolute z-20 h-full right-0' use:click={() => {showOptions.set(!$showOptions)}}>
-      <button type='button' class='options h-full bg-transparent shadow-none border-0 pointer p-0 pr-10 muted d-flex align-items-center' title='More Options'><EllipsisVertical size='2rem' /></button>
-      <div class='position-absolute visibility top-0 text-capitalize hm-40 text-nowrap bg-dark-very-light dmr-arrow d-flex flex-column' class:hidden={!$showOptions}>
-        <div class='dropdown dropleft with-arrow z-20 pointer p-5 rounded-1 option' aria-label='Preferred Audio Language' title='Preferred Audio Language' use:click={toggleDropdown}>
-          <div class='d-flex align-items-center pr-5'><ChevronLeft size='2rem' strokeWidth={2.5} class='flex-shrink-0' /><span class='ml-10 flex-grow-1 text-center'>Preferred Audio</span></div>
-          <div class='dropdown-menu dropdown-menu-right text-capitalize text-nowrap'>
-            <div class='custom-radio overflow-y-auto overflow-x-hidden hm-400'>
-              {#each languages as language}
-                <input name='audio-radio-set' type='radio' id='audio-{language.value}-radio' value={language.value} checked={language.value === $settings.audioLanguage} />
-                <label for='audio-{language.value}-radio' use:click={() => { $settings.audioLanguage = language.value }} class='pb-5'>
-                  {language.label}
-                </label>
-              {/each}
-            </div>
-          </div>
+<div class='h-full overflow-hidden d-flex flex-column' bind:this={containerEl}>
+  <div class='controls w-full bg-very-dark position-sticky top-0 z-10 pb-5 px-30 mb-10' style='padding-top: max(var(--safe-area-top), var(--pt-md-wh-20, 0px)) !important'>
+    <div class='d-flex align-items-center'>
+      <h3 class='mb-0 font-weight-bold text-white title mr-10 font-scale-40'>{anilistClient.title(search?.media)}</h3>
+      <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={close}><X size='1.7rem' strokeWidth='3'/></button>
+      <div class='position-absolute top-0 left-0 w-full h-full z--1'>
+        <div class='position-absolute w-full h-full overflow-hidden' >
+          <SmartImage class='img-cover w-full h-full' images={[
+            search.media.bannerImage,
+            ...(search.media.trailer?.id ? [
+              `https://i.ytimg.com/vi/${search.media.trailer.id}/maxresdefault.jpg`,
+              `https://i.ytimg.com/vi/${search.media.trailer.id}/hqdefault.jpg`] : []),
+            () => getKitsuMappings(search.media.id).then(metadata =>
+              [metadata?.included?.[0]?.attributes?.coverImage?.original,
+              metadata?.included?.[0]?.attributes?.coverImage?.large,
+              metadata?.included?.[0]?.attributes?.coverImage?.small,
+              metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
+            () => getEpisodeMetadataForMedia(search.media).then(metadata => metadata?.[1]?.image),
+            search.media.coverImage?.extraLarge]}
+          />
         </div>
-        <div class='dropdown dropleft with-arrow z-20 pointer p-5 rounded-1 option' aria-label='Auto-Scrape Results' title='Auto-Scrape Results' use:click={toggleDropdown}>
-          <div class='d-flex align-items-center pr-5'><ChevronLeft size='2rem' strokeWidth={2.5} class='flex-shrink-0' /><span class='ml-10 flex-grow-1 text-center'>Auto-Scrape Results</span></div>
-          <div class='dropdown-menu dropdown-menu-right text-capitalize text-nowrap mw-80'>
-            <div class='custom-radio overflow-y-auto overflow-x-hidden'>
-              <input name='scrape-radio-set' type='radio' id='scrape-on-radio' value='on' checked={$settings.torrentAutoScrape} />
-              <label for='scrape-on-radio' use:click={() => $settings.torrentAutoScrape = true} class='pb-5'>On</label>
-              <input name='scrape-radio-set' type='radio' id='scrape-off-radio' value='off' checked={!$settings.torrentAutoScrape} />
-              <label for='scrape-off-radio' use:click={() => $settings.torrentAutoScrape = false} class='pb-5'>Off</label>
-            </div>
-          </div>
+        <div class='position-absolute top-0 left-0 w-full h-full' style='background: var(--torrent-banner-gradient)' />
+      </div>
+    </div>
+    <div class='input-group mt-20 h-40 long-input z-11'>
+      <Search size='2.6rem' strokeWidth='2.5' class='position-absolute z-10 text-dark-light h-full pl-10 pointer-events-none' />
+      <input
+        type='search'
+        class='form-control bg-dark-very-light pl-40 pr-35 rounded-3 h-40 text-truncate'
+        autocomplete='off'
+        spellcheck='false'
+        data-option='search'
+        placeholder='Filter torrents by text, or manually specify one by pasting a magnet link or torrent file' bind:value={searchText} />
+      <div class='position-absolute right-0 h-full d-flex'>
+        <NestedDropdown direction='left' panelHeightPadding={6.5} title='More Filters' alignStart={true} {containerEl} items={[
+            {
+              icon: Paintbrush,
+              label: 'Auto-Scrape Results',
+              value: $settings.torrentAutoScrape ? 'On' : 'Off',
+              onSelect: () => ($settings.torrentAutoScrape = !$settings.torrentAutoScrape)
+            },
+            {
+              icon: ListMusic,
+              label: 'Preferred Audio',
+              value: languages.find(language => language.value === $settings.audioLanguage)?.label,
+              children: languages.map(language => ({
+                label: language.label,
+                value: language.value === $settings.audioLanguage ? '✓' : undefined,
+                valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+                onSelect: () => ($settings.audioLanguage = language.value)
+              })),
+            }
+          ]}>
+          <button type='button' class='options h-full bg-transparent shadow-none border-0 pointer p-0 pr-10 muted d-flex align-items-center z-10' title='More Options'>
+            <EllipsisVertical size='2rem' />
+          </button>
+        </NestedDropdown>
+      </div>
+    </div>
+    <div class='row mt-10'>
+      <div class='col-12 col-sm-6 d-flex align-items-center justify-content-center justify-content-sm-start'>
+        <div class='d-flex align-items-center mr-5' title='Toggle Autoplay'>
+          <Timer size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
+          <button type='button' class='form-control w-full bg-dark-very-light pointer control text-nowrap {!$settings.rssAutoplay ? `pl-15` : `px-25`}' use:click={() => autoPlayToggle()}>
+          <span class:ml-20={!$settings.rssAutoplay} class:ml-10={$settings.rssAutoplay}>
+            {#if $settings.rssAutoplay}
+              Autoplay [{countdown}]
+            {:else}
+              Autoplay [Off]
+            {/if}
+          </span>
+          </button>
+        </div>
+        <div class='d-flex align-items-center mr-5' style='width: calc(5.2rem + {(String(episodeSearch).length <= 10 ? String(episodeSearch).length : 10) * 1}rem) !important' title='Episode'>
+          <Clapperboard size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
+          <input type='number' inputmode='numeric' pattern='[0-9]*' max={maxEpisode} class='form-control bg-dark-very-light pl-40 control' placeholder='5' step='1' value={episodeSearch} on:input={episodeInput} disabled={(!search.episode && search.episode !== 0) || movie} />
+        </div>
+      </div>
+      <div class='col-12 col-sm-6 d-flex align-items-center mt-5 justify-content-center mt-sm-0 justify-content-sm-end'>
+        <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Scrape Peer Data'>
+          <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={handleScrape} disabled={!$results?.resolved || !$results?.torrents?.length || scraping}><Radio size='1.8rem' class={scraping ? 'pulsing' : ''} /></button>
+        </div>
+        <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Refresh Search Results'>
+          <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={() => ($queries = queryExtensions({...search}, resolution))} disabled={!$results?.resolved}><RefreshCw size='1.8rem' class={!$results?.resolved ? 'spinning' : ''} /></button>
+        </div>
+        <div class='d-flex align-items-center pr-5' title='Sorting Preference'>
+          <ArrowDownWideNarrow size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
+          <select class='form-control w-full bg-dark-very-light pl-40 control' bind:value={$settings.torrentSort}>
+            <option value='seeders' selected>Seeders</option>
+            <option value='smallest' selected>Smallest</option>
+            <option value='new' selected>Newest</option>
+            <option value='old' selected>Oldest</option>
+            <option value='batch' selected>Batch</option>
+            <option value='best' selected>Best</option>
+          </select>
+        </div>
+        <div class='d-flex align-items-center' title='Video Quality'>
+          <MonitorCog size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
+          <select class='form-control w-full bg-dark-very-light pl-40 control' bind:value={$settings.rssQuality}>
+            <option value='1080' selected>1080p</option>
+            <option value='720'>720p</option>
+            <option value='540'>540p</option>
+            <option value='480'>480p</option>
+            <option value=''>Any</option>
+          </select>
         </div>
       </div>
     </div>
   </div>
-  <div class='row mt-10'>
-    <div class='col-12 col-sm-6 d-flex align-items-center justify-content-center justify-content-sm-start'>
-      <div class='d-flex align-items-center mr-5' title='Toggle Autoplay'>
-        <Timer size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
-        <button type='button' class='form-control w-full bg-dark-very-light pointer control text-nowrap {!$settings.rssAutoplay ? `pl-15` : `px-25`}' use:click={() => autoPlayToggle()}>
-        <span class:ml-20={!$settings.rssAutoplay} class:ml-10={$settings.rssAutoplay}>
-          {#if $settings.rssAutoplay}
-            Autoplay [{countdown}]
-          {:else}
-            Autoplay [Off]
-          {/if}
-        </span>
-        </button>
-      </div>
-      <div class='d-flex align-items-center mr-5' style='width: calc(5.2rem + {(String(episodeSearch).length <= 10 ? String(episodeSearch).length : 10) * 1}rem) !important' title='Episode'>
-        <Clapperboard size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
-        <input type='number' inputmode='numeric' pattern='[0-9]*' max={maxEpisode} class='form-control bg-dark-very-light pl-40 control' placeholder='5' step='1' value={episodeSearch} on:input={episodeInput} disabled={(!search.episode && search.episode !== 0) || movie} />
-      </div>
-    </div>
-    <div class='col-12 col-sm-6 d-flex align-items-center mt-5 justify-content-center mt-sm-0 justify-content-sm-end'>
-      <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Scrape Peer Data'>
-        <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={handleScrape} disabled={!$results?.resolved || !$results?.torrents?.length || scraping}><Radio size='1.8rem' class={scraping ? 'pulsing' : ''} /></button>
-      </div>
-      <div class='d-flex align-items-center mr-5' data-toggle='tooltip' data-placement='top' data-title='Refresh Search Results'>
-        <button type='button' class='btn btn-square bg-dark-very-light ml-auto d-flex align-items-center justify-content-center rounded-2 flex-shrink-0' use:click={() => queries = queryExtensions({...search}, resolution)} disabled={!$results?.resolved}><RefreshCw size='1.8rem' class={!$results?.resolved ? 'spinning' : ''} /></button>
-      </div>
-      <div class='d-flex align-items-center pr-5' title='Sorting Preference'>
-        <ArrowDownWideNarrow size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
-        <select class='form-control w-full bg-dark-very-light pl-40 control' bind:value={$settings.torrentSort}>
-          <option value='seeders' selected>Seeders</option>
-          <option value='smallest' selected>Smallest</option>
-          <option value='new' selected>Newest</option>
-          <option value='old' selected>Oldest</option>
-          <option value='batch' selected>Batch</option>
-          <option value='best' selected>Best</option>
-        </select>
-      </div>
-      <div class='d-flex align-items-center' title='Video Quality'>
-        <MonitorCog size='2.75rem' class='position-absolute z-10 text-dark-light pl-10 pointer-events-none' />
-        <select class='form-control w-full bg-dark-very-light pl-40 control' bind:value={$settings.rssQuality}>
-          <option value='1080' selected>1080p</option>
-          <option value='720'>720p</option>
-          <option value='540'>540p</option>
-          <option value='480'>480p</option>
-          <option value=''>Any</option>
-        </select>
-      </div>
-    </div>
-  </div>
-</div>
-<div class='mt-10 mb-sm-10 px-30'>
-  {#await errors then errorResult}
-    {#if errorResult?.errorCardOnly && $results?.resolved && !$results?.torrents?.length}
-      <div class='mt-80'>
-        {hideErrors()}
-        <ErrorCard promise={Promise.resolve(errorResult)} />
-      </div>
-    {/if}
-  {/await}
-  {#if $results?.torrents?.length && !$results?.resolved && ($results?.torrents?.length !== lookupHidden?.length) && (!best || !Object.values(best)?.length)}
-    <TorrentCardSk />
-  {:else if $results?.torrents?.length}
-    {#if best}<TorrentCard type='best' countdown={$settings.rssAutoplay && $results?.resolved ? countdown : -1} result={best} {play} media={search.media} episode={search.episode} />{/if}
-    {#if lastMagnet}
-      {#each filterResults(lookup, searchText) as result}
-        {#if ((result.link === lastMagnet.link) || (result.hash === lastMagnet.hash)) && (result.seeders ?? 0) > 1 && ((best?.link !== lastMagnet.link) && (best?.hash !== lastMagnet.hash)) }
-          <TorrentCard type='magnet' result={result} {play} media={search.media} episode={search.episode} />
-        {/if}
-      {/each}
-    {/if}
-  {/if}
-  {#each filterResults(lookup, searchText) as result}
-    {#if ((best?.link !== result.link) && (best?.hash !== result.hash)) && (!lastMagnet || (((result.link !== lastMagnet.link) || (result.hash !== lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
-      <TorrentCard {result} {play} media={search.media} episode={search.episode} />
-    {/if}
-  {/each}
-  {#if queries}
-    {#await queries then queries}
-      {#each queries as [key, extension] (key)}
-        {#await extension.promise}
-          <TorrentCardSk name={extension.name} icon={extension.icon || 'none'} />
-        {:then resolved}
-          {#if !resolved?.errors?.length}
-            {addResults(resolved, { name: extension.name, icon: extension.icon })}
-          {/if}
-        {/await}
-      {/each}
+  <div bind:this={container} class='scroll-container h-full px-30 overflow-y-scroll'>
+    {#await $errors then errorResult}
+      {#if errorResult?.errorCardOnly && $results?.resolved && !$results?.torrents?.length}
+        <div class='mt-80'>
+          {hideErrors()}
+          <ErrorCard promise={Promise.resolve(errorResult)} />
+        </div>
+      {/if}
     {/await}
-  {/if}
-  {#if !$results?.resolved}
-    {#each Array.from({ length: $results?.torrents?.length ? Math.max(15 - $results.torrents.length, 0) : 15 }) as _}
+    {#if $results?.torrents?.length && !$results?.resolved && ($results?.torrents?.length !== lookupHidden?.length) && (!best || !Object.values(best)?.length)}
       <TorrentCardSk />
+    {:else if $results?.torrents?.length}
+      {#if best}<TorrentCard type='best' countdown={$settings.rssAutoplay && $results?.resolved ? countdown : -1} result={best} {play} media={search.media} episode={search.episode} />{/if}
+      {#if lastMagnet}
+        {#each filterResults(lookup, searchText) as result (result)}
+          {#if (equalsIgnoreCase(result.link, lastMagnet.link) || equalsIgnoreCase(result.hash, lastMagnet.hash)) && (result.seeders ?? 0) > 1 && (!equalsIgnoreCase(best?.link, lastMagnet.link) && !equalsIgnoreCase(best?.hash, lastMagnet.hash)) }
+            <TorrentCard type='magnet' result={result} {play} media={search.media} episode={search.episode} />
+          {/if}
+        {/each}
+      {/if}
+    {/if}
+    {#each filterResults(lookup, searchText) as result (result)}
+      {#if (!equalsIgnoreCase(best?.link, result.link) && !equalsIgnoreCase(best?.hash, result.hash)) && (!lastMagnet || ((!equalsIgnoreCase(result.link, lastMagnet.link) || !equalsIgnoreCase(result.hash, lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
+        <TorrentCard {result} {play} media={search.media} episode={search.episode} />
+      {/if}
     {/each}
-  {/if}
-  {#if lookupHidden?.length && $results?.torrents?.length && filterResults(lookupHidden, searchText)?.length}
-    <button type='button' class='long-button mb-10 control bd-highlight h-50 btn w-full p-5 rounded-3 d-flex align-items-center font-size-16 font-weight-semi-bold overflow-hidden' class:bg-dark={!viewHidden} class:bg-primary={viewHidden} use:click={()=> { viewHidden = !viewHidden }}>
-      <span class='ml-20'>{lookupHidden?.length} Unseeded Result{lookupHidden?.length > 1 ? 's' : ''} (Unavailable)</span>
-      <svelte:component this={ viewHidden ? ChevronUp : ChevronDown } class='ml-auto mr-10' size='2.2rem' />
-    </button>
-    {#if viewHidden}
-      {#each filterResults(lookupHidden, searchText) as result}
-        {#if (!best || ((best.link !== result.link) && (best.hash !== result.hash))) && (!lastMagnet || (((result.link !== lastMagnet.link) || (result.hash !== lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
-          <div class='unavailable'><TorrentCard {result} {play} media={search.media} episode={search.episode} /></div>
-        {/if}
+    {#if $queries}
+      {#await $queries then queries}
+        {#each queries as [key, extension] (key)}
+          {@const extensionName = `${(extension.name).slice(0, 25)}${extension?.name?.length > 25 ? '...' : ''}`}
+          {#await extension.promise}
+            <TorrentCardSk name={extensionName} icon={extension.icon || 'none'} />
+          {:then resolved}
+            {#if !resolved?.errors?.length}
+              {addResults(resolved, { name: extensionName, icon: extension.icon })}
+            {/if}
+          {/await}
+        {/each}
+      {/await}
+    {/if}
+    {#if !$results?.resolved}
+      {#each Array.from({ length: $results?.torrents?.length ? Math.max(15 - $results.torrents.length, 0) : 15 }) as _, skeletonIndex (skeletonIndex)}
+        <TorrentCardSk />
       {/each}
     {/if}
-  {/if}
-  {#if queries && !errorCardOnly}
-    {#await queries then queries}
-      {#each queries as [key, extension] (key)}
-        {#await extension.promise then resolved}
-          {#if resolved?.errors?.length}
-            <TorrentCard type='error' result={{ title: cleanErrorMessage(resolved.errors[0].message), source: { name: extension.name, icon: extension.icon } }} media={search.media} episode={search.episode} />
+    {#if lookupHidden?.length && $results?.torrents?.length && filterResults(lookupHidden, searchText)?.length}
+      <button type='button' class='long-button mb-10 control bd-highlight h-50 btn w-full p-5 rounded-3 d-flex align-items-center font-size-16 font-weight-semi-bold overflow-hidden' class:bg-dark={!viewHidden} class:bg-primary={viewHidden} use:click={()=> { viewHidden = !viewHidden }}>
+        <span class='ml-20'>{lookupHidden?.length} Unseeded Result{lookupHidden?.length > 1 ? 's' : ''} (Unavailable)</span>
+        <svelte:component this={ viewHidden ? ChevronUp : ChevronDown } class='ml-auto mr-10' size='2.2rem' />
+      </button>
+      {#if viewHidden}
+        {#each filterResults(lookupHidden, searchText) as result (result)}
+          {#if (!best || (!equalsIgnoreCase(best.link, result.link) && !equalsIgnoreCase(best.hash, result.hash))) && (!lastMagnet || ((!equalsIgnoreCase(result.link, lastMagnet.link) || !equalsIgnoreCase(result.hash, lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
+            <div class='unavailable'><TorrentCard {result} {play} media={search.media} episode={search.episode} /></div>
           {/if}
-        {:catch error}
-          <TorrentCard type='error' result={{ title: cleanErrorMessage(error?.message), source: { name: extension.name, icon: extension.icon } }} media={search.media} episode={search.episode} />
-        {/await}
-      {/each}
-    {/await}
-  {/if}
+        {/each}
+      {/if}
+    {/if}
+    {#if $queries && !$errorCardOnly}
+      {#await $queries then queries}
+        {#each queries as [key, extension] (key)}
+          {@const extensionName = `${(extension.name).slice(0, 25)}${extension?.name?.length > 25 ? '...' : ''}`}
+          {#await extension.promise then resolved}
+            {#if resolved?.errors?.length}
+              <TorrentCard type='error' result={{ title: cleanErrorMessage(resolved.errors[0].message), source: { name: extensionName, icon: extension.icon } }} media={search.media} episode={search.episode} />
+            {/if}
+          {:catch error}
+            <TorrentCard type='error' result={{ title: cleanErrorMessage(error?.message), source: { name: extensionName, icon: extension.icon } }} media={search.media} episode={search.episode} />
+          {/await}
+        {/each}
+      {/await}
+    {/if}
+  </div>
 </div>
 
 <style>
   .unavailable {
     opacity: 0.6;
   }
-  .visibility {
-    margin-top: .4rem;
-    margin-left: -18.5rem;
-    transition: opacity 0.1s ease-in;
+  .controls::after {
+    content: '';
+    position: absolute;
+    bottom: -2.2rem;
+    left: 0;
+    right: 0;
+    height: 1.2rem;
+    background: linear-gradient(to bottom, var(--dark-color-dim), transparent);
+    pointer-events: none;
+    z-index: 1;
   }
-
-  .controls {
-    box-shadow: 0 1.2rem 1.2rem var(--dark-color-dim);
+  .scroll-container :global(> *:first-child) {
+    margin-top: 1rem !important;
   }
   .title {
     display: inline-block;
