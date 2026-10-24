@@ -57,7 +57,7 @@
     },
     "asarUnpack": "**/*.node",
     "electronDownload": {
-      "mirror": "https://craftationgaming.com/api/packages/electron/",
+      "mirror": "https://npmmirror.com/mirrors/electron/",
       "customDir": "43.3.0"
     },
     "protocols": {
