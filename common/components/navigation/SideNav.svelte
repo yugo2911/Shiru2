@@ -5,14 +5,10 @@
   import Helper from '@/modules/helper.js'
   import { Home, Settings, LogIn, Bell, BellDot, Download, Users, CalendarSearch, Search, ChevronLeft, ChevronRight, TvMinimalPlay, History, ListVideo } from 'lucide-svelte'
   import { fade } from 'svelte/transition'
+  import { makeSfx, playSfx } from '@/modules/sfx.js'
 
   const sfx = {
-    menu: new Audio('./audio/カーソル移動6.mp3'),
-  }
-
-  function playSfx(sound) {
-    sound.currentTime = 0
-    sound.play().catch(() => {})
+    menu: makeSfx('./audio/カーソル移動6.mp3'),
   }
 
   let hidden = true

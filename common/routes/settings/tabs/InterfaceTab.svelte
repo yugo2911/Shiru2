@@ -101,11 +101,14 @@
 {/if}
 {/if}
 {#if matches('Auto Mute Trailers', 'automatically mute trailer previews', 'Interface Settings')}
-<SettingCard title='Auto Mute Trailers' description='Automatically mute trailer previews when hovering over cards or viewing the home banner.'>
+<SettingCard title='Auto Mute Trailers' …>
   <div class='custom-switch'>
     <input type='checkbox' id='auto-mute-trailers' bind:checked={settings.autoMuteTrailers} />
     <label for='auto-mute-trailers'>{settings.autoMuteTrailers ? 'On' : 'Off'}</label>
   </div>
+</SettingCard>
+{/if}
+
 {#if matches('SFX Volume', 'volume of interface sound effects', 'Interface Settings')}
 <SettingCard title='SFX Volume' description='Volume of interface sound effects.'>
   <div class='form-group w-160 flex-shrink-0 my-auto'>
@@ -121,8 +124,6 @@
       ><RotateCcw size='1.8rem' /></button>
     </div>
   </div>
-</SettingCard>
-{/if}
 </SettingCard>
 {/if}
 {#if matches('Card Audio', 'sub, dub, partial dub, and age rating icons', 'Interface Settings')}

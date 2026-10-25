@@ -3,6 +3,7 @@
   import { anilistClient, currentSeason, currentYear } from '@/modules/anilist.js'
   import { settings } from '@/modules/settings.js'
   import { uniqueStore } from '@/modules/util.js'
+  import { makeSfx, playSfx } from '@/modules/sfx.js'
   import Helper from '@/modules/helper.js'
   import WPC from '@/modules/wpc.js'
   import { mediaCache } from '@/modules/cache.js'
@@ -14,6 +15,7 @@
   import { modal } from '@/modules/navigation.js'
   import { ELECTRON } from '@/modules/bridge.js'
   import { Play, ChevronLeft, ChevronRight, VolumeX, Volume2 } from 'lucide-svelte'
+
 
   export const filterMode = writable('section')
   export const refreshTrigger = writable(0)
@@ -152,14 +154,6 @@
 
 // ─── SFX ────────────────────────────────────────────────────────────────────────
 
-const SFX_VOLUME_DEFAULT = 0.5
-
-function makeSfx(src) {
-  const audio = new Audio(src)
-  audio.volume = SFX_VOLUME_DEFAULT
-  return audio
-}
-
 const sfx = {
   nav:     makeSfx('./audio/カーソル移動9.mp3'),
   section: makeSfx('./audio/決定ボタンを押す22.mp3'),
@@ -167,20 +161,6 @@ const sfx = {
   menu:    makeSfx('./audio/カーソル移動6.mp3'),
   details: makeSfx('./audio/カーソル移動12.mp3'),
 }
-
-function applySfxVolume() {
-  const raw = Number(settings.value.sfxVolume)
-  const vol = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), 1) : SFX_VOLUME_DEFAULT
-  for (const key in sfx) sfx[key].volume = vol
-}
-
-// Applies the saved volume immediately and again whenever the setting changes.
-settings.subscribe(applySfxVolume)
-
-  function playSfx(sound) {
-    sound.currentTime = 0
-    sound.play().catch(() => {})
-  }
 </script>
 
 <script>
