@@ -1,0 +1,17 @@
+packages:
+  - electron
+  - common
+  - client
+  - capacitor
+  - extensions
+allowBuilds:
+  '@paymoapp/electron-shutdown-handler': true
+  bufferutil: true
+  electron-winstaller: true
+  fsctl: true
+  ip-set: true
+  node-datachannel: true
+  sharp: true
+  utf-8-validate: true
+  utp-native: true
+  wrtc: true
